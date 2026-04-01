@@ -1,0 +1,4 @@
+generated/
+README.md
+tsconfig.json
+bun.lock
