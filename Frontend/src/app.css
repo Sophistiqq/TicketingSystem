@@ -1,5 +1,19 @@
-@import "tailwindcss";
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 
-@plugin "daisyui" {
-  themes: light --default, business --prefersdark;
+}
+
+html {
+  font-family: 'Ubuntu';
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Teko'
 }

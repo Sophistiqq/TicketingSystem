@@ -1,7 +1,7 @@
 // auth.svelte.ts
 import { setCurrentUser } from "./stores/user.svelte";
 import { navigate } from "./router.svelte";
-const url = "http://10.0.23.245:3000/auth";
+const url = "http://localhost:3000/auth";
 
 const auth = {
   check: async () => {
@@ -25,7 +25,7 @@ const auth = {
     if (!response.ok) return data.message;
 
     setCurrentUser(data);
-    navigate("/home").catch(() => { });
+    await navigate("/home");
   },
 
   logout: async (): Promise<string | void> => {
@@ -37,7 +37,7 @@ const auth = {
     if (!response.ok) return data.message;
 
     setCurrentUser(null);
-    navigate("/login").catch(() => { });
+    await navigate("/login");
   },
 };
 
