@@ -47,3 +47,5 @@ server
 .env
 *.db
 generated/
+
+*.Identifier

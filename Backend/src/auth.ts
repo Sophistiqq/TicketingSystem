@@ -36,18 +36,21 @@ export const auth = new Elysia({ prefix: "/auth" })
     }
   }, {
     body: t.Object({
-      username: t.String({ minLength: 1 }),
-      password: t.String({ minLength: 1 }),
-      email: t.String({ minLength: 1 }),
-      first_name: t.String({ minLength: 1 }),
-      last_name: t.String({ minLength: 1 })
+      username: t.String({ minLength: 3, maxLength: 50 }),
+      password: t.String({ minLength: 8 }),
+      email: t.String({ format: "email" }),
+      first_name: t.String({ minLength: 1, maxLength: 50 }),
+      last_name: t.String({ minLength: 1, maxLength: 50 }),
+      position: t.Optional(t.String({ maxLength: 100 })),
+      department_id: t.Optional(t.Number())
     })
   })
   .post("/login", async ({ body, status, jwt_token, cookie: { auth_cookie } }) => {
     const { username, password } = body;
     try {
       const user = await prisma.user.findFirst({
-        where: { username }
+        where: { username },
+        include: { roles: true },
       });
       if (!user) {
         return status(404, { message: "User not found" })
@@ -58,9 +61,12 @@ export const auth = new Elysia({ prefix: "/auth" })
         return status(401, { message: "Invalid credentials" });
       }
 
+      // Delete password from user object
+      delete (user as any).password;
+
       const token = await jwt_token.sign({
         sub: user.id.toString(),
-        role: user.role || 'user',
+        roles: user.roles.map(r => r.role),
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
       })
 

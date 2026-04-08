@@ -15,7 +15,7 @@ const app = new Elysia()
     console.log('health hit: ', Date.now())
     return status(200)
   })
-  .get("/", () => "Hello Elysia", { isAuth: true })
+  .get("/", () => "Hello Elysia")
 
 
   .listen(PORT);
