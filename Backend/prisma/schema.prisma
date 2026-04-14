@@ -61,6 +61,7 @@ enum NotificationType {
   ticket_resolved
   ticket_reopened
   escalated
+  comment_added
 }
 
 enum AttachmentType {
@@ -130,6 +131,7 @@ model User {
   submitted_tickets   Ticket[]            @relation("TicketRequester")
   assigned_tickets    Ticket[]            @relation("TicketAssignee")
   ticket_approvals    TicketApprover[]
+  ticket_comments     TicketComment[]
   resolution_attempts ResolutionAttempt[]
   audit_logs          AuditLog[]
   notifications       Notification[]
@@ -183,6 +185,7 @@ model Ticket {
 
   approvers           TicketApprover[]
   attachments         Attachment[]
+  comments            TicketComment[]
   resolution_attempts ResolutionAttempt[]
   audit_logs          AuditLog[]
   notifications       Notification[]
@@ -290,6 +293,27 @@ model Notification {
 
   user_id Int
   user    User @relation(fields: [user_id], references: [id])
+}
+
+// ============================================================
+// TICKET COMMENTS
+// ============================================================
+
+/// Threaded conversation on a ticket.
+/// Internal notes (is_internal=true) are visible only to staff (MIS/approver/admin).
+/// Public comments are visible to the requester.
+model TicketComment {
+  id          Int      @id @default(autoincrement())
+  content     String   // Markdown or plain text
+  is_internal Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  ticket_id Int
+  ticket    Ticket @relation(fields: [ticket_id], references: [id])
+
+  user_id   Int
+  user      User   @relation(fields: [user_id], references: [id])
 }
 
 // ============================================================
