@@ -1,43 +1,67 @@
-// auth.svelte.ts
-import { setCurrentUser } from "./stores/user.svelte";
-import { navigate } from "./router.svelte";
-const url = "http://localhost:3000/auth";
+// ============================================================
+// Auth helpers — login / logout / session check
+// ============================================================
+import { api } from './lib/api';
+import { setCurrentUser } from './stores/user.svelte';
+import { startPolling, stopPolling } from './stores/notifications.svelte';
+import { fetchReferenceData } from './stores/reference.svelte';
+import { navigate } from './router.svelte';
+import type { LoginResponse, User } from './lib/types';
 
 const auth = {
-  check: async () => {
-    const response = await fetch(`${url}/me`, {
-      method: "POST",
-      credentials: "include",
-    });
-    if (!response.ok) return null;
-    const data = await response.json();
-    return data;
+  /** Check current session via cookie (GET /auth/me) */
+  check: async (): Promise<User | null> => {
+    try {
+      const user = await api.get<User>('/auth/me');
+      return user;
+    } catch {
+      return null;
+    }
   },
 
-  login: async (username: string, password: string) => {
-    const response = await fetch(`${url}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-      credentials: "include",
-    });
-    const data = await response.json();
-    if (!response.ok) return data.message;
-
-    setCurrentUser(data);
-    await navigate("/home");
+  /** Log in and bootstrap app state */
+  login: async (username: string, password: string): Promise<string | void> => {
+    try {
+      const res = await api.post<LoginResponse>('/auth/login', { username, password });
+      if (res?.user) {
+        setCurrentUser(res.user);
+        startPolling();
+        fetchReferenceData();
+        await navigate('/');
+      }
+    } catch (e: any) {
+      return e?.message ?? 'Login failed';
+    }
   },
 
+  /** Log out and clean up */
   logout: async (): Promise<string | void> => {
-    const response = await fetch(`${url}/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    const data = await response.json();
-    if (!response.ok) return data.message;
-
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // even if the request fails, clear local state
+    }
     setCurrentUser(null);
-    await navigate("/login");
+    stopPolling();
+    await navigate('/login');
+  },
+
+  /** Register a new account */
+  register: async (data: {
+    username: string;
+    password: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    position?: string;
+    department_id?: number;
+  }): Promise<string | void> => {
+    try {
+      await api.post('/auth/register', data);
+      await navigate('/login');
+    } catch (e: any) {
+      return e?.message ?? 'Registration failed';
+    }
   },
 };
 

@@ -1,10 +1,10 @@
 <script lang="ts">
-  import auth from "../auth.svelte";
-</script>
+  // This file is kept for backward compatibility.
+  // The main dashboard is now at /routes/Dashboard.svelte
+  import { navigate } from "../router.svelte";
+  import { onMount } from "svelte";
 
-<button
-  class="btn btn-neutral"
-  onclick={() => {
-    auth.logout();
-  }}>Logout</button
->
+  onMount(() => {
+    navigate("/");
+  });
+</script>

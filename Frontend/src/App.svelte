@@ -1,365 +1,215 @@
 <script lang="ts">
   import { Router } from "sv-router";
   import "./router.svelte";
-  import { getCurrentUser } from "./stores/user.svelte";
+  import { getCurrentUser, hasRole, displayName, userInitials } from "./stores/user.svelte";
+  import { getUnreadCount } from "./stores/notifications.svelte";
+  import { isActive } from "./router.svelte";
+  import auth from "./auth.svelte";
   import {
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    CircleUser,
-    House,
-    Minus,
-    Pencil,
+    LayoutDashboard,
+    Ticket,
     Plus,
+    ListTodo,
+    ClipboardCheck,
+    Bell,
+    Users,
+    ScrollText,
+    Star,
+    Settings,
+    LogOut,
+    Menu,
+    Sun,
+    Moon,
   } from "lucide-svelte";
 
   type NavItem = {
-    icon: typeof ChevronDown;
+    icon: typeof LayoutDashboard;
     label: string;
-    href?: string;
-    badge?: number;
-    sublinks?: NavItem[];
+    href: string;
+    roles?: string[];
+    badge?: () => number;
   };
 
-  let navitems: NavItem[] = [
-    { icon: House, label: "Home", href: "/" },
-    {
-      icon: ChevronDown,
-      label: "Options",
-      sublinks: [
-        { icon: Pencil, label: "Sublink 1" },
-        {
-          icon: ChevronRight,
-          label: "Sublink 2",
-          sublinks: [
-            { icon: ChevronRight, label: "Sublink 2.1", badge: 20 },
-            { icon: ChevronRight, label: "Sublink 2.2" },
-          ],
-        },
-      ],
-    },
+  let user = $derived(getCurrentUser());
+  let unread = $derived(getUnreadCount());
+  let isDark = $state(true);
+
+  const navItems: NavItem[] = [
+    { icon: LayoutDashboard, label: "Dashboard", href: "/" },
+    { icon: Plus, label: "New Ticket", href: "/tickets/new" },
+    { icon: ListTodo, label: "My Tickets", href: "/my-tickets" },
+    { icon: ClipboardCheck, label: "My Approvals", href: "/approvals", roles: ["approver", "admin"] },
+    { icon: Bell, label: "Notifications", href: "/notifications", badge: () => unread },
   ];
 
-  let drawerOpen = $state(false);
-  let user = $derived(getCurrentUser());
+  const adminItems: NavItem[] = [
+    { icon: Users, label: "Users", href: "/admin/users", roles: ["admin"] },
+    { icon: ScrollText, label: "Audit Log", href: "/admin/audit", roles: ["admin", "mis"] },
+    { icon: Star, label: "CSAT", href: "/admin/csat", roles: ["admin", "mis"] },
+    { icon: Settings, label: "Settings", href: "/admin/settings", roles: ["admin"] },
+  ];
 
-  const MIN_REM = 12;
-  const MAX_REM = 30;
-  let drawerWidthRem = $state(15);
-  let isResizing = $state(false);
+  function canSee(item: NavItem): boolean {
+    if (!item.roles) return true;
+    return item.roles.some((r) => hasRole(r as any));
+  }
 
-  function onResizeStart(e: MouseEvent) {
-    if (!drawerOpen) return;
-    isResizing = true;
-    e.preventDefault();
-
-    function onMove(e: MouseEvent) {
-      const rem = parseFloat(
-        getComputedStyle(document.documentElement).fontSize,
-      );
-      const newWidth = e.clientX / rem;
-      drawerWidthRem = Math.min(MAX_REM, Math.max(MIN_REM, newWidth));
-    }
-
-    function onUp() {
-      isResizing = false;
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    }
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
+  function toggleTheme() {
+    isDark = !isDark;
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDark ? "ticketing" : "ticketing-light"
+    );
   }
 </script>
 
-<div class="layout">
-  <header>
-    {#if user}
-      <button id="drawer-toggle" onclick={() => (drawerOpen = !drawerOpen)}>
-        {#if drawerOpen}
-          <ChevronLeft />
-        {:else}
-          <ChevronRight />
-        {/if}
-      </button>
-    {/if}
-    <h1 class="title">Ticketing?</h1>
-    {#if user}
-      <CircleUser />
-    {/if}
-  </header>
-
-  <div class="body">
-    {#if user}
-      <aside
-        class="drawer"
-        class:collapsed={!drawerOpen}
-        class:resizing={isResizing}
-        style="--drawer-width: {drawerWidthRem}rem"
-      >
-        <nav>
-          {@render navcontents(navitems, 0)}
-        </nav>
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div
-          class="resize-handle"
-          role="separator"
-          aria-label="Resize sidebar"
-          onmousedown={onResizeStart}
-        ></div>
-      </aside>
-    {/if}
-
-    <main>
-      <Router />
-    </main>
+{#if !user}
+  <!-- Public layout (Login / Register) — no chrome -->
+  <div class="min-h-screen bg-base-200 flex items-center justify-center">
+    <Router />
   </div>
-</div>
+{:else}
+  <!-- Authenticated layout — DaisyUI drawer -->
+  <div class="drawer lg:drawer-open">
+    <input id="app-drawer" type="checkbox" class="drawer-toggle" />
 
-{#snippet navcontents(items: NavItem[], depth: number)}
-  {#each items as item}
-    {#if item.sublinks}
-      <details>
-        <summary style="padding-left: {0.5 + depth * 0.75}rem">
-          <item.icon size={16} />
-          <span class="label">{item.label}</span>
-          <Plus class="chevron chevron-closed" size={13} opacity={0.5} />
-          <Minus class="chevron chevron-open" size={13} opacity={0.5} />
-        </summary>
-        <div class="sublinks">
-          {@render navcontents(item.sublinks, depth + 1)}
+    <!-- ─── Main content area ─────────────────────────────── -->
+    <div class="drawer-content flex flex-col min-h-screen">
+      <!-- Navbar -->
+      <nav class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2">
+        <label for="app-drawer" class="btn btn-ghost btn-sm btn-square lg:hidden">
+          <Menu size={20} />
+        </label>
+
+        <div class="flex-1">
+          <h1 class="text-xl font-bold tracking-wide">
+            <a href="/" class="hover:text-primary transition-colors">Ticketing</a>
+          </h1>
         </div>
-      </details>
-    {:else}
-      <a href={item.href} style="padding-left: {0.5 + depth * 0.75}rem">
-        <item.icon size={16} />
-        <span class="label">{item.label}</span>
-        {#if item.badge}
-          <span class="badge">{item.badge}</span>
-        {/if}
-      </a>
-    {/if}
-  {/each}
-{/snippet}
 
-<style>
-  .layout {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100vw;
-    font-size: 1rem;
-  }
+        <!-- Theme toggle -->
+        <button class="btn btn-ghost btn-sm btn-square" onclick={toggleTheme}>
+          {#if isDark}
+            <Sun size={18} />
+          {:else}
+            <Moon size={18} />
+          {/if}
+        </button>
 
-  header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0 1rem;
-    height: 3.5rem;
-    border-bottom: 1px solid #ccc;
-    z-index: 10;
-    flex-shrink: 0;
+        <!-- Notification bell -->
+        <a href="/notifications" class="btn btn-ghost btn-sm btn-square indicator">
+          <Bell size={18} />
+          {#if unread > 0}
+            <span class="indicator-item badge badge-primary badge-xs">{unread}</span>
+          {/if}
+        </a>
 
-    .title {
-      flex: 1;
-      font-size: 1.125rem;
-      font-weight: 600;
-      margin: 0;
-    }
-  }
+        <!-- User dropdown -->
+        <details class="dropdown dropdown-end">
+          <summary class="btn btn-ghost btn-sm gap-2">
+            <div class="avatar avatar-placeholder">
+              <div class="bg-neutral text-neutral-content w-8 rounded-full">
+                <span class="text-xs">{userInitials()}</span>
+              </div>
+            </div>
+            <span class="hidden sm:inline text-sm">{displayName()}</span>
+          </summary>
+          <ul class="dropdown-content menu bg-base-200 rounded-box z-50 w-52 p-2 shadow-lg mt-2">
+            <li class="menu-title text-xs opacity-60">
+              {user.roles?.map((r) => String(r).toUpperCase()).join(", ") || "USER"}
+            </li>
+            <li>
+              <button onclick={() => auth.logout()}>
+                <LogOut size={16} /> Logout
+              </button>
+            </li>
+          </ul>
+        </details>
+      </nav>
 
-  .body {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+      <!-- Page content -->
+      <main class="flex-1 p-4 md:p-6 overflow-y-auto">
+        <Router />
+      </main>
+    </div>
 
-  aside.drawer {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: var(--drawer-width, 15rem);
-    height: 100%;
-    border-right: 1px solid #ccc;
-    overflow: hidden;
-    transition: width 0.2s ease;
-    z-index: 9;
-    flex-shrink: 0;
+    <!-- ─── Sidebar ───────────────────────────────────────── -->
+    <div class="drawer-side z-40">
+      <label for="app-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
+      <aside class="bg-base-200 min-h-full w-72 flex flex-col">
+        <!-- Logo area -->
+        <div class="p-4 border-b border-base-300">
+          <a href="/" class="flex items-center gap-3">
+            <div class="bg-primary text-primary-content w-10 h-10 rounded-lg flex items-center justify-center">
+              <Ticket size={22} />
+            </div>
+            <div>
+              <h2 class="text-lg font-bold leading-tight">Ticketing</h2>
+              <p class="text-xs opacity-50">Internal Support</p>
+            </div>
+          </a>
+        </div>
 
-    &.resizing {
-      transition: none;
-    }
+        <!-- Navigation -->
+        <ul class="menu menu-md flex-1 px-3 py-4 gap-0.5">
+          {#each navItems as item}
+            {#if canSee(item)}
+              <li>
+                <a
+                  href={item.href}
+                  class:active={isActive(item.href as any)}
+                >
+                  <item.icon size={18} />
+                  {item.label}
+                  {#if item.badge && item.badge() > 0}
+                    <span class="badge badge-primary badge-sm ml-auto">{item.badge()}</span>
+                  {/if}
+                </a>
+              </li>
+            {/if}
+          {/each}
 
-    &.collapsed {
-      width: 3rem;
+          <!-- Admin section divider -->
+          {#if adminItems.some(canSee)}
+            <li class="menu-title mt-4 text-xs opacity-50">Administration</li>
+            {#each adminItems as item}
+              {#if canSee(item)}
+                <li>
+                  <a
+                    href={item.href}
+                    class:active={isActive(item.href as any)}
+                  >
+                    <item.icon size={18} />
+                    {item.label}
+                  </a>
+                </li>
+              {/if}
+            {/each}
+          {/if}
+        </ul>
 
-      .label {
-        display: none;
-      }
-
-      .resize-handle {
-        display: none;
-      }
-
-      /* hide badges */
-      :global(nav a .badge) {
-        display: none;
-      }
-
-      /* hide sublink icons - only show top-level icons */
-      .sublinks {
-        display: none;
-      }
-
-      nav a,
-      nav summary {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-        justify-content: center;
-      }
-
-      nav summary :global(svg) {
-        display: none;
-      }
-    }
-
-    &.collapsed:hover {
-      width: var(--drawer-width, 15rem);
-
-      .label {
-        display: inline;
-      }
-
-      :global(nav a .badge) {
-        display: flex;
-      }
-
-      .sublinks {
-        display: flex;
-      }
-
-      nav a,
-      nav summary {
-        padding-left: revert;
-        padding-right: 0.75rem;
-        justify-content: flex-start;
-      }
-
-      nav summary :global(svg) {
-        display: block;
-      }
-    }
-  }
-
-  nav {
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem;
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  nav a,
-  nav summary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    padding-right: 0.75rem;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    white-space: nowrap;
-    cursor: pointer;
-    text-decoration: none;
-    color: inherit;
-    list-style: none;
-
-    &:hover {
-      background: #f3f4f6;
-    }
-  }
-
-  nav summary {
-    .label {
-      flex: 1; /* pushes chevron to the far right */
-    }
-
-    &::marker,
-    &::-webkit-details-marker {
-      display: none;
-    }
-  }
-
-  .sublinks {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .resize-handle {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 0.25rem;
-    height: 100%;
-    cursor: col-resize;
-    background: transparent;
-    transition: background 0.15s;
-
-    &:hover {
-      background: #6366f1;
-    }
-  }
-
-  main {
-    flex: 1;
-    overflow-y: auto;
-    padding: 1rem;
-  }
-
-  #drawer-toggle {
-    border: none;
-    background: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.25rem;
-    border-radius: 0.375rem;
-
-    &:hover {
-      background: #f3f4f6;
-    }
-  }
-
-  /* show/hide plus-minus based on open state */
-  :global(details .chevron-open) {
-    display: none;
-  }
-  :global(details .chevron-closed) {
-    display: block;
-  }
-  :global(details[open] .chevron-open) {
-    display: block;
-  }
-  :global(details[open] .chevron-closed) {
-    display: none;
-  }
-
-  aside.drawer.collapsed:not(:hover) :global(nav summary svg) {
-    display: none;
-  }
-
-  .badge {
-    margin-left: auto;
-    background: #1f2937;
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.125rem 0.4rem;
-    border-radius: 999px;
-    min-width: 1.25rem;
-    text-align: center;
-  }
-</style>
+        <!-- User footer -->
+        <div class="p-4 border-t border-base-300">
+          <div class="flex items-center gap-3">
+            <div class="avatar avatar-placeholder">
+              <div class="bg-neutral text-neutral-content w-10 rounded-full">
+                <span class="text-sm">{userInitials()}</span>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">{displayName()}</p>
+              <p class="text-xs opacity-50 truncate">{user.email}</p>
+            </div>
+            <button
+              class="btn btn-ghost btn-sm btn-square"
+              onclick={() => auth.logout()}
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+{/if}

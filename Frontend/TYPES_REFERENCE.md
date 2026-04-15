@@ -1,0 +1,343 @@
+// ============================================================
+// Internal Ticketing System — Prisma Schema
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+generator prismabox {
+  provider                    = "prismabox"
+  typeboxImportDependencyName = "elysia"
+  typeboxImportVariableName   = "t"
+  inputModel                  = true
+  output                      = "../generated/prismabox"
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum Role {
+  user
+  mis
+  approver
+  admin
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  pending_approval
+  pending_hard_copy
+  resolved
+  closed
+  rejected
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+  critical
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+enum NotificationType {
+  ticket_created
+  ticket_assigned
+  approval_requested
+  approval_decided
+  ticket_resolved
+  ticket_reopened
+  escalated
+  comment_added
+}
+
+enum AttachmentType {
+  approval_form
+  screenshot
+  document
+  other
+}
+
+// ============================================================
+// REFERENCE TABLES
+// ============================================================
+
+/// Departments within the company
+model Department {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  is_active   Boolean @default(true)
+
+  users User[]
+}
+
+/// Systems or modules that tickets can be filed against
+/// e.g. Payroll, Voucher System, Inventory, HR Portal
+model AffectedSystem {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  is_active   Boolean @default(true)
+
+  tickets Ticket[]
+}
+
+/// Catalog of request types
+/// Does not hard-wire an approver — approval routing is decided per ticket
+model RequestType {
+  id                           Int     @id @default(autoincrement())
+  name                         String  @unique
+  description                  String?
+  requires_approval_by_default Boolean @default(false)
+  is_active                    Boolean @default(true)
+
+  tickets Ticket[]
+}
+
+// ============================================================
+// USERS
+// ============================================================
+
+model User {
+  id         Int      @id @default(autoincrement())
+  first_name String
+  last_name  String
+  email      String   @unique
+  username   String   @unique
+  password   String
+  position   String?
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  department_id Int?
+  department    Department? @relation(fields: [department_id], references: [id])
+
+  roles               UserRole[]
+  submitted_tickets   Ticket[]            @relation("TicketRequester")
+  assigned_tickets    Ticket[]            @relation("TicketAssignee")
+  ticket_approvals    TicketApprover[]
+  ticket_comments     TicketComment[]
+  resolution_attempts ResolutionAttempt[]
+  audit_logs          AuditLog[]
+  notifications       Notification[]
+  csat_received       CSAT[]              @relation("CSATAgent")
+}
+
+/// Flexible role assignment — a user can have multiple roles
+/// e.g. someone can be both MIS and an approver
+model UserRole {
+  id          Int      @id @default(autoincrement())
+  role        Role
+  assigned_at DateTime @default(now())
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id])
+
+  @@unique([user_id, role])
+}
+
+// ============================================================
+// TICKETS
+// ============================================================
+
+model Ticket {
+  id           Int            @id @default(autoincrement())
+  title        String
+  description  String
+  status       TicketStatus   @default(open)
+  priority     TicketPriority @default(medium)
+  reopen_count Int            @default(0)
+
+  requires_approval     Boolean   @default(false)
+  escalated_to_approval Boolean   @default(false)
+  escalated_at          DateTime?
+  escalated_by_id       Int?
+
+  started_at    DateTime?  // When work began (open → in_progress)
+  completed_at  DateTime?  // When resolved/closed
+  due_date      DateTime?  // SLA deadline
+  sla_breached  Boolean    @default(false)
+  breached_at   DateTime?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  requester_id Int
+  requester    User  @relation("TicketRequester", fields: [requester_id], references: [id])
+
+  assignee_id Int?
+  assignee    User? @relation("TicketAssignee", fields: [assignee_id], references: [id])
+
+  request_type_id Int?
+  request_type    RequestType? @relation(fields: [request_type_id], references: [id])
+
+  affected_system_id Int?
+  affected_system    AffectedSystem? @relation(fields: [affected_system_id], references: [id])
+
+  approvers           TicketApprover[]
+  attachments         Attachment[]
+  comments            TicketComment[]
+  resolution_attempts ResolutionAttempt[]
+  audit_logs          AuditLog[]
+  notifications       Notification[]
+  csat                CSAT?
+}
+
+// ============================================================
+// APPROVAL WORKFLOW
+// ============================================================
+
+/// One record per approver chosen for a ticket
+/// Approvers are chosen at the time approval is needed, not from the request type
+model TicketApprover {
+  id         Int            @id @default(autoincrement())
+  status     ApprovalStatus @default(pending)
+  remarks    String?
+  decided_at DateTime?
+  created_at DateTime       @default(now())
+
+  ticket_id   Int
+  ticket      Ticket @relation(fields: [ticket_id], references: [id])
+
+  approver_id Int
+  approver    User   @relation(fields: [approver_id], references: [id])
+
+  @@unique([ticket_id, approver_id])
+}
+
+// ============================================================
+// ATTACHMENTS
+// ============================================================
+
+model Attachment {
+  id          Int            @id @default(autoincrement())
+  file_name   String
+  file_url    String
+  file_size   Int?
+  mime_type   String?
+  type        AttachmentType @default(other)
+  uploaded_at DateTime       @default(now())
+
+  ticket_id Int
+  ticket    Ticket @relation(fields: [ticket_id], references: [id])
+}
+
+// ============================================================
+// RESOLUTION ATTEMPTS
+// ============================================================
+
+/// Each resolution cycle gets its own record.
+/// On reopen: set reopened_at + reopen_reason on the current attempt,
+/// bump reopen_count on the ticket, insert a new attempt record.
+model ResolutionAttempt {
+  id             Int       @id @default(autoincrement())
+  attempt_number Int
+  notes          String?
+  resolved_at    DateTime?
+  reopened_at    DateTime?
+  reopen_reason  String?
+  created_at     DateTime  @default(now())
+
+  ticket_id     Int
+  ticket        Ticket @relation(fields: [ticket_id], references: [id])
+
+  handled_by_id Int?
+  handled_by    User?  @relation(fields: [handled_by_id], references: [id])
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+/// Tracks every meaningful change to a ticket's lifecycle —
+/// status changes, reassignments, escalations, approval flag changes.
+/// Separate from ResolutionAttempt which tracks the technical work done.
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  action     String
+  old_value  String?
+  new_value  String?
+  notes      String?
+  created_at DateTime @default(now())
+
+  ticket_id Int?
+  ticket    Ticket? @relation(fields: [ticket_id], references: [id])
+
+  performed_by_id Int?
+  performed_by    User? @relation(fields: [performed_by_id], references: [id])
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id         Int              @id @default(autoincrement())
+  type       NotificationType
+  message    String
+  is_read    Boolean          @default(false)
+  created_at DateTime         @default(now())
+  read_at    DateTime?
+
+  ticket_id Int?
+  ticket    Ticket? @relation(fields: [ticket_id], references: [id])
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id])
+}
+
+// ============================================================
+// TICKET COMMENTS
+// ============================================================
+
+/// Threaded conversation on a ticket.
+/// Internal notes (is_internal=true) are visible only to staff (MIS/approver/admin).
+/// Public comments are visible to the requester.
+model TicketComment {
+  id          Int      @id @default(autoincrement())
+  content     String   // Markdown or plain text
+  is_internal Boolean  @default(false)
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  ticket_id Int
+  ticket    Ticket @relation(fields: [ticket_id], references: [id])
+
+  user_id   Int
+  user      User   @relation(fields: [user_id], references: [id])
+}
+
+// ============================================================
+// CSAT
+// ============================================================
+
+/// Created once per ticket after final resolution only.
+/// Not triggered on intermediate resolutions that later get reopened.
+model CSAT {
+  id                  Int      @id @default(autoincrement())
+  rating              Int      // 1 to 5
+  comment             String?
+  resolution_time_ms  Int?     // Time taken to resolve in milliseconds
+  submitted_at        DateTime @default(now())
+
+  ticket_id Int    @unique
+  ticket    Ticket @relation(fields: [ticket_id], references: [id])
+
+  agent_id Int?
+  agent    User? @relation("CSATAgent", fields: [agent_id], references: [id])
+}
