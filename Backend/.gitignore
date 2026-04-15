@@ -48,4 +48,7 @@ server
 *.db
 generated/
 
+uploads/*
+!uploads/.keep
+
 *.Identifier

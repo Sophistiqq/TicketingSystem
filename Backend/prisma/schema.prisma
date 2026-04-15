@@ -168,6 +168,12 @@ model Ticket {
   escalated_at          DateTime?
   escalated_by_id       Int?
 
+  started_at    DateTime?  // When work began (open → in_progress)
+  completed_at  DateTime?  // When resolved/closed
+  due_date      DateTime?  // SLA deadline
+  sla_breached  Boolean    @default(false)
+  breached_at   DateTime?
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -323,10 +329,11 @@ model TicketComment {
 /// Created once per ticket after final resolution only.
 /// Not triggered on intermediate resolutions that later get reopened.
 model CSAT {
-  id           Int      @id @default(autoincrement())
-  rating       Int      // 1 to 5
-  comment      String?
-  submitted_at DateTime @default(now())
+  id                  Int      @id @default(autoincrement())
+  rating              Int      // 1 to 5
+  comment             String?
+  resolution_time_ms  Int?     // Time taken to resolve in milliseconds
+  submitted_at        DateTime @default(now())
 
   ticket_id Int    @unique
   ticket    Ticket @relation(fields: [ticket_id], references: [id])

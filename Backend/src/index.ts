@@ -31,6 +31,41 @@ const app = new Elysia()
   .use(audit)
   .use(csat)
   .use(comments)
+  // Serve uploaded files statically
+  .get("/uploads/:filename", async ({ params, set }) => {
+    const { filename } = params;
+    const filePath = `./uploads/${filename}`;
+    const file = Bun.file(filePath);
+
+    if (!(await file.exists())) {
+      set.status = 404;
+      return "File not found";
+    }
+
+    // Set content type based on extension
+    const ext = filename.split(".").pop()?.toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+      svg: "image/svg+xml",
+      pdf: "application/pdf",
+      doc: "application/msword",
+      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      txt: "text/plain",
+      csv: "text/csv",
+      zip: "application/zip",
+    };
+    if (ext && mimeTypes[ext]) {
+      set.headers["content-type"] = mimeTypes[ext];
+    }
+
+    return file;
+  })
   .get("/health", ({ status }) => {
     console.log('health hit: ', Date.now())
     return status(200)

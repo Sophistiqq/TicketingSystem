@@ -65,6 +65,7 @@ tickets
         affected_system_id,
         request_type_id,
         search,
+        overdue,
         page = 1,
         limit = 20,
         sort = "created_at",
@@ -90,9 +91,28 @@ tickets
         ];
       }
 
+      // Overdue filter: tickets past due_date that are not resolved/closed
+      if (overdue === "true") {
+        where.due_date = { lte: new Date() };
+        where.status = { notIn: ["resolved", "closed"] };
+      }
+
       const skip = (page - 1) * limit;
       const orderBy: any = {};
       orderBy[sort] = order;
+
+      // Auto-detect SLA breaches before fetching
+      await prisma.ticket.updateMany({
+        where: {
+          due_date: { lte: new Date() },
+          sla_breached: false,
+          status: { notIn: ["resolved", "closed"] },
+        },
+        data: {
+          sla_breached: true,
+          breached_at: new Date(),
+        },
+      });
 
       const [data, total] = await Promise.all([
         prisma.ticket.findMany({
@@ -130,6 +150,7 @@ tickets
         affected_system_id: t.Optional(t.Numeric()),
         request_type_id: t.Optional(t.Numeric()),
         search: t.Optional(t.String()),
+        overdue: t.Optional(t.String()),
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
         sort: t.Optional(
@@ -221,6 +242,7 @@ tickets
           affected_system_id: body.affected_system_id ?? null,
           requires_approval: requiresApproval,
           status: requiresApproval ? "pending_approval" : "open",
+          due_date: body.due_date ? new Date(body.due_date) : null,
         },
         include: {
           requester: { omit: { password: true } },
@@ -254,6 +276,7 @@ tickets
         request_type_id: t.Optional(t.Numeric()),
         affected_system_id: t.Optional(t.Numeric()),
         requires_approval: t.Optional(t.Boolean()),
+        due_date: t.Optional(t.String({ format: "date-time" })),
       }),
       isAuth: true,
     },
@@ -299,6 +322,26 @@ tickets
         );
 
         updateData.status = body.status;
+
+        // Track time: started_at (open → in_progress)
+        if (body.status === "in_progress") {
+          updateData.started_at = new Date();
+        }
+
+        // Track time: completed_at (in_progress → resolved/closed)
+        if (body.status === "resolved" || body.status === "closed") {
+          updateData.completed_at = new Date();
+        }
+
+        // Clear time tracking on reopen
+        if (body.status === "open") {
+          updateData.completed_at = null;
+        }
+
+        // Clear started_at when going back to open (unassign/reset)
+        if (body.status === "open" && ticket.status === "in_progress") {
+          updateData.started_at = null;
+        }
 
         // If resolving, create resolution attempt
         if (body.status === "resolved" && ticket.assignee_id) {
@@ -431,6 +474,18 @@ tickets
         updateData.priority = body.priority;
       }
 
+      // Update due_date (admin/MIS only can clear)
+      if (body.due_date !== undefined) {
+        if (body.due_date === null) {
+          updateData.due_date = null;
+          // Clear SLA breach if due_date is removed
+          updateData.sla_breached = false;
+          updateData.breached_at = null;
+        } else {
+          updateData.due_date = new Date(body.due_date);
+        }
+      }
+
       const updated = await prisma.ticket.update({
         where: { id: params.id },
         data: updateData,
@@ -454,6 +509,7 @@ tickets
         assignee_id: t.Optional(t.Nullable(t.Numeric())),
         reopen_reason: t.Optional(t.String()),
         resolution_notes: t.Optional(t.String()),
+        due_date: t.Optional(t.Nullable(t.String({ format: "date-time" }))),
       }),
       isAuth: true,
     },

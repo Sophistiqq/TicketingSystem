@@ -32,11 +32,18 @@ export const csat = new Elysia({ prefix: "/csat" })
         return status(409, { message: "CSAT already submitted for this ticket" });
       }
 
+      // Calculate resolution time if available
+      let resolutionTimeMs: number | null = null;
+      if (ticket.started_at && ticket.completed_at) {
+        resolutionTimeMs = ticket.completed_at.getTime() - ticket.started_at.getTime();
+      }
+
       const csat = await prisma.cSAT.create({
         data: {
           ticket_id: body.ticket_id,
           rating: body.rating,
           comment: body.comment ?? null,
+          resolution_time_ms: resolutionTimeMs,
           agent_id: ticket.assignee_id,
         },
       });

@@ -107,10 +107,11 @@ const { user } = await res.json();
 
 | Method | Endpoint | Auth | Query Params |
 |--------|----------|------|-------------|
-| `GET` | `/tickets/` | Yes | `?status=&priority=&assignee_id=&requester_id=&affected_system_id=&request_type_id=&search=&page=&limit=&sort=&order=` |
+| `GET` | `/tickets/` | Yes | `?status=&priority=&assignee_id=&requester_id=&affected_system_id=&request_type_id=&search=&overdue=&page=&limit=&sort=&order=` |
 
 **Sort options:** `created_at`, `updated_at`, `priority`, `status`
 **Order:** `asc`, `desc`
+**Overdue filter:** `?overdue=true` → only tickets past their `due_date` that are not resolved/closed
 
 **Access rules:**
 - Regular users → see only their own tickets
@@ -131,17 +132,24 @@ const { user } = await res.json();
 
 **Includes:** requester, assignee, request_type, affected_system, approvers, attachments, resolution_attempts, audit_logs, csat
 
+**New ticket fields:**
+- `due_date` — ISO datetime, SLA deadline
+- `sla_breached` — boolean, auto-set when past due
+- `breached_at` — ISO datetime, when SLA was breached
+- `started_at` — when work began (open → in_progress)
+- `completed_at` — when resolved/closed
+
 ### Create Ticket
 
 | Method | Endpoint | Auth | Body |
 |--------|----------|------|------|
-| `POST` | `/tickets/` | Yes | `{ title, description, priority?, request_type_id?, affected_system_id?, requires_approval? }` |
+| `POST` | `/tickets/` | Yes | `{ title, description, priority?, request_type_id?, affected_system_id?, requires_approval?, due_date? }` |
 
 ### Update Ticket
 
 | Method | Endpoint | Auth | Body |
 |--------|----------|------|------|
-| `PUT` | `/tickets/:id` | Yes | `{ title?, description?, status?, priority?, assignee_id?, reopen_reason?, resolution_notes? }` |
+| `PUT` | `/tickets/:id` | Yes | `{ title?, description?, status?, priority?, assignee_id?, reopen_reason?, resolution_notes?, due_date? }` |
 
 **Valid status transitions:**
 ```
@@ -159,7 +167,88 @@ rejected → open | in_progress
 |--------|----------|------|-------------|
 | `DELETE` | `/tickets/:id` | Admin/MIS | Soft delete (sets status=closed) |
 
-**Frontend:** Ticket table with filters, status badges, priority icons, detail page with tabs.
+**Frontend:** Ticket table with filters, status badges, priority icons, SLA overdue badges, detail page with tabs.
+
+---
+
+## Feature: SLA / Due Dates
+
+**How it works:**
+- `due_date` can be set on ticket creation or updated later
+- Tickets past their `due_date` (and not resolved/closed) are auto-flagged with `sla_breached: true`
+- Breach detection runs automatically on every ticket list fetch
+- Set `due_date` to `null` to clear SLA and reset breach flag
+
+**Frontend:**
+- Date picker for setting deadlines on tickets
+- Red "OVERDUE" badge on breached tickets
+- Overdue filter button: `?overdue=true`
+- Time tracking display: `started_at` → `completed_at` = resolution time
+
+---
+
+## Feature: File Upload
+
+### Upload Attachments (Multipart)
+
+| Method | Endpoint | Auth | Content-Type | Description |
+|--------|----------|------|-------------|-------------|
+| `GET` | `/attachments?ticket_id=N` | Yes | JSON | List attachments |
+| `POST` | `/attachments/` | Yes | `multipart/form-data` | Upload file(s) |
+| `GET` | `/attachments/:id` | Yes | JSON | Single attachment |
+| `DELETE` | `/attachments/:id` | Admin/MIS | — | Delete |
+
+**POST `/attachments/` — Multipart Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `ticket_id` | number | Yes | Target ticket |
+| `files` | File[] | Yes | One or more files |
+| `type` | string | No | `approval_form`, `screenshot`, `document`, `other` |
+
+**Response:**
+```json
+{
+  "id": 1,
+  "file_name": "1776238852978-jh7uxl81-screenshot.png",
+  "file_url": "/uploads/1776238852978-jh7uxl81-screenshot.png",
+  "file_size": 12345,
+  "mime_type": "image/png",
+  "type": "screenshot",
+  "uploaded_at": "2026-04-15T07:40:52.983Z",
+  "ticket_id": 9
+}
+```
+
+### Serve Uploaded Files
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/uploads/:filename` | No | Direct file access |
+
+Uploaded files are publicly accessible via URL. The `file_url` field in attachment records contains the full path.
+
+**Frontend file upload example:**
+```tsx
+function FileUpload({ ticketId, onUpload }: { ticketId: number; onUpload: () => void }) {
+  const handleFiles = async (files: FileList) => {
+    const formData = new FormData();
+    formData.append('ticket_id', ticketId.toString());
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    formData.append('type', 'screenshot');
+
+    await fetch('/attachments', {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    });
+    onUpload();
+  };
+
+  return <input type="file" multiple onChange={(e) => e.target.files && handleFiles(e.target.files)} />;
+}
+```
 
 ---
 
@@ -179,21 +268,6 @@ rejected → open | in_progress
 - Notifications sent to all ticket participants on new comment
 
 **Frontend:** Comment thread at bottom of ticket detail, toggle for internal notes, edit/delete buttons for own comments.
-
----
-
-## Feature: Attachments
-
-| Method | Endpoint | Auth | Body/Query | Description |
-|--------|----------|------|-----------|-------------|
-| `GET` | `/attachments?ticket_id=N` | Yes | Query | List attachments |
-| `POST` | `/attachments/` | Yes | `{ ticket_id, file_name, file_url, file_size?, mime_type?, type? }` | Register attachment |
-| `GET` | `/attachments/:id` | Yes | — | Single attachment |
-| `DELETE` | `/attachments/:id` | Admin/MIS | — | Delete |
-
-**Attachment types:** `approval_form`, `screenshot`, `document`, `other`
-
-**Frontend:** File upload component (upload to storage first, then POST URL to this endpoint), file list with download links.
 
 ---
 
@@ -234,7 +308,7 @@ rejected → open | in_progress
 | `PUT` | `/notifications/read-all` | Yes | — | Mark all as read |
 | `DELETE` | `/notifications/:id` | Yes | — | Delete notification |
 
-**Notification types:** `ticket_created`, `ticket_assigned`, `approval_requested`, `approval_decided`, `ticket_resolved`, `ticket_reopened`, `comment_added`
+**Notification types:** `ticket_created`, `ticket_assigned`, `approval_requested`, `approval_decided`, `ticket_resolved`, `ticket_reopened`, `escalated`, `comment_added`
 
 **Frontend:** Bell icon with unread badge, dropdown notification list, "mark all read" button.
 
@@ -272,6 +346,21 @@ rejected → open | in_progress
 | `GET` | `/csat/stats` | Admin/MIS | `?agent_id=&start_date=&end_date=` | Overall CSAT stats |
 | `GET` | `/csat/my/agent` | Yes | `?page=&limit=` | My CSAT as assigned agent |
 
+**CSAT response includes:**
+```json
+{
+  "id": 1,
+  "rating": 5,
+  "comment": "Quick resolution",
+  "resolution_time_ms": 3600000,
+  "submitted_at": "2026-04-15T07:11:16.430Z",
+  "ticket_id": 7,
+  "agent_id": 3
+}
+```
+
+**`resolution_time_ms`** — milliseconds from `started_at` to `completed_at` on the ticket.
+
 **Frontend:** Star rating modal after ticket closure, CSAT dashboard for admin/MIS with average and distribution chart.
 
 ---
@@ -305,7 +394,6 @@ const api = async (path: string, options: RequestInit = {}) => {
     ...options,
     credentials: 'include',  // Always send cookies
     headers: {
-      'Content-Type': 'application/json',
       ...options.headers,
     },
   });
@@ -319,9 +407,27 @@ const api = async (path: string, options: RequestInit = {}) => {
   return res.json();
 };
 
+// File upload (multipart)
+const uploadFiles = async (ticketId: number, files: FileList, type?: string) => {
+  const formData = new FormData();
+  formData.append('ticket_id', ticketId.toString());
+  for (const file of files) {
+    formData.append('files', file);
+  }
+  if (type) formData.append('type', type);
+
+  const res = await fetch('/attachments', {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+  return res.json();
+};
+
 // Usage
 const tickets = await api('/tickets/?page=1&limit=20');
 await api('/tickets/1', { method: 'PUT', body: JSON.stringify({ status: 'resolved' }) });
+await uploadFiles(1, fileInput.files, 'screenshot');
 ```
 
 ---
@@ -341,7 +447,7 @@ All endpoints return consistent format:
 - `200` — Success
 - `201` — Created
 - `204` — No content (delete success)
-- `400` — Bad request (invalid transition, missing field)
+- `400` — Bad request (invalid transition, missing field, no files)
 - `401` — Unauthorized (no cookie, invalid token)
 - `403` — Forbidden (wrong role, access denied)
 - `404` — Not found
