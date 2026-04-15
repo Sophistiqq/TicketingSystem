@@ -11,5 +11,3 @@ export function setCurrentUser(user: User | null) {
   currentUser = user
 }
 
-
-export let sidebarOpen = false

@@ -269,8 +269,8 @@ model AuditLog {
   notes      String?
   created_at DateTime @default(now())
 
-  ticket_id Int
-  ticket    Ticket @relation(fields: [ticket_id], references: [id])
+  ticket_id Int?
+  ticket    Ticket? @relation(fields: [ticket_id], references: [id])
 
   performed_by_id Int?
   performed_by    User? @relation(fields: [performed_by_id], references: [id])

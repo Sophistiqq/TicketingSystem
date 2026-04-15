@@ -49,7 +49,10 @@
       <details>
         <summary> <item.icon /> {item.label} </summary>
         {#each item.sublinks as sublink}
-          <a href={sublink.href}> <sublink.icon /> {sublink.label} </a>
+          <a href={sublink.href}>
+            <sublink.icon />
+            {sublink.label}
+          </a>
         {/each}
       </details>
     {:else}

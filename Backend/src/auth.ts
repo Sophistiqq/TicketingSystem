@@ -2,13 +2,33 @@ import { Elysia, t } from "elysia"
 import { validator } from "./plugins/authValidator";
 import { prisma } from "../lib/prisma";
 
+/**
+ * Create an audit log entry (no ticket required for auth events)
+ */
+async function createAuthAudit(
+  performedById: number | null,
+  action: string,
+  oldValue: string | null,
+  newValue: string | null,
+  notes?: string,
+) {
+  await prisma.auditLog.create({
+    data: {
+      ticket_id: null,
+      performed_by_id: performedById,
+      action,
+      old_value: oldValue,
+      new_value: newValue,
+      notes,
+    },
+  });
+}
+
 export const auth = new Elysia({ prefix: "/auth" })
-  // The auth middleware is required for all routes that require authentication, just apply isAuth: true
   .use(validator)
   .post('/register', async ({ body, status }) => {
-    const { username, password, email, first_name, last_name } = body;
+    const { username, password, email, first_name, last_name, position, department_id } = body;
     try {
-      // const user = await sqlite`SELECT id FROM users WHERE username = ${username}`;
       const existingUser = await prisma.user.findFirst({
         where: {
           OR: [
@@ -17,22 +37,39 @@ export const auth = new Elysia({ prefix: "/auth" })
           ]
         }
       });
-      if (existingUser) return status(409, "User already exists");
+      if (existingUser) return status(409, { message: "User already exists" });
 
       const hashedPassword = await Bun.password.hash(password);
-      const newUser = {
+      const newUser = await prisma.user.create({
+        data: {
+          username,
+          password: hashedPassword,
+          first_name,
+          last_name,
+          email,
+          position: position ?? null,
+          department_id: department_id ?? null,
+        },
+        omit: { password: true },
+      });
+
+      // Assign default "user" role
+      await prisma.userRole.create({
+        data: { user_id: newUser.id, role: "user" },
+      });
+
+      // Audit log
+      await createAuthAudit(
+        newUser.id,
+        "user_registered",
+        null,
         username,
-        password: hashedPassword,
-        first_name,
-        last_name,
-        email
-      }
-      await prisma.user.create({
-        data: newUser
-      })
-      return status(201, { message: "Register Success" });
+        `Email: ${email}`,
+      );
+
+      return status(201, { message: "Register Success", user: newUser });
     } catch (err) {
-      return status(500, { message: "Internal Server Error: " + err });
+      return status(500, { message: "Internal Server Error" });
     }
   }, {
     body: t.Object({
@@ -42,7 +79,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       first_name: t.String({ minLength: 1, maxLength: 50 }),
       last_name: t.String({ minLength: 1, maxLength: 50 }),
       position: t.Optional(t.String({ maxLength: 100 })),
-      department_id: t.Optional(t.Number())
+      department_id: t.Optional(t.Numeric())
     })
   })
   .post("/login", async ({ body, status, jwt_token, cookie: { auth_cookie } }) => {
@@ -51,24 +88,44 @@ export const auth = new Elysia({ prefix: "/auth" })
       const user = await prisma.user.findFirst({
         where: { username },
         include: { roles: true },
+        omit: { password: true },
       });
+
       if (!user) {
-        return status(404, { message: "User not found" })
+        // Log failed login attempt (no user ID available)
+        await createAuthAudit(
+          null,
+          "user_login_failed",
+          null,
+          username,
+          "User not found",
+        );
+        return status(404, { message: "User not found" });
       }
 
-      const isValid = await Bun.password.verify(password, user.password);
+      // Fetch password separately since omit excludes it
+      const userWithPassword = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { password: true },
+      });
+
+      const isValid = userWithPassword && await Bun.password.verify(password, userWithPassword.password);
       if (!isValid) {
+        await createAuthAudit(
+          user.id,
+          "user_login_failed",
+          null,
+          username,
+          "Invalid password",
+        );
         return status(401, { message: "Invalid credentials" });
       }
-
-      // Delete password from user object
-      delete (user as any).password;
 
       const token = await jwt_token.sign({
         sub: user.id.toString(),
         roles: user.roles.map(r => r.role),
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
-      })
+      });
 
       const isProduction = process.env.NODE_ENV === 'production';
 
@@ -81,10 +138,18 @@ export const auth = new Elysia({ prefix: "/auth" })
         maxAge: 60 * 60 * 24 * 7,
       });
 
+      // Audit successful login
+      await createAuthAudit(
+        user.id,
+        "user_login",
+        null,
+        username,
+        `Roles: ${user.roles.map(r => r.role).join(", ")}`,
+      );
 
-      return status(200, { message: "Login Success", user: user });
+      return status(200, { message: "Login Success", user });
     } catch (err) {
-      return status(500, { message: "Internal Server Error" + err });
+      return status(500, { message: "Internal Server Error" });
     }
   }, {
     body: t.Object({
@@ -93,38 +158,47 @@ export const auth = new Elysia({ prefix: "/auth" })
     })
   })
 
-  // user is from the auth middleware, it contains user's id - Check the middleware authValidator for more info
-  .post('/me', async ({ status, user }) => {
+  // Changed from POST to GET
+  .get('/me', async ({ status, user }) => {
     try {
       if (!user) return status(401, { message: "Unauthorized" });
-      const users = await prisma.user.findFirst({
+      const foundUser = await prisma.user.findFirst({
         where: { id: user },
-        omit: {
-          password: true
-        }
-      })
-      return status(200, users)
+        omit: { password: true },
+        include: { roles: true, department: true },
+      });
+      if (!foundUser) return status(404, { message: "User not found" });
+      return status(200, foundUser);
     } catch (err) {
-      return status(401, `Invalid token: ${err}`)
+      return status(500, { message: "Internal Server Error" });
     }
   }, {
     isAuth: true
   })
 
-  .post('/logout', async ({ cookie: { auth_cookie }, status }) => {
+  .post('/logout', async ({ cookie: { auth_cookie }, status, user }) => {
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Set cookie with maxAge: 0 to expire it immediately
     auth_cookie.set({
       value: '',
       httpOnly: true,
       secure: isProduction,
       sameSite: isProduction ? 'none' : 'lax',
       path: "/",
-      maxAge: 0, // This expires the cookie immediately
+      maxAge: 0,
     });
 
-    return status(200, { message: "Logout Success" })
+    // Audit logout
+    if (user) {
+      await createAuthAudit(
+        user,
+        "user_logout",
+        null,
+        null,
+      );
+    }
+
+    return status(200, { message: "Logout Success" });
   }, {
     isAuth: true
-  })
+  });
