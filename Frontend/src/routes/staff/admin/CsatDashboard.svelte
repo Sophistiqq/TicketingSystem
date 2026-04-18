@@ -71,7 +71,7 @@
     </div>
   {:else if stats}
     <!-- Stats cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="stats stats-vertical sm:stats-horizontal shadow-sm bg-base-200 w-full overflow-hidden border border-base-300">
       <StatsCard
         icon={Star}
         label="Average Rating"

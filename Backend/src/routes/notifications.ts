@@ -8,10 +8,15 @@ export const notifications = new Elysia({ prefix: "/notifications" })
   // Get my notifications
   .get(
     "/",
-    async ({ user, query, status }) => {
+    async ({ user, roles, query, status }) => {
       const { unread_only, page = 1, limit = 50 } = query;
 
-      const where: any = { user_id: user };
+            const where: any = { user_id: user };
+      
+      // Approvers should not see comment notifications (only important/relevant items)
+      if (roles?.includes("approver")) {
+        where.type = { not: "comment_added" };
+      }
       if (unread_only === "true") {
         where.is_read = false;
       }
@@ -51,10 +56,14 @@ export const notifications = new Elysia({ prefix: "/notifications" })
   // Get unread count
   .get(
     "/unread-count",
-    async ({ user, status }) => {
-      const count = await prisma.notification.count({
-        where: { user_id: user, is_read: false },
-      });
+    async ({ user, roles, status }) => {
+      const where: any = { user_id: user, is_read: false };
+      
+      if (roles?.includes("approver")) {
+        where.type = { not: "comment_added" };
+      }
+
+      const count = await prisma.notification.count({ where });
       return status(200, { count });
     },
     { isAuth: true },

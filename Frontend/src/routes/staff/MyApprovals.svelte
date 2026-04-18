@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { api } from "../../lib/api";
   import type { TicketApprover } from "../../lib/types";
+  import { simplePrompt } from "../../stores/ui.svelte";
   import StatusBadge from "../../components/StatusBadge.svelte";
   import {
     CircleCheckBig,
@@ -35,7 +36,7 @@
     approval: TicketApprover,
     decision: "approved" | "rejected",
   ) {
-    const remarks = prompt(`Remarks for ${decision}: (Optional)`);
+    const remarks = await simplePrompt(`Remarks for ${decision}: (Optional)`, "Add any internal remarks...");
     // If user clicks Cancel, prompt returns null.
     if (remarks === null) return; 
 

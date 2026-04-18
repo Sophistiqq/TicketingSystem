@@ -113,31 +113,28 @@
 
   {#if activeTab === "ticket"}
     <!-- Ticket audit filters -->
-    <div class="card bg-base-200 p-4">
-      <div class="flex flex-wrap items-end gap-3">
-        <fieldset class="fieldset">
-          <label class="label text-xs" for="audit-id">Ticket ID</label>
-          <input 
-            id="audit-id" 
-            type="number" 
-            class="input input-bordered input-sm w-28" 
-            placeholder="All" 
-            bind:value={ticketIdFilter} 
-            onkeydown={(e) => e.key === 'Enter' && loadTicketAudit(1)}
-          />
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label text-xs" for="audit-action">Action</label>
-          <select id="audit-action" class="select select-bordered select-sm" bind:value={actionFilter} onchange={() => loadTicketAudit(1)}>
-            <option value="">All Actions</option>
-            {#each ticketActions as action}
-              <option value={action}>{action.replace(/_/g, " ")}</option>
-            {/each}
-          </select>
-        </fieldset>
-        <button class="btn btn-primary btn-sm" onclick={() => loadTicketAudit(1)}>
-          <Filter size={14} /> Filter
-        </button>
+    <div class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden mb-4">
+      <div class="p-3">
+        <form onsubmit={(e) => { e.preventDefault(); loadTicketAudit(1); }} class="flex flex-col md:flex-row gap-3 items-center w-full">
+          <div class="join w-full flex-1 flex-nowrap">
+            <div class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0">
+              <Search size={14} class="opacity-50" />
+            </div>
+            <input 
+              type="number" 
+              class="input input-bordered input-sm join-item w-32 focus:outline-none text-xs" 
+              placeholder="Ticket ID" 
+              bind:value={ticketIdFilter} 
+            />
+            <select class="select select-bordered select-sm join-item flex-1 focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3" bind:value={actionFilter} onchange={() => loadTicketAudit(1)}>
+              <option value="">All Ticket Actions</option>
+              {#each ticketActions as action}
+                <option value={action}>{action.replace(/_/g, " ")}</option>
+              {/each}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm join-item px-6 text-xs">Filter</button>
+          </div>
+        </form>
       </div>
     </div>
 
@@ -198,20 +195,22 @@
 
   {:else}
     <!-- Auth audit filters -->
-    <div class="card bg-base-200 p-4">
-      <div class="flex flex-wrap items-end gap-3">
-        <fieldset class="fieldset">
-          <label class="label text-xs" for="auth-action">Action</label>
-          <select id="auth-action" class="select select-bordered select-sm" bind:value={authActionFilter}>
-            <option value="">All</option>
-            {#each authActions as action}
-              <option value={action}>{action.replace(/_/g, " ")}</option>
-            {/each}
-          </select>
-        </fieldset>
-        <button class="btn btn-primary btn-sm" onclick={() => loadAuthAudit(1)}>
-          <Filter size={14} /> Filter
-        </button>
+    <div class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden mb-4">
+      <div class="p-3">
+        <form onsubmit={(e) => { e.preventDefault(); loadAuthAudit(1); }} class="flex flex-col md:flex-row gap-3 items-center w-full">
+          <div class="join w-full flex-1 flex-nowrap">
+            <div class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0">
+              <Search size={14} class="opacity-50" />
+            </div>
+            <select class="select select-bordered select-sm join-item flex-1 focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3" bind:value={authActionFilter} onchange={() => loadAuthAudit(1)}>
+              <option value="">All Auth Actions</option>
+              {#each authActions as action}
+                <option value={action}>{action.replace(/_/g, " ")}</option>
+              {/each}
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm join-item px-6 text-xs">Filter</button>
+          </div>
+        </form>
       </div>
     </div>
 

@@ -73,6 +73,27 @@ export const users = new Elysia({ prefix: "/users" })
     },
   )
 
+  // Get directory of active users (for all authenticated users)
+  .get(
+    "/directory",
+    async ({ status }) => {
+      const users = await prisma.user.findMany({
+        where: { is_active: true },
+        select: {
+          id: true,
+          first_name: true,
+          last_name: true,
+          username: true,
+          position: true,
+          last_active: true,
+        },
+        orderBy: [{ last_name: "asc" }, { first_name: "asc" }],
+      });
+      return status(200, users);
+    },
+    { isAuth: true }
+  )
+
   // Get available approvers (for ticket assignment)
   .get(
     "/approvers",
@@ -151,7 +172,12 @@ export const users = new Elysia({ prefix: "/users" })
       return status(201, user);
     },
     {
-      body: UserPlainInputCreate,
+      body: t.Composite([
+        UserPlainInputCreate,
+        t.Object({
+          department_id: t.Optional(t.Nullable(t.Integer())),
+        }),
+      ]),
       hasRole: ["admin"],
     },
   )
@@ -196,7 +222,12 @@ export const users = new Elysia({ prefix: "/users" })
     },
     {
       params: t.Object({ id: t.Numeric() }),
-      body: UserPlainInputUpdate,
+      body: t.Composite([
+        UserPlainInputUpdate,
+        t.Object({
+          department_id: t.Optional(t.Nullable(t.Integer())),
+        }),
+      ]),
       hasRole: ["admin"],
     },
   )

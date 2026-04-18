@@ -11,14 +11,16 @@ export const audit = new Elysia({ prefix: "/audit" })
     async ({ query, status }) => {
       const {
         action,
+        exclude_action,
         performed_by_id,
         page = 1,
         limit = 50,
       } = query;
 
-      const where: any = { ticket_id: null }; // Auth logs have no ticket
+      const where: any = { ticket_id: null }; // Auth logs have NO ticket_id
       if (performed_by_id) where.performed_by_id = performed_by_id;
       if (action) where.action = { contains: action };
+      if (exclude_action) where.action = { not: exclude_action };
 
       const skip = (page - 1) * limit;
 
@@ -45,6 +47,7 @@ export const audit = new Elysia({ prefix: "/audit" })
     {
       query: t.Object({
         action: t.Optional(t.String()),
+        exclude_action: t.Optional(t.String()),
         performed_by_id: t.Optional(t.Numeric()),
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
@@ -79,7 +82,7 @@ export const audit = new Elysia({ prefix: "/audit" })
       where: { ticket_id: params.ticketId },
       include: {
         performed_by: {
-          omit: { password: true },
+          select: { id: true, first_name: true, last_name: true, username: true },
         },
       },
       orderBy: { created_at: "desc" },
@@ -99,14 +102,19 @@ export const audit = new Elysia({ prefix: "/audit" })
       ticket_id,
       performed_by_id,
       action,
+      exclude_action,
       page = 1,
       limit = 50,
     } = query;
 
-    const where: any = {};
+    // IMPORTANT: Ticket Activity MUST have a ticket_id
+    // Auth activity has ticket_id: null
+    const where: any = { ticket_id: { not: null } }; 
+    
     if (ticket_id) where.ticket_id = ticket_id;
     if (performed_by_id) where.performed_by_id = performed_by_id;
     if (action) where.action = { contains: action };
+    if (exclude_action) where.action = { not: exclude_action };
 
     const skip = (page - 1) * limit;
 
@@ -118,7 +126,6 @@ export const audit = new Elysia({ prefix: "/audit" })
             select: { id: true, title: true, status: true },
           },
           performed_by: {
-            omit: { password: true },
             select: { id: true, first_name: true, last_name: true, username: true },
           },
         },
@@ -139,6 +146,7 @@ export const audit = new Elysia({ prefix: "/audit" })
         ticket_id: t.Optional(t.Numeric()),
         performed_by_id: t.Optional(t.Numeric()),
         action: t.Optional(t.String()),
+        exclude_action: t.Optional(t.String()),
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
       }),

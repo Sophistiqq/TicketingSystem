@@ -176,6 +176,71 @@ export const auth = new Elysia({ prefix: "/auth" })
     isAuth: true
   })
 
+  
+  .patch('/me', async ({ body, user, status }) => {
+    try {
+      if (!user) return status(401, { message: "Unauthorized" });
+      
+      const { first_name, last_name, email, password, username } = body;
+      
+      const existingUser = await prisma.user.findUnique({
+        where: { id: user }
+      });
+      if (!existingUser) return status(404, { message: "User not found" });
+
+      // Check conflicts if email or username changed
+      if (email || username) {
+        const conflict = await prisma.user.findFirst({
+          where: {
+            id: { not: user },
+            OR: [
+              email ? { email } : {},
+              username ? { username } : {}
+            ].filter(x => Object.keys(x).length > 0)
+          }
+        });
+        if (conflict) return status(409, { message: "Username or Email already taken" });
+      }
+
+      const updateData: any = {};
+      if (first_name) updateData.first_name = first_name;
+      if (last_name) updateData.last_name = last_name;
+      if (email) updateData.email = email;
+      if (username) updateData.username = username;
+      if (password) {
+        updateData.password = await Bun.password.hash(password);
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: user },
+        data: updateData,
+        omit: { password: true },
+        include: { roles: true, department: true }
+      });
+
+      await createAuthAudit(
+        user,
+        "user_profile_updated",
+        null,
+        null,
+        `Updated: ${Object.keys(updateData).join(', ')}`
+      );
+
+      return status(200, updatedUser);
+    } catch (err) {
+      return status(500, { message: "Internal Server Error" });
+    }
+  }, {
+    isAuth: true,
+    body: t.Object({
+      first_name: t.Optional(t.String({ minLength: 1, maxLength: 50 })),
+      last_name: t.Optional(t.String({ minLength: 1, maxLength: 50 })),
+      email: t.Optional(t.String({ format: "email" })),
+      username: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
+      password: t.Optional(t.String({ minLength: 8 }))
+    })
+  })
+
   .post('/logout', async ({ cookie: { auth_cookie }, status, user }) => {
     const isProduction = process.env.NODE_ENV === 'production';
 

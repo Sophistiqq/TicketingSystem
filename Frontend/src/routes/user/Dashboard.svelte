@@ -1,7 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api } from "../../lib/api";
-  import type { Ticket, PaginatedResponse, TicketApprover } from "../../lib/types";
+  import type {
+    Ticket,
+    PaginatedResponse,
+    TicketApprover,
+    User,
+  } from "../../lib/types";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
   import TicketTable from "../../components/TicketTable.svelte";
   import StatsCard from "../../components/StatsCard.svelte";
@@ -18,6 +23,7 @@
   let user = $derived(getCurrentUser());
   let tickets = $state<Ticket[]>([]);
   let pendingApprovals = $state<TicketApprover[]>([]);
+  let activeUsers = $state<User[]>([]);
   let loading = $state(true);
 
   // Stats
@@ -28,6 +34,10 @@
   let totalPendingApprovals = $state(0);
   let totalAssignedToMe = $state(0);
 
+  let totalTickets = $derived(
+    totalOpen + totalInProgress + totalOverdue + totalResolved,
+  );
+
   onMount(async () => {
     try {
       // Fetch recent tickets
@@ -37,6 +47,11 @@
       if (res) {
         tickets = res.data;
       }
+
+      // Fetch active users for messaging
+      api.get<User[]>("/messages/active").then((res) => {
+        if (res) activeUsers = res;
+      });
 
       // Get accurate counts from filtered queries
       const queries = [
@@ -98,7 +113,9 @@
   </div>
 
   <!-- Stats Grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div
+    class="stats stats-vertical lg:stats-horizontal shadow-sm bg-base-200 w-full overflow-hidden border border-base-300"
+  >
     {#if hasRole("approver", "admin") && totalPendingApprovals > 0}
       <StatsCard
         icon={ClipboardCheck}
@@ -117,24 +134,43 @@
         sub="Assigned to you"
       />
     {/if}
-    <StatsCard icon={Inbox} label="Total Open" value={totalOpen} color="info" />
+    <StatsCard
+      icon={Inbox}
+      label="Total Open"
+      value={totalOpen}
+      color="info"
+      pct={totalTickets > 0 ? Math.round((totalOpen / totalTickets) * 100) : 0}
+      sub="New requests"
+    />
     <StatsCard
       icon={Clock}
       label="In Progress"
       value={totalInProgress}
       color="warning"
+      pct={totalTickets > 0
+        ? Math.round((totalInProgress / totalTickets) * 100)
+        : 0}
+      sub="Active work"
     />
     <StatsCard
       icon={TriangleAlert}
       label="Overdue"
       value={totalOverdue}
       color="error"
+      pct={totalTickets > 0
+        ? Math.round((totalOverdue / totalTickets) * 100)
+        : 0}
+      sub="SLA breached"
     />
     <StatsCard
       icon={CircleCheckBig}
       label="Resolved"
       value={totalResolved}
       color="success"
+      pct={totalTickets > 0
+        ? Math.round((totalResolved / totalTickets) * 100)
+        : 0}
+      sub="Finalized today"
     />
   </div>
 
@@ -197,29 +233,61 @@
         </div>
       {/if}
 
-      <!-- Quick Actions -->
-      <div class="card bg-base-200 shadow-sm">
-        <div class="card-body p-4">
-          <h2 class="card-title text-sm font-bold mb-2">Quick Actions</h2>
-          <div class="grid grid-cols-1 gap-2">
-            <a
-              href="/tickets/new"
-              class="btn btn-sm btn-outline btn-primary justify-start"
+      <!-- Active Staff / Quick Message -->
+      <div
+        class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden"
+      >
+        <div
+          class="p-4 border-b border-base-300 bg-base-200/50 flex items-center justify-between"
+        >
+          <h2 class="text-xs font-black uppercase tracking-widest opacity-50">
+            Active Staff
+          </h2>
+          <div class="flex items-center gap-1">
+            <div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
+            <span class="text-[10px] font-bold opacity-40 uppercase"
+              >{activeUsers.length} Online</span
             >
-              <Plus size={14} /> New Ticket
-            </a>
-            <a href="/my-tickets" class="btn btn-sm btn-outline justify-start">
-              <Inbox size={14} /> My Tickets
-            </a>
-            {#if hasRole("approver", "admin")}
-              <a
-                href="/approvals"
-                class="btn btn-sm btn-outline btn-primary justify-start"
-              >
-                <ClipboardCheck size={14} /> My Approvals
-              </a>
-            {/if}
           </div>
+        </div>
+        <div class="card-body p-0 max-h-64 overflow-y-auto">
+          {#each activeUsers.slice(0, 6) as staff (staff.id)}
+            <a
+              href="/messages?userId={staff.id}"
+              class="w-full px-4 py-3 flex items-center gap-3 hover:bg-base-200 transition-colors border-b border-base-200 last:border-0 group"
+            >
+              <div class="avatar online">
+                <div
+                  class="w-8 h-8 rounded-full bg-neutral text-neutral-content flex items-center justify-center text-xs font-bold"
+                >
+                  {staff.first_name[0]}{staff.last_name[0]}
+                </div>
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <p
+                  class="text-xs font-bold truncate group-hover:text-primary transition-colors"
+                >
+                  {staff.first_name}
+                  {staff.last_name}
+                </p>
+                <p class="text-[10px] opacity-40 truncate">
+                  {staff.position ?? "Technical Support"}
+                </p>
+              </div>
+            </a>
+          {:else}
+            <div class="p-10 text-center opacity-30 italic text-xs">
+              No staff active at the moment
+            </div>
+          {/each}
+        </div>
+        <div class="p-3 bg-base-200/30">
+          <a
+            href="/messages"
+            class="btn btn-ghost btn-xs btn-block gap-2 text-[10px] font-black uppercase tracking-widest"
+          >
+            Open Full Chat
+          </a>
         </div>
       </div>
     </div>

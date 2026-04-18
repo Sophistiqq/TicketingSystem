@@ -7,3 +7,4 @@ export { notifications } from "./notifications";
 export { audit } from "./audit";
 export { csat } from "./csat";
 export { comments } from "./comments";
+export { messages } from "./messages";

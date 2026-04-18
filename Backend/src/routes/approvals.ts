@@ -236,7 +236,7 @@ approvals
       await prisma.ticketApprover.update({
         where: { id: approverRecord.id },
         data: {
-          status: body.decision,
+          status: body.decision as any,
           remarks: body.remarks ?? null,
           decided_at: new Date(),
         },

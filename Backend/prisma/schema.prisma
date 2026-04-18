@@ -113,16 +113,17 @@ model RequestType {
 // ============================================================
 
 model User {
-  id         Int      @id @default(autoincrement())
-  first_name String
-  last_name  String
-  email      String   @unique
-  username   String   @unique
-  password   String
-  position   String?
-  is_active  Boolean  @default(true)
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id          Int       @id @default(autoincrement())
+  first_name  String
+  last_name   String
+  email       String    @unique
+  username    String    @unique
+  password    String
+  position    String?
+  is_active   Boolean   @default(true)
+  last_active DateTime? // Track online status
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
 
   department_id Int?
   department    Department? @relation(fields: [department_id], references: [id])
@@ -130,12 +131,29 @@ model User {
   roles               UserRole[]
   submitted_tickets   Ticket[]            @relation("TicketRequester")
   assigned_tickets    Ticket[]            @relation("TicketAssignee")
+  sent_messages       Message[]           @relation("SentMessages")
+  received_messages   Message[]           @relation("ReceivedMessages")
   ticket_approvals    TicketApprover[]
   ticket_comments     TicketComment[]
   resolution_attempts ResolutionAttempt[]
   audit_logs          AuditLog[]
   notifications       Notification[]
   csat_received       CSAT[]              @relation("CSATAgent")
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  content    String
+  created_at DateTime @default(now())
+  is_read    Boolean  @default(false)
+
+  sender_id   Int
+  sender      User @relation("SentMessages", fields: [sender_id], references: [id])
+  receiver_id Int
+  receiver    User @relation("ReceivedMessages", fields: [receiver_id], references: [id])
+
+  ticket_id Int?
+  ticket    Ticket? @relation(fields: [ticket_id], references: [id])
 }
 
 /// Flexible role assignment — a user can have multiple roles
@@ -168,17 +186,17 @@ model Ticket {
   escalated_at          DateTime?
   escalated_by_id       Int?
 
-  started_at    DateTime?  // When work began (open → in_progress)
-  completed_at  DateTime?  // When resolved/closed
-  due_date      DateTime?  // SLA deadline
-  sla_breached  Boolean    @default(false)
-  breached_at   DateTime?
+  started_at   DateTime? // When work began (open → in_progress)
+  completed_at DateTime? // When resolved/closed
+  due_date     DateTime? // SLA deadline
+  sla_breached Boolean   @default(false)
+  breached_at  DateTime?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
   requester_id Int
-  requester    User  @relation("TicketRequester", fields: [requester_id], references: [id])
+  requester    User @relation("TicketRequester", fields: [requester_id], references: [id])
 
   assignee_id Int?
   assignee    User? @relation("TicketAssignee", fields: [assignee_id], references: [id])
@@ -196,6 +214,7 @@ model Ticket {
   audit_logs          AuditLog[]
   notifications       Notification[]
   csat                CSAT?
+  messages            Message[]
 }
 
 // ============================================================
@@ -211,11 +230,11 @@ model TicketApprover {
   decided_at DateTime?
   created_at DateTime       @default(now())
 
-  ticket_id   Int
-  ticket      Ticket @relation(fields: [ticket_id], references: [id])
+  ticket_id Int
+  ticket    Ticket @relation(fields: [ticket_id], references: [id])
 
   approver_id Int
-  approver    User   @relation(fields: [approver_id], references: [id])
+  approver    User @relation(fields: [approver_id], references: [id])
 
   @@unique([ticket_id, approver_id])
 }
@@ -253,11 +272,11 @@ model ResolutionAttempt {
   reopen_reason  String?
   created_at     DateTime  @default(now())
 
-  ticket_id     Int
-  ticket        Ticket @relation(fields: [ticket_id], references: [id])
+  ticket_id Int
+  ticket    Ticket @relation(fields: [ticket_id], references: [id])
 
   handled_by_id Int?
-  handled_by    User?  @relation(fields: [handled_by_id], references: [id])
+  handled_by    User? @relation(fields: [handled_by_id], references: [id])
 }
 
 // ============================================================
@@ -310,7 +329,7 @@ model Notification {
 /// Public comments are visible to the requester.
 model TicketComment {
   id          Int      @id @default(autoincrement())
-  content     String   // Markdown or plain text
+  content     String // Markdown or plain text
   is_internal Boolean  @default(false)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
@@ -318,8 +337,8 @@ model TicketComment {
   ticket_id Int
   ticket    Ticket @relation(fields: [ticket_id], references: [id])
 
-  user_id   Int
-  user      User   @relation(fields: [user_id], references: [id])
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id])
 }
 
 // ============================================================
@@ -329,11 +348,11 @@ model TicketComment {
 /// Created once per ticket after final resolution only.
 /// Not triggered on intermediate resolutions that later get reopened.
 model CSAT {
-  id                  Int      @id @default(autoincrement())
-  rating              Int      // 1 to 5
-  comment             String?
-  resolution_time_ms  Int?     // Time taken to resolve in milliseconds
-  submitted_at        DateTime @default(now())
+  id                 Int      @id @default(autoincrement())
+  rating             Int // 1 to 5
+  comment            String?
+  resolution_time_ms Int? // Time taken to resolve in milliseconds
+  submitted_at       DateTime @default(now())
 
   ticket_id Int    @unique
   ticket    Ticket @relation(fields: [ticket_id], references: [id])

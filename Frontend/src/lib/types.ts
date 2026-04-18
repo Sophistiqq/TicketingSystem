@@ -66,6 +66,7 @@ export type User = {
   username: string;
   position?: string;
   is_active?: boolean;
+  last_active?: string;
   created_at?: string;
   updated_at?: string;
   department_id?: number;
@@ -188,6 +189,21 @@ export type Notification = {
   read_at?: string;
   ticket_id?: number;
   user_id: number;
+};
+
+// ── Messaging ──────────────────────────────────────────────
+
+export type Message = {
+  id: number;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+  sender_id: number;
+  receiver_id: number;
+  sender?: User;
+  receiver?: User;
+  ticket_id?: number;
+  ticket?: Partial<Ticket>;
 };
 
 // ── CSAT ────────────────────────────────────────────────────

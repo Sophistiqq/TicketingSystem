@@ -3,6 +3,7 @@
   import { api } from "../../../lib/api";
   import type { User, PaginatedResponse, Role, Department } from "../../../lib/types";
   import Pagination from "../../../components/Pagination.svelte";
+  import { simpleConfirm } from "../../../stores/ui.svelte";
   import {
     Search,
     Plus,
@@ -105,10 +106,19 @@
     modalLoading = true;
     modalError = "";
     try {
-      const body: Record<string, unknown> = { ...formData };
-      if (!body.password) delete body.password;
-      if (!body.position) delete body.position;
-      if (!body.department_id) delete body.department_id;
+      const body: Record<string, unknown> = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        username: formData.username,
+        is_active: formData.is_active,
+      };
+
+      if (formData.password) body.password = formData.password;
+      if (formData.position) body.position = formData.position;
+
+      // Explicitly send department_id (allow null)
+      body.department_id = formData.department_id ?? null;
 
       if (editingUser) {
         await api.put(`/users/${editingUser.id}`, body);
@@ -123,8 +133,15 @@
     modalLoading = false;
   }
 
+  const roleColors: Record<string, string> = {
+    admin: "badge-error",
+    mis: "badge-info",
+    approver: "badge-warning",
+    user: "badge-neutral",
+  };
+
   async function deleteUser(user: User) {
-    if (!confirm(`Deactivate ${user.first_name} ${user.last_name}?`)) return;
+    if (!(await simpleConfirm(`Deactivate ${user.first_name} ${user.last_name}?`, true))) return;
     await api.delete(`/users/${user.id}`);
     await loadUsers(pagination.page);
   }
@@ -145,7 +162,7 @@
   }
 
   async function removeRole(userId: number, role: string) {
-    if (!confirm(`Remove role "${role}"?`)) return;
+    if (!(await simpleConfirm(`Remove role "${role}"?`, true))) return;
     await api.delete(`/users/${userId}/roles/${role}`);
     await loadUsers(pagination.page);
   }
@@ -163,34 +180,55 @@
   </div>
 
   <!-- Filters -->
-  <div class="card bg-base-200 p-4">
-    <form onsubmit={(e) => { e.preventDefault(); loadUsers(1); }} class="flex flex-wrap items-end gap-3">
-      <fieldset class="fieldset flex-1 min-w-[200px]">
-        <label class="label text-xs" for="user-search">Search</label>
-        <div class="join w-full">
-          <input id="user-search" type="text" class="input input-bordered input-sm join-item flex-1" placeholder="Name, email, username…" bind:value={search} />
-          <button type="submit" class="btn btn-primary btn-sm join-item"><Search size={14} /></button>
+  <div class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden">
+    <div class="p-3">
+      <form
+        onsubmit={(e) => {
+          e.preventDefault();
+          loadUsers(1);
+        }}
+        class="flex flex-col md:flex-row gap-3 items-center w-full"
+      >
+        <div class="join w-full flex-1 flex-nowrap">
+          <div class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0">
+            <Search size={14} class="opacity-50" />
+          </div>
+          <input
+            id="user-search"
+            type="text"
+            class="input input-bordered input-sm join-item flex-1 focus:outline-none text-xs"
+            placeholder="Search users..."
+            bind:value={search}
+          />
+          <select
+            class="select select-bordered select-sm join-item w-auto hidden sm:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
+            bind:value={roleFilter}
+            onchange={() => loadUsers(1)}
+          >
+            <option value="">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="mis">MIS</option>
+            <option value="approver">Approver</option>
+            <option value="user">User</option>
+          </select>
+          <select
+            class="select select-bordered select-sm join-item w-auto hidden md:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
+            bind:value={activeFilter}
+            onchange={() => loadUsers(1)}
+          >
+            <option value="">All Statuses</option>
+            <option value="true">Active Only</option>
+            <option value="false">Inactive Only</option>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm join-item px-6 text-xs">Search</button>
         </div>
-      </fieldset>
-      <fieldset class="fieldset">
-        <label class="label text-xs" for="role-filter">Role</label>
-        <select id="role-filter" class="select select-bordered select-sm" bind:value={roleFilter} onchange={() => loadUsers(1)}>
-          <option value="">All</option>
-          <option value="admin">Admin</option>
-          <option value="mis">MIS</option>
-          <option value="approver">Approver</option>
-          <option value="user">User</option>
-        </select>
-      </fieldset>
-      <fieldset class="fieldset">
-        <label class="label text-xs" for="active-filter">Status</label>
-        <select id="active-filter" class="select select-bordered select-sm" bind:value={activeFilter} onchange={() => loadUsers(1)}>
-          <option value="">All</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
-      </fieldset>
-    </form>
+
+        <div class="flex items-center gap-3 w-full md:w-auto md:hidden px-1">
+           <span class="text-xs font-bold opacity-50 uppercase">Filters</span>
+           <!-- Mobile filters can be added here if needed, or just rely on the Search button -->
+        </div>
+      </form>
+    </div>
   </div>
 
   <!-- Table -->
@@ -220,17 +258,17 @@
                   <td class="text-sm">{user.email}</td>
                   <td class="text-sm">{user.department?.name ?? "—"}</td>
                   <td>
-                    <div class="flex flex-wrap gap-1">
+                    <div class="flex flex-wrap gap-1.5">
                       {#each user.roles as role}
-                        <span class="badge badge-xs badge-outline gap-1">
+                        <span class="badge badge-sm badge-soft {roleColors[role] ?? 'badge-neutral'} gap-1 font-bold uppercase text-[10px]">
                           {role}
-                          <button class="opacity-50 hover:opacity-100" onclick={() => removeRole(user.id, role)}>
+                          <button class="btn btn-ghost btn-xs btn-circle h-4 w-4 min-h-0 p-0 hover:bg-black/10" onclick={() => removeRole(user.id, role)}>
                             <X size={10} />
                           </button>
                         </span>
                       {/each}
-                      <button class="badge badge-xs badge-ghost" onclick={() => openRoles(user)}>
-                        <Plus size={10} />
+                      <button class="btn btn-ghost btn-xs btn-circle h-6 w-6 min-h-0" onclick={() => openRoles(user)} title="Add Role">
+                        <Plus size={14} />
                       </button>
                     </div>
                   </td>

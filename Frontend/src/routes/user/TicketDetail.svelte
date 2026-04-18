@@ -1,14 +1,16 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api } from "../../lib/api";
-  import { route } from "../../router.svelte";
+  import { route, navigate } from "../../router.svelte";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
+  import { simpleConfirm, simplePrompt } from "../../stores/ui.svelte";
   import type { Ticket, TicketComment, User } from "../../lib/types";
   import StatusBadge from "../../components/StatusBadge.svelte";
   import PriorityBadge from "../../components/PriorityBadge.svelte";
   import {
     ArrowLeft,
     Send,
+    MessageSquare,
     Paperclip,
     Upload,
     Trash2,
@@ -86,12 +88,14 @@
     await loadTicket();
     // Load assignees and potential approvers for the dropdowns
     try {
-      const [assigneesRes, approversRes] = await Promise.all([
+      const [assigneesRes, approversRes, conversationsRes] = await Promise.all([
         api.get<User[]>("/users/assignees"),
         api.get<User[]>("/users/approvers"),
+        api.get<any[]>("/messages/conversations"),
       ]);
       if (assigneesRes) assignees = assigneesRes;
       if (approversRes) allApprovers = approversRes;
+      if (conversationsRes) recentContacts = conversationsRes;
     } catch {
       /* non-critical */
     }
@@ -159,7 +163,7 @@
   }
 
   async function deleteComment(id: number) {
-    if (!confirm("Delete this comment?")) return;
+    if (!(await simpleConfirm("Delete this comment?", true))) return;
     await api.delete(`/comments/${id}`);
     await loadTicket();
   }
@@ -200,7 +204,7 @@
   }
 
   async function deleteAttachment(id: number) {
-    if (!confirm("Delete this attachment?")) return;
+    if (!(await simpleConfirm("Delete this attachment?", true))) return;
     await api.delete(`/attachments/${id}`);
     await loadTicket();
   }
@@ -226,7 +230,8 @@
     approvalId: number,
     decision: "approved" | "rejected",
   ) {
-    const remarks = prompt(`Remarks for ${decision}:`);
+    const remarks = await simplePrompt(`Remarks for ${decision}:`, "Add any internal remarks...");
+    if (remarks === null) return;
     await api.post(`/approvals/${approvalId}/decide`, {
       ticket_id: ticket!.id,
       decision,
@@ -251,7 +256,7 @@
 
   async function removeApprover(approvalId: number) {
     if (!ticket) return;
-    if (!confirm("Remove this pending approver?")) return;
+    if (!(await simpleConfirm("Remove this pending approver?", true))) return;
     try {
       await api.delete(`/approvals/${approvalId}?ticket_id=${ticket.id}`);
       await loadTicket();
@@ -276,6 +281,39 @@
   let otherAttachments = $derived(ticket?.attachments?.filter(a => !isImage(a)) ?? []);
 
   let selectedZoomImage = $state<string | null>(null);
+
+  // Sharing
+  let recentContacts = $state<any[]>([]);
+  let sharingToId = $state<number | undefined>(undefined);
+  let shareLoading = $state(false);
+
+  let combinedContacts = $derived.by(() => {
+    const list = [...recentContacts];
+    assignees.forEach(a => {
+      if (!list.some(c => c.id === a.id) && a.id !== user?.id) {
+        list.push({ ...a, last_message: null });
+      }
+    });
+    return list;
+  });
+
+  async function shareReference() {
+    if (!ticket || !sharingToId) return;
+    shareLoading = true;
+    try {
+      await api.post("/messages", {
+        content: `Hi, referencing Ticket #${ticket.id}: "${ticket.title}"`,
+        receiver_id: Number(sharingToId),
+        ticket_id: ticket.id
+      });
+      if (window.location.pathname === '/messages') {
+        window.location.search = `?userId=${sharingToId}`;
+      } else {
+        (navigate as any)(`/messages?userId=${sharingToId}`);
+      }
+    } catch { /* handled */ }
+    shareLoading = false;
+  }
 </script>
 
 <div class="flex flex-col gap-5 max-w-7xl mx-auto w-full px-4 lg:px-6">
@@ -711,15 +749,37 @@
             <h3 class="font-bold text-[10px] uppercase tracking-widest text-base-content/40">Details</h3>
 
             <div class="space-y-3">
-              <div class="flex flex-col gap-0.5">
+              <div class="flex flex-col gap-0.5 group/req">
                 <span class="text-[9px] font-bold uppercase opacity-30">Requester</span>
-                <span class="text-xs font-medium truncate">{ticket.requester?.first_name} {ticket.requester?.last_name}</span>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-medium truncate">{ticket?.requester?.first_name} {ticket?.requester?.last_name}</span>
+                  {#if ticket && ticket.requester_id !== user?.id}
+                    <a 
+                      href="/messages?userId={ticket.requester_id}"
+                      class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/req:opacity-100 transition-opacity text-primary flex items-center justify-center"
+                      title="Chat with Requester"
+                    >
+                      <MessageSquare size={12} />
+                    </a>
+                  {/if}
+                </div>
               </div>
-              <div class="flex flex-col gap-0.5">
+              <div class="flex flex-col gap-0.5 group/ass">
                 <span class="text-[9px] font-bold uppercase opacity-30">Assignee</span>
-                <span class="text-xs font-medium truncate {ticket.assignee ? '' : 'italic opacity-40'}">
-                  {ticket.assignee ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}` : "Unassigned"}
-                </span>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-medium truncate {ticket?.assignee ? '' : 'italic opacity-40'}">
+                    {ticket?.assignee ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}` : "Unassigned"}
+                  </span>
+                  {#if ticket && ticket.assignee && ticket.assignee_id !== user?.id}
+                    <a 
+                      href="/messages?userId={ticket.assignee_id}"
+                      class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/ass:opacity-100 transition-opacity text-primary flex items-center justify-center"
+                      title="Chat with Assignee"
+                    >
+                      <MessageSquare size={12} />
+                    </a>
+                  {/if}
+                </div>
               </div>
               <div class="grid grid-cols-1 gap-2 pt-1 border-t border-base-200">
                 <div class="flex justify-between items-center text-[11px]">
@@ -733,6 +793,32 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Share Card -->
+        <div class="card bg-base-100 shadow-sm border border-base-300">
+           <div class="card-body p-4 gap-3">
+              <h3 class="font-bold text-[10px] uppercase tracking-widest text-base-content/40">Share Reference</h3>
+              <div class="space-y-2">
+                 <select 
+                  class="select select-bordered select-sm w-full text-xs h-8 min-h-0 bg-none appearance-none pr-3" 
+                  bind:value={sharingToId}
+                 >
+                    <option value={undefined}>Select contact...</option>
+                    {#each combinedContacts as contact}
+                       <option value={contact.id}>{contact.first_name} {contact.last_name}</option>
+                    {/each}
+                 </select>
+                 <button 
+                  class="btn btn-ghost btn-sm w-full text-xs h-8 min-h-0 gap-2 border border-base-300 shadow-xs" 
+                  onclick={shareReference}
+                  disabled={!sharingToId || shareLoading}
+                 >
+                    <MessageSquare size={14} />
+                    Send to Chat
+                 </button>
+              </div>
+           </div>
         </div>
 
         <!-- Management Card -->

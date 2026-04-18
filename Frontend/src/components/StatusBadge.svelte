@@ -16,4 +16,6 @@
   let config = $derived(statusMap[status] ?? { label: status, class: "badge-ghost" });
 </script>
 
-<span class="badge badge-sm {config.class}">{config.label}</span>
+<div class="badge badge-sm whitespace-nowrap inline-flex items-center justify-center shrink-0 {config.class}">
+  {config.label}
+</div>

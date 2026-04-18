@@ -144,71 +144,77 @@
 
   <!-- Filters (only for All Tickets) -->
   {#if activeTab === ("all" as any)}
-    <div class="card bg-base-200 p-4">
-      <form
-        onsubmit={(e) => {
-          e.preventDefault();
-          handleSearch();
-        }}
-        class="flex flex-wrap items-end gap-3"
-      >
-        <fieldset class="fieldset flex-1 min-w-[200px]">
-          <label class="label text-xs" for="search-input">Search</label>
-          <div class="join w-full">
+    <div class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden">
+      <div class="p-3">
+        <form
+          onsubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }}
+          class="flex flex-col md:flex-row gap-3 items-center w-full"
+        >
+          <div class="join w-full flex-1 flex-nowrap">
+            <div class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0">
+              <Search size={14} class="opacity-50" />
+            </div>
             <input
               id="search-input"
               type="text"
-              class="input input-bordered input-sm join-item flex-1"
-              placeholder="Search tickets…"
+              class="input input-bordered input-sm join-item flex-1 focus:outline-none text-xs"
+              placeholder="Search tickets..."
               bind:value={search}
             />
-            <button type="submit" class="btn btn-primary btn-sm join-item"
-              ><Search size={14} /></button
+            <select
+              class="select select-bordered select-sm join-item w-auto hidden sm:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
+              bind:value={statusFilter}
+              onchange={() => loadAll(1)}
             >
+              <option value="">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="pending_approval">Pending Approval</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <select
+              class="select select-bordered select-sm join-item w-auto hidden md:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
+              bind:value={priorityFilter}
+              onchange={() => loadAll(1)}
+            >
+              <option value="">All Priorities</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+            <button type="submit" class="btn btn-primary btn-sm join-item px-6 text-xs">Find</button>
           </div>
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label text-xs" for="status-filter">Status</label>
-          <select
-            id="status-filter"
-            class="select select-bordered select-sm"
-            bind:value={statusFilter}
-            onchange={() => loadAll(1)}
-          >
-            <option value="">All</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="pending_approval">Pending Approval</option>
-            <option value="resolved">Resolved</option>
-            <option value="closed">Closed</option>
-            <option value="rejected">Rejected</option>
-          </select>
-        </fieldset>
-        <fieldset class="fieldset">
-          <label class="label text-xs" for="priority-filter">Priority</label>
-          <select
-            id="priority-filter"
-            class="select select-bordered select-sm"
-            bind:value={priorityFilter}
-            onchange={() => loadAll(1)}
-          >
-            <option value="">All</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
-        </fieldset>
-        <label class="label cursor-pointer gap-2 text-sm pb-1">
-          <input
-            type="checkbox"
-            class="checkbox checkbox-xs checkbox-error"
-            bind:checked={overdueOnly}
-            onchange={() => loadAll(1)}
-          />
-          Overdue only
-        </label>
-      </form>
+
+          <div class="flex items-center gap-4 w-full md:w-auto px-1">
+            <label class="label cursor-pointer gap-2 text-xs font-bold uppercase tracking-wider opacity-70">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm checkbox-error"
+                bind:checked={overdueOnly}
+                onchange={() => loadAll(1)}
+              />
+              SLA Breached
+            </label>
+            
+            <!-- Mobile-only filters dropdown (optional but clean) -->
+            <div class="dropdown dropdown-end md:hidden ml-auto">
+              <div tabindex="0" role="button" class="btn btn-ghost btn-sm">Filters</div>
+              <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-lg border border-base-300 mt-2">
+                <li><span class="menu-title text-[10px] font-black uppercase">Status</span></li>
+                {#each ['open', 'in_progress', 'pending_approval', 'resolved', 'closed', 'rejected'] as s}
+                  <li><button class="whitespace-nowrap" class:active={statusFilter === s} onclick={() => { statusFilter = s; loadAll(1); }}>{s.replace('_', ' ')}</button></li>
+                {/each}
+              </ul>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
   {/if}
 

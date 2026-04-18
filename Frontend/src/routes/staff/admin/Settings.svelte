@@ -3,6 +3,7 @@
   import { api } from "../../../lib/api";
   import { refreshReferenceData } from "../../../stores/reference.svelte";
   import type { Department, AffectedSystem, RequestType } from "../../../lib/types";
+  import { simpleConfirm } from "../../../stores/ui.svelte";
   import { Plus, Pencil, Trash2, Settings as SettingsIcon } from "lucide-svelte";
 
   // All reference data
@@ -110,7 +111,7 @@
   }
 
   async function remove(type: "departments" | "systems" | "types", id: number) {
-    if (!confirm("Delete this item? (soft delete)")) return;
+    if (!(await simpleConfirm("Delete this item? (soft delete)", true))) return;
     const endpoint = getEndpoint(type);
     await api.delete(`${endpoint}/${id}`);
     await loadAll();

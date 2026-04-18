@@ -1,24 +1,55 @@
 <script lang="ts">
-  let { icon: Icon, label, value, color, sub } = $props<{
+  let { icon: Icon, label, value, color, sub, pct } = $props<{
     icon: any;
     label: string;
     value: string | number;
     color: "primary" | "secondary" | "accent" | "info" | "success" | "warning" | "error";
     sub?: string;
+    pct?: number; // Optional percentage for a progress indicator
   }>();
+
+  const colorClasses: Record<string, string> = {
+    primary: "text-primary",
+    secondary: "text-secondary",
+    accent: "text-accent",
+    info: "text-info",
+    success: "text-success",
+    warning: "text-warning",
+    error: "text-error"
+  };
+
+  const bgClasses: Record<string, string> = {
+    primary: "bg-primary/10 text-primary",
+    secondary: "bg-secondary/10 text-secondary",
+    accent: "bg-accent/10 text-accent",
+    info: "bg-info/10 text-info",
+    success: "bg-success/10 text-success",
+    warning: "bg-warning/10 text-warning",
+    error: "bg-error/10 text-error"
+  };
 </script>
 
-<div class="card bg-base-200 shadow-sm">
-  <div class="card-body p-4 flex-row items-center gap-4">
-    <div class="bg-{color}/10 text-{color} w-12 h-12 rounded-xl flex items-center justify-center shrink-0">
-      <Icon size={24} />
-    </div>
-    <div class="min-w-0">
-      <p class="text-2xl font-bold leading-none">{value}</p>
-      <p class="text-sm opacity-60 mt-0.5">{label}</p>
-      {#if sub}
-        <p class="text-xs opacity-40">{sub}</p>
-      {/if}
+<div class="stat group transition-all hover:bg-base-300/30">
+  <div class="stat-figure">
+    <div class="p-3 rounded-2xl transition-transform group-hover:scale-110 {bgClasses[color]}">
+      <Icon class="size-6 sm:size-7" />
     </div>
   </div>
+  
+  <div class="stat-title text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-50 truncate">{label}</div>
+  <div class="stat-value text-2xl sm:text-3xl font-black {colorClasses[color]}">{value}</div>
+  
+  {#if pct !== undefined}
+    <div class="stat-desc mt-2 flex flex-col gap-1.5">
+      <progress class="progress progress-{color} h-1.5 w-full" value={pct} max="100"></progress>
+      <div class="flex justify-between items-center text-[10px] font-medium opacity-60">
+        <span>{sub ?? 'Completion'}</span>
+        <span>{pct}%</span>
+      </div>
+    </div>
+  {:else if sub}
+    <div class="stat-desc text-[10px] sm:text-xs truncate font-medium opacity-60 mt-1">
+      {sub}
+    </div>
+  {/if}
 </div>

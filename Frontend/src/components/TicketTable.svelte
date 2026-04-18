@@ -46,15 +46,15 @@
             <div class="flex items-center gap-2">
               <span class="font-medium">{ticket.title}</span>
               {#if ticket.sla_breached}
-                <span class="badge badge-error badge-xs gap-1">
+                <span class="badge badge-error badge-xs gap-1 shrink-0">
                   <AlertTriangle size={10} />
                   SLA
                 </span>
               {/if}
             </div>
           </td>
-          <td><StatusBadge status={ticket.status} /></td>
-          <td><PriorityBadge priority={ticket.priority} /></td>
+          <td class="whitespace-nowrap"><StatusBadge status={ticket.status} /></td>
+          <td class="whitespace-nowrap"><PriorityBadge priority={ticket.priority} /></td>
           {#if showRequester}
             <td class="text-sm">
               {ticket.requester ? `${ticket.requester.first_name} ${ticket.requester.last_name}` : "—"}

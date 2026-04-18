@@ -25,7 +25,7 @@ async function createNotification(
   message: string,
 ) {
   await prisma.notification.create({
-    data: { user_id: userId, ticket_id: ticketId, type, message },
+    data: { user_id: userId, ticket_id: ticketId, type: type as any, message },
   });
 }
 
@@ -236,7 +236,7 @@ tickets
         data: {
           title: body.title,
           description: body.description,
-          priority: body.priority ?? "medium",
+          priority: (body.priority ?? "medium") as any,
           requester_id: user,
           request_type_id: body.request_type_id ?? null,
           affected_system_id: body.affected_system_id ?? null,
@@ -250,6 +250,53 @@ tickets
           affected_system: true,
         },
       });
+
+      // Automatic Default Approver Assignment
+      if (requiresApproval) {
+        // Find first active admin/MIS as default approver
+        // Find default approver: prioritize 'approver' role, fallback to 'admin'/'mis'
+        let defaultApprover = await prisma.user.findFirst({
+          where: {
+            is_active: true,
+            roles: { some: { role: 'approver' } },
+          },
+        });
+
+        if (!defaultApprover) {
+          defaultApprover = await prisma.user.findFirst({
+            where: {
+              is_active: true,
+              roles: { some: { role: { in: ['admin', 'mis'] } } },
+            },
+          });
+        }
+
+        if (defaultApprover) {
+          await prisma.ticketApprover.create({
+            data: {
+              ticket_id: ticket.id,
+              approver_id: defaultApprover.id,
+              status: 'pending',
+            },
+          });
+
+          await createNotification(
+            defaultApprover.id,
+            ticket.id,
+            'approval_requested',
+            `New approval request for ticket #${ticket.id}: ${ticket.title}`,
+          );
+          
+          await createAuditLog(
+            ticket.id,
+            user, // The requester who triggered the approval
+            'approvers_added',
+            null,
+            `${defaultApprover.first_name} ${defaultApprover.last_name}`,
+            'Automatically assigned default approver'
+          );
+        }
+      }
 
       // Notify MIS team for assignment (if not pending approval)
       if (!requiresApproval) {

@@ -6,6 +6,7 @@ import auth from './auth.svelte';
 import { setCurrentUser, getCurrentUser } from './stores/user.svelte';
 import { startPolling } from './stores/notifications.svelte';
 import { fetchReferenceData } from './stores/reference.svelte';
+import { startMessagePolling } from './stores/messages.svelte';
 
 // ── Route components ────────────────────────────────────────
 
@@ -20,6 +21,7 @@ import TicketDetail from './routes/user/TicketDetail.svelte';
 import MyTickets from './routes/user/MyTickets.svelte';
 import Notifications from './routes/user/Notifications.svelte';
 import Profile from './routes/user/Profile.svelte';
+import Messages from './routes/user/Messages.svelte';
 
 // Staff (Approver / Admin / MIS)
 import MyApprovals from './routes/staff/MyApprovals.svelte';
@@ -43,6 +45,7 @@ export const { p, navigate, isActive, route } = createRouter({
             setCurrentUser(user);
             startPolling();
             fetchReferenceData();
+            startMessagePolling();
           }
         } catch {
           setCurrentUser(null);
@@ -72,6 +75,7 @@ export const { p, navigate, isActive, route } = createRouter({
   '/my-tickets': MyTickets,
   '/notifications': Notifications,
   '/profile': Profile,
+  '/messages': Messages,
 
   // ── Staff / Admin ───────────────────────────────────────
   '/approvals': MyApprovals,

@@ -1,5 +1,6 @@
 import { Elysia, t } from "elysia"
 import jwt from "@elysiajs/jwt";
+import { prisma } from "../../lib/prisma";
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required")
@@ -20,6 +21,13 @@ export const validator = new Elysia()
       if (!token) return status(401)
       const userId = Number(token.sub)
       if (!Number.isInteger(userId)) return status(400)
+
+      // Background update of last_active
+      prisma.user.update({
+        where: { id: userId },
+        data: { last_active: new Date() }
+      }).catch(console.error);
+
       return {
         user: userId,
         roles: token.roles as string[]
