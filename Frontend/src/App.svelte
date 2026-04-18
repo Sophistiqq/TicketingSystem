@@ -3,7 +3,7 @@
   import "./router.svelte";
   import { getCurrentUser, hasRole, displayName, userInitials } from "./stores/user.svelte";
   import { getUnreadCount } from "./stores/notifications.svelte";
-  import { isActive } from "./router.svelte";
+  import { navigate, isActive } from "./router.svelte";
   import auth from "./auth.svelte";
   import {
     LayoutDashboard,
@@ -20,6 +20,8 @@
     Menu,
     Sun,
     Moon,
+    ChevronLeft,
+    User as UserIcon,
   } from "lucide-svelte";
 
   type NavItem = {
@@ -81,8 +83,17 @@
           <Menu size={20} />
         </label>
 
-        <div class="flex-1">
-          <h1 class="text-xl font-bold tracking-wide">
+        <div class="flex-1 flex items-center gap-2">
+          {#if !isActive('/')}
+            <button 
+              class="btn btn-ghost btn-sm btn-square" 
+              onclick={() => navigate(-1)}
+              title="Go Back"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          {/if}
+          <h1 class="text-xl font-bold tracking-wide lg:hidden">
             <a href="/" class="hover:text-primary transition-colors">Ticketing</a>
           </h1>
         </div>
@@ -117,6 +128,11 @@
           <ul class="dropdown-content menu bg-base-200 rounded-box z-50 w-52 p-2 shadow-lg mt-2">
             <li class="menu-title text-xs opacity-60">
               {user.roles?.map((r) => String(r).toUpperCase()).join(", ") || "USER"}
+            </li>
+            <li>
+              <a href="/profile">
+                <UserIcon size={16} /> Profile
+              </a>
             </li>
             <li>
               <button onclick={() => auth.logout()}>

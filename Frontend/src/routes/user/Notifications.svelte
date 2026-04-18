@@ -1,16 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../lib/api";
-  import { navigate } from "../router.svelte";
+  import { api } from "../../lib/api";
+  import { navigate } from "../../router.svelte";
   import {
     getNotifications,
     fetchNotifications,
     markAsRead,
     markAllAsRead,
     getUnreadCount,
-  } from "../stores/notifications.svelte";
-  import type { Notification, PaginatedResponse } from "../lib/types";
-  import Pagination from "../components/Pagination.svelte";
+  } from "../../stores/notifications.svelte";
+  import Pagination from "../../components/Pagination.svelte";
   import {
     Bell,
     BellOff,
@@ -20,7 +19,7 @@
     UserPlus,
     ClipboardCheck,
     MessageSquare,
-    AlertTriangle,
+    TriangleAlert,
   } from "lucide-svelte";
 
   let loading = $state(true);
@@ -34,8 +33,8 @@
     approval_requested: ClipboardCheck,
     approval_decided: CheckCheck,
     ticket_resolved: CheckCheck,
-    ticket_reopened: AlertTriangle,
-    escalated: AlertTriangle,
+    ticket_reopened: TriangleAlert,
+    escalated: TriangleAlert,
     comment_added: MessageSquare,
   };
 
@@ -103,26 +102,45 @@
       {#each notifications as notif (notif.id)}
         {@const Icon = iconMap[notif.type] ?? Bell}
         <div
-          class="flex items-start gap-3 p-3 rounded-lg transition-colors {notif.is_read ? 'opacity-60' : 'bg-base-200'}"
+          class="flex items-start gap-3 p-3 rounded-lg transition-colors {notif.is_read
+            ? 'opacity-60'
+            : 'bg-base-200'}"
           role="button"
           tabindex="0"
           onclick={() => {
             if (!notif.is_read) markAsRead(notif.id);
-            if (notif.ticket_id) navigate("/tickets/:id", { params: { id: notif.ticket_id.toString() } });
+            if (notif.ticket_id)
+              navigate("/tickets/:id", {
+                params: { id: notif.ticket_id.toString() },
+              });
           }}
-          onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.click(); }}
+          onkeydown={(e) => {
+            if (e.key === "Enter") e.currentTarget.click();
+          }}
         >
-          <div class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 {notif.is_read ? 'bg-base-300' : 'bg-primary/15 text-primary'}">
+          <div
+            class="w-9 h-9 rounded-full flex items-center justify-center shrink-0 {notif.is_read
+              ? 'bg-base-300'
+              : 'bg-primary/15 text-primary'}"
+          >
             <Icon size={16} />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm {notif.is_read ? '' : 'font-medium'}">{notif.message}</p>
+            <p class="text-sm {notif.is_read ? '' : 'font-medium'}">
+              {notif.message}
+            </p>
             <p class="text-xs opacity-50 mt-0.5">{timeAgo(notif.created_at)}</p>
           </div>
           {#if !notif.is_read}
             <div class="w-2 h-2 rounded-full bg-primary shrink-0 mt-2"></div>
           {/if}
-          <button class="btn btn-ghost btn-xs opacity-40 hover:opacity-100" onclick={(e) => { e.stopPropagation(); handleDelete(notif.id); }}>
+          <button
+            class="btn btn-ghost btn-xs opacity-40 hover:opacity-100"
+            onclick={(e) => {
+              e.stopPropagation();
+              handleDelete(notif.id);
+            }}
+          >
             <Trash2 size={14} />
           </button>
         </div>

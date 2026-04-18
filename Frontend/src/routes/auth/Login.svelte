@@ -1,5 +1,5 @@
 <script lang="ts">
-  import auth from "../auth.svelte";
+  import auth from "../../auth.svelte";
   import { Ticket } from "lucide-svelte";
 
   let username = $state("");

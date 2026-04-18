@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
-  import type { User, PaginatedResponse, Role, Department } from "../../lib/types";
-  import Pagination from "../../components/Pagination.svelte";
+  import { api } from "../../../lib/api";
+  import type { User, PaginatedResponse, Role, Department } from "../../../lib/types";
+  import Pagination from "../../../components/Pagination.svelte";
   import {
     Search,
     Plus,

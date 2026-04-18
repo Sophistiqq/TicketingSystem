@@ -1,15 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../lib/api";
-  import type { Ticket, PaginatedResponse, TicketApprover } from "../lib/types";
-  import { getCurrentUser, hasRole } from "../stores/user.svelte";
-  import TicketTable from "../components/TicketTable.svelte";
-  import StatsCard from "../components/StatsCard.svelte";
+  import { api } from "../../lib/api";
+  import type { Ticket, PaginatedResponse, TicketApprover } from "../../lib/types";
+  import { getCurrentUser, hasRole } from "../../stores/user.svelte";
+  import TicketTable from "../../components/TicketTable.svelte";
+  import StatsCard from "../../components/StatsCard.svelte";
   import {
     Inbox,
     Clock,
-    AlertTriangle,
-    CheckCircle,
+    TriangleAlert,
+    CircleCheckBig,
     Plus,
     ClipboardCheck,
     UserCheck,
@@ -31,7 +31,9 @@
   onMount(async () => {
     try {
       // Fetch recent tickets
-      const res = await api.get<PaginatedResponse<Ticket>>("/tickets/?page=1&limit=10&sort=created_at&order=desc");
+      const res = await api.get<PaginatedResponse<Ticket>>(
+        "/tickets/?page=1&limit=10&sort=created_at&order=desc",
+      );
       if (res) {
         tickets = res.data;
       }
@@ -39,14 +41,20 @@
       // Get accurate counts from filtered queries
       const queries = [
         api.get<PaginatedResponse<Ticket>>("/tickets/?status=open&limit=1"),
-        api.get<PaginatedResponse<Ticket>>("/tickets/?status=in_progress&limit=1"),
+        api.get<PaginatedResponse<Ticket>>(
+          "/tickets/?status=in_progress&limit=1",
+        ),
         api.get<PaginatedResponse<Ticket>>("/tickets/?overdue=true&limit=1"),
         api.get<PaginatedResponse<Ticket>>("/tickets/?status=resolved&limit=1"),
       ];
 
       // If staff, also check assigned to me
       if (hasRole("admin", "mis")) {
-        queries.push(api.get<PaginatedResponse<Ticket>>(`/tickets/?assignee_id=${user?.id}&limit=1`));
+        queries.push(
+          api.get<PaginatedResponse<Ticket>>(
+            `/tickets/?assignee_id=${user?.id}&limit=1`,
+          ),
+        );
       }
 
       const results = await Promise.all(queries);
@@ -92,15 +100,42 @@
   <!-- Stats Grid -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
     {#if hasRole("approver", "admin") && totalPendingApprovals > 0}
-      <StatsCard icon={ClipboardCheck} label="To Approve" value={totalPendingApprovals} color="primary" sub="Pending your decision" />
+      <StatsCard
+        icon={ClipboardCheck}
+        label="To Approve"
+        value={totalPendingApprovals}
+        color="primary"
+        sub="Pending your decision"
+      />
     {/if}
     {#if hasRole("admin", "mis")}
-      <StatsCard icon={UserCheck} label="My Workload" value={totalAssignedToMe} color="secondary" sub="Assigned to you" />
+      <StatsCard
+        icon={UserCheck}
+        label="My Workload"
+        value={totalAssignedToMe}
+        color="secondary"
+        sub="Assigned to you"
+      />
     {/if}
     <StatsCard icon={Inbox} label="Total Open" value={totalOpen} color="info" />
-    <StatsCard icon={Clock} label="In Progress" value={totalInProgress} color="warning" />
-    <StatsCard icon={AlertTriangle} label="Overdue" value={totalOverdue} color="error" />
-    <StatsCard icon={CheckCircle} label="Resolved" value={totalResolved} color="success" />
+    <StatsCard
+      icon={Clock}
+      label="In Progress"
+      value={totalInProgress}
+      color="warning"
+    />
+    <StatsCard
+      icon={TriangleAlert}
+      label="Overdue"
+      value={totalOverdue}
+      color="error"
+    />
+    <StatsCard
+      icon={CircleCheckBig}
+      label="Resolved"
+      value={totalResolved}
+      color="success"
+    />
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -113,7 +148,8 @@
         </div>
         {#if loading}
           <div class="flex justify-center py-12">
-            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <span class="loading loading-spinner loading-lg text-primary"
+            ></span>
           </div>
         {:else}
           <div class="p-0">
@@ -129,19 +165,30 @@
       {#if hasRole("approver", "admin") && pendingApprovals.length > 0}
         <div class="card bg-primary/10 border border-primary/20 shadow-sm">
           <div class="card-body p-4">
-            <h2 class="card-title text-sm font-bold flex items-center gap-2 mb-2">
+            <h2
+              class="card-title text-sm font-bold flex items-center gap-2 mb-2"
+            >
               <ClipboardCheck size={18} class="text-primary" />
               Pending Approvals
             </h2>
             <div class="flex flex-col gap-2">
               {#each pendingApprovals.slice(0, 5) as app}
-                <a href="/tickets/{app.ticket_id}" class="bg-base-100 p-2 rounded-lg text-xs hover:bg-base-300 transition-colors flex justify-between items-center">
-                  <span class="truncate flex-1 font-medium">{(app as any).ticket?.title ?? `Ticket #${app.ticket_id}`}</span>
+                <a
+                  href="/tickets/{app.ticket_id}"
+                  class="bg-base-100 p-2 rounded-lg text-xs hover:bg-base-300 transition-colors flex justify-between items-center"
+                >
+                  <span class="truncate flex-1 font-medium"
+                    >{(app as any).ticket?.title ??
+                      `Ticket #${app.ticket_id}`}</span
+                  >
                   <span class="opacity-50 ml-2">#{app.ticket_id}</span>
                 </a>
               {/each}
               {#if pendingApprovals.length > 5}
-                <a href="/approvals" class="text-xs text-primary font-bold mt-1 hover:underline text-center">
+                <a
+                  href="/approvals"
+                  class="text-xs text-primary font-bold mt-1 hover:underline text-center"
+                >
                   View all {pendingApprovals.length} approvals
                 </a>
               {/if}
@@ -155,14 +202,20 @@
         <div class="card-body p-4">
           <h2 class="card-title text-sm font-bold mb-2">Quick Actions</h2>
           <div class="grid grid-cols-1 gap-2">
-            <a href="/tickets/new" class="btn btn-sm btn-outline btn-primary justify-start">
+            <a
+              href="/tickets/new"
+              class="btn btn-sm btn-outline btn-primary justify-start"
+            >
               <Plus size={14} /> New Ticket
             </a>
             <a href="/my-tickets" class="btn btn-sm btn-outline justify-start">
               <Inbox size={14} /> My Tickets
             </a>
             {#if hasRole("approver", "admin")}
-              <a href="/approvals" class="btn btn-sm btn-outline btn-primary justify-start">
+              <a
+                href="/approvals"
+                class="btn btn-sm btn-outline btn-primary justify-start"
+              >
                 <ClipboardCheck size={14} /> My Approvals
               </a>
             {/if}

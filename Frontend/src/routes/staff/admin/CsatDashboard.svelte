@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
-  import type { CSATStats, CSAT, PaginatedResponse } from "../../lib/types";
+  import { api } from "../../../lib/api";
+  import type { CSATStats, CSAT, PaginatedResponse } from "../../../lib/types";
   import { Star, TrendingUp, Users, BarChart3 } from "lucide-svelte";
-  import StatsCard from "../../components/StatsCard.svelte";
+  import StatsCard from "../../../components/StatsCard.svelte";
 
   let stats = $state<CSATStats | null>(null);
   let loading = $state(true);

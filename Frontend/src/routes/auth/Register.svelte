@@ -1,8 +1,7 @@
 <script lang="ts">
-  import auth from "../auth.svelte";
-  import { getDepartments } from "../stores/reference.svelte";
-  import { api } from "../lib/api";
-  import type { Department } from "../lib/types";
+  import auth from "../../auth.svelte";
+  import { api } from "../../lib/api";
+  import type { Department } from "../../lib/types";
   import { Ticket } from "lucide-svelte";
   import { onMount } from "svelte";
 
@@ -48,7 +47,9 @@
   <div class="card-body gap-5">
     <!-- Branding -->
     <div class="flex flex-col items-center gap-2">
-      <div class="bg-primary text-primary-content w-14 h-14 rounded-2xl flex items-center justify-center">
+      <div
+        class="bg-primary text-primary-content w-14 h-14 rounded-2xl flex items-center justify-center"
+      >
         <Ticket size={28} />
       </div>
       <h1 class="text-2xl font-bold">Create Account</h1>
@@ -56,44 +57,92 @@
     </div>
 
     {#if error}
-      <div role="alert" class="alert alert-error alert-soft text-sm">{error}</div>
+      <div role="alert" class="alert alert-error alert-soft text-sm">
+        {error}
+      </div>
     {/if}
 
     <form onsubmit={handleRegister} class="flex flex-col gap-3">
       <div class="grid grid-cols-2 gap-3">
         <fieldset class="fieldset">
           <label class="label" for="reg-fname">First name</label>
-          <input id="reg-fname" type="text" class="input input-bordered w-full" required bind:value={first_name} disabled={loading} />
+          <input
+            id="reg-fname"
+            type="text"
+            class="input input-bordered w-full"
+            required
+            bind:value={first_name}
+            disabled={loading}
+          />
         </fieldset>
         <fieldset class="fieldset">
           <label class="label" for="reg-lname">Last name</label>
-          <input id="reg-lname" type="text" class="input input-bordered w-full" required bind:value={last_name} disabled={loading} />
+          <input
+            id="reg-lname"
+            type="text"
+            class="input input-bordered w-full"
+            required
+            bind:value={last_name}
+            disabled={loading}
+          />
         </fieldset>
       </div>
 
       <fieldset class="fieldset">
         <label class="label" for="reg-email">Email</label>
-        <input id="reg-email" type="email" class="input input-bordered w-full" required bind:value={email} disabled={loading} />
+        <input
+          id="reg-email"
+          type="email"
+          class="input input-bordered w-full"
+          required
+          bind:value={email}
+          disabled={loading}
+        />
       </fieldset>
 
       <fieldset class="fieldset">
         <label class="label" for="reg-username">Username</label>
-        <input id="reg-username" type="text" class="input input-bordered w-full" required bind:value={username} disabled={loading} />
+        <input
+          id="reg-username"
+          type="text"
+          class="input input-bordered w-full"
+          required
+          bind:value={username}
+          disabled={loading}
+        />
       </fieldset>
 
       <fieldset class="fieldset">
         <label class="label" for="reg-password">Password</label>
-        <input id="reg-password" type="password" class="input input-bordered w-full" required bind:value={password} disabled={loading} />
+        <input
+          id="reg-password"
+          type="password"
+          class="input input-bordered w-full"
+          required
+          bind:value={password}
+          disabled={loading}
+        />
       </fieldset>
 
       <div class="grid grid-cols-2 gap-3">
         <fieldset class="fieldset">
           <label class="label" for="reg-position">Position</label>
-          <input id="reg-position" type="text" class="input input-bordered w-full" bind:value={position} disabled={loading} />
+          <input
+            id="reg-position"
+            type="text"
+            class="input input-bordered w-full"
+            bind:value={position}
+            disabled={loading}
+          />
         </fieldset>
         <fieldset class="fieldset">
           <label class="label" for="reg-dept">Department</label>
-          <select id="reg-dept" class="select select-bordered w-full" bind:value={department_id} disabled={loading}>
+          <select
+            id="reg-dept"
+            class="select select-bordered w-full"
+            bind:value={department_id}
+            disabled={loading}
+          >
             <option value={undefined}>— None —</option>
             {#each departments as dept}
               <option value={dept.id}>{dept.name}</option>
@@ -102,8 +151,13 @@
         </fieldset>
       </div>
 
-      <button class="btn btn-primary w-full mt-2" type="submit" disabled={loading}>
-        {#if loading}<span class="loading loading-spinner loading-sm"></span>{/if}
+      <button
+        class="btn btn-primary w-full mt-2"
+        type="submit"
+        disabled={loading}
+      >
+        {#if loading}<span class="loading loading-spinner loading-sm"
+          ></span>{/if}
         Create Account
       </button>
     </form>

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
-  import type { AuditLog, PaginatedResponse } from "../../lib/types";
-  import Pagination from "../../components/Pagination.svelte";
+  import { api } from "../../../lib/api";
+  import type { AuditLog, PaginatedResponse } from "../../../lib/types";
+  import Pagination from "../../../components/Pagination.svelte";
   import { ScrollText, Search, Clock, Filter } from "lucide-svelte";
 
   let activeTab = $state<"ticket" | "auth">("ticket");
@@ -31,6 +31,18 @@
     "user_registered", "user_login", "user_login_failed", "user_logout",
   ];
 
+  $effect(() => {
+    if (activeTab === "ticket" && !ticketIdFilter && !actionFilter) {
+      loadTicketAudit(1);
+    }
+  });
+
+  $effect(() => {
+    if (activeTab === "auth" && !authActionFilter) {
+      loadAuthAudit(1);
+    }
+  });
+
   onMount(() => {
     loadTicketAudit();
     loadAuthAudit();
@@ -42,10 +54,17 @@
     params.set("page", String(page));
     params.set("limit", "30");
     if (ticketIdFilter) params.set("ticket_id", ticketIdFilter);
-    if (actionFilter) params.set("action", actionFilter);
+    
+    // Logic: if actionFilter is empty, tell backend to exclude comment_added
+    // If actionFilter is set, use that specific action.
+    if (actionFilter) {
+      params.set("action", actionFilter);
+    } else {
+      params.set("exclude_action", "comment_added");
+    }
 
     try {
-      const res = await api.get<PaginatedResponse<AuditLog>>(`/audit/?${params}`);
+      const res = await api.get<PaginatedResponse<AuditLog>>(`/audit?${params}`);
       if (res) {
         ticketLogs = res.data;
         ticketPagination = res.pagination;
@@ -98,12 +117,19 @@
       <div class="flex flex-wrap items-end gap-3">
         <fieldset class="fieldset">
           <label class="label text-xs" for="audit-id">Ticket ID</label>
-          <input id="audit-id" type="number" class="input input-bordered input-sm w-28" placeholder="#" bind:value={ticketIdFilter} />
+          <input 
+            id="audit-id" 
+            type="number" 
+            class="input input-bordered input-sm w-28" 
+            placeholder="All" 
+            bind:value={ticketIdFilter} 
+            onkeydown={(e) => e.key === 'Enter' && loadTicketAudit(1)}
+          />
         </fieldset>
         <fieldset class="fieldset">
           <label class="label text-xs" for="audit-action">Action</label>
-          <select id="audit-action" class="select select-bordered select-sm" bind:value={actionFilter}>
-            <option value="">All</option>
+          <select id="audit-action" class="select select-bordered select-sm" bind:value={actionFilter} onchange={() => loadTicketAudit(1)}>
+            <option value="">All Actions</option>
             {#each ticketActions as action}
               <option value={action}>{action.replace(/_/g, " ")}</option>
             {/each}

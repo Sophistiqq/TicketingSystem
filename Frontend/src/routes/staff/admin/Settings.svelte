@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
-  import { refreshReferenceData } from "../../stores/reference.svelte";
-  import type { Department, AffectedSystem, RequestType } from "../../lib/types";
+  import { api } from "../../../lib/api";
+  import { refreshReferenceData } from "../../../stores/reference.svelte";
+  import type { Department, AffectedSystem, RequestType } from "../../../lib/types";
   import { Plus, Pencil, Trash2, Settings as SettingsIcon } from "lucide-svelte";
 
   // All reference data

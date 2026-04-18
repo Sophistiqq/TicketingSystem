@@ -7,19 +7,26 @@ import { setCurrentUser, getCurrentUser } from './stores/user.svelte';
 import { startPolling } from './stores/notifications.svelte';
 import { fetchReferenceData } from './stores/reference.svelte';
 
-// ── Route components (lazy-ish — Vite will code-split) ──────
-import Login from './routes/Login.svelte';
-import Register from './routes/Register.svelte';
-import Dashboard from './routes/Dashboard.svelte';
-import CreateTicket from './routes/CreateTicket.svelte';
-import TicketDetail from './routes/TicketDetail.svelte';
-import MyTickets from './routes/MyTickets.svelte';
-import MyApprovals from './routes/MyApprovals.svelte';
-import Notifications from './routes/Notifications.svelte';
-import Users from './routes/admin/Users.svelte';
-import AuditLog from './routes/admin/AuditLog.svelte';
-import CsatDashboard from './routes/admin/CsatDashboard.svelte';
-import Settings from './routes/admin/Settings.svelte';
+// ── Route components ────────────────────────────────────────
+
+// Auth
+import Login from './routes/auth/Login.svelte';
+import Register from './routes/auth/Register.svelte';
+
+// User (Common)
+import Dashboard from './routes/user/Dashboard.svelte';
+import CreateTicket from './routes/user/CreateTicket.svelte';
+import TicketDetail from './routes/user/TicketDetail.svelte';
+import MyTickets from './routes/user/MyTickets.svelte';
+import Notifications from './routes/user/Notifications.svelte';
+import Profile from './routes/user/Profile.svelte';
+
+// Staff (Approver / Admin / MIS)
+import MyApprovals from './routes/staff/MyApprovals.svelte';
+import Users from './routes/staff/admin/Users.svelte';
+import AuditLog from './routes/staff/admin/AuditLog.svelte';
+import CsatDashboard from './routes/staff/admin/CsatDashboard.svelte';
+import Settings from './routes/staff/admin/Settings.svelte';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
 
@@ -58,15 +65,16 @@ export const { p, navigate, isActive, route } = createRouter({
   '/login': Login,
   '/register': Register,
 
-  // ── Authenticated ───────────────────────────────────────
+  // ── Authenticated (User) ────────────────────────────────
   '/': Dashboard,
   '/tickets/new': CreateTicket,
   '/tickets/:id': TicketDetail,
   '/my-tickets': MyTickets,
-  '/approvals': MyApprovals,
   '/notifications': Notifications,
+  '/profile': Profile,
 
-  // ── Admin / MIS ─────────────────────────────────────────
+  // ── Staff / Admin ───────────────────────────────────────
+  '/approvals': MyApprovals,
   '/admin/users': Users,
   '/admin/audit': AuditLog,
   '/admin/csat': CsatDashboard,
