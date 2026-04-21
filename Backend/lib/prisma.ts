@@ -1,16 +1,10 @@
+import "dotenv/config";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../generated/prisma/client";
-import { PrismaLibSql } from "@prisma/adapter-libsql";
 
-// create a .env file in the root directory with DATABASE_URL
-// e.g DATABASE_URL=file:./database.db
+const connectionString = `${process.env.DATABASE_URL}`;
 
-const databaseUrl = process.env.DATABASE_URL;
+const adapter = new PrismaPg({ connectionString });
+const prisma = new PrismaClient({ adapter });
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is not set");
-}
-
-const adapter = new PrismaLibSql({
-  url: databaseUrl,
-});
-export const prisma = new PrismaClient({ adapter });
+export { prisma };

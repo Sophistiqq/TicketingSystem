@@ -2,3 +2,8 @@ generated/
 README.md
 tsconfig.json
 bun.lock
+codebase.md
+.env
+FRONTEND_GUIDE.md
+GEMINI.md
+
