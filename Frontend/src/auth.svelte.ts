@@ -6,6 +6,7 @@ import { setCurrentUser } from './stores/user.svelte';
 import { startPolling, stopPolling } from './stores/notifications.svelte';
 import { fetchReferenceData } from './stores/reference.svelte';
 import { navigate } from './router.svelte';
+import { ws } from './lib/ws';
 import type { LoginResponse, User } from './lib/types';
 
 const auth = {
@@ -27,6 +28,7 @@ const auth = {
         setCurrentUser(res.user);
         startPolling();
         fetchReferenceData();
+        ws.connect();
         await navigate('/');
       }
     } catch (e: any) {
@@ -43,6 +45,7 @@ const auth = {
     }
     setCurrentUser(null);
     stopPolling();
+    ws.disconnect();
     await navigate('/login');
   },
 

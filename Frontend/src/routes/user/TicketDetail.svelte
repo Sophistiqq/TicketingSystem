@@ -4,30 +4,26 @@
   import { route, navigate } from "../../router.svelte";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
   import { simpleConfirm, simplePrompt } from "../../stores/ui.svelte";
+  import { ws } from "../../lib/ws";
   import type { Ticket, TicketComment, User } from "../../lib/types";
   import StatusBadge from "../../components/StatusBadge.svelte";
   import PriorityBadge from "../../components/PriorityBadge.svelte";
   import {
-    ArrowLeft,
     Send,
     MessageSquare,
     Paperclip,
     Upload,
     Trash2,
     Download,
-    Clock,
     Pencil,
-    EyeOff,
     CircleCheckBig,
     CircleX,
     TriangleAlert,
     Star,
     ClipboardCheck,
-    ChevronDown,
-    ChevronUp,
     ImageIcon,
-    FileText,
     Search,
+    Plus,
   } from "lucide-svelte";
 
   let ticket = $state<Ticket | null>(null);
@@ -35,7 +31,6 @@
   let activeTab = $state<"comments" | "attachments" | "approvals" | "history">(
     "comments",
   );
-  let imagesExpanded = $state(true);
 
   // Comment form
   let commentText = $state("");
@@ -77,6 +72,33 @@
     ),
   );
   let canManage = $derived(hasRole("admin", "mis") || isAssigned);
+  let canClaim = $derived(
+    ticket &&
+      !ticket.assignee_id &&
+      (hasRole("admin", "mis") ||
+        (user?.department_id &&
+          (Number(ticket.department_id) === Number(user.department_id) ||
+            Number(ticket.affected_system?.department_id) ===
+              Number(user.department_id) ||
+            Number(ticket.request_type?.department_id) ===
+              Number(user.department_id)))),
+  );
+
+  async function claimTicket() {
+    if (!ticket || !user) return;
+    statusLoading = true;
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        assignee_id: user.id,
+        status: ticket.status === "open" ? "in_progress" : undefined,
+      });
+      await loadTicket();
+    } catch (e: any) {
+      statusError = e?.message ?? "Claim failed";
+    }
+    statusLoading = false;
+  }
+
   let showCsat = $derived(
     isOwner &&
       (ticket?.status === "resolved" || ticket?.status === "closed") &&
@@ -101,6 +123,38 @@
     }
   });
 
+  $effect(() => {
+    if (!ticket?.id) return;
+
+    const unsubUpdate = ws.onTicketUpdate(ticket.id, (update) => {
+      if (ticket) {
+        if (update.status) {
+          (ticket as any).status = update.status;
+          newStatus = update.status;
+        }
+        // Refresh full ticket if multiple fields changed
+        if (update.field.includes(",")) {
+          loadTicket();
+        }
+      }
+    });
+
+    const unsubComment = ws.onComment(ticket.id, (comment) => {
+      if (ticket) {
+        if (!ticket.comments) ticket.comments = [];
+        // Avoid duplicates if we just posted it
+        if (!ticket.comments.some((c) => c.id === comment.id)) {
+          ticket.comments = [...ticket.comments, comment as any];
+        }
+      }
+    });
+
+    return () => {
+      unsubUpdate();
+      unsubComment();
+    };
+  });
+
   async function loadTicket() {
     loading = true;
     try {
@@ -116,9 +170,9 @@
           const comments = await api.get<TicketComment[]>(
             `/comments?ticket_id=${res.id}`,
           );
-          ticket.comments = comments;
+          if (ticket) ticket.comments = comments;
         } catch {
-          ticket.comments = [];
+          if (ticket) ticket.comments = [];
         }
       }
     } catch {
@@ -160,12 +214,6 @@
     editingCommentId = comment.id;
     commentText = comment.content;
     isInternal = comment.is_internal;
-  }
-
-  async function deleteComment(id: number) {
-    if (!(await simpleConfirm("Delete this comment?", true))) return;
-    await api.delete(`/comments/${id}`);
-    await loadTicket();
   }
 
   async function updateTicket() {
@@ -230,7 +278,10 @@
     approvalId: number,
     decision: "approved" | "rejected",
   ) {
-    const remarks = await simplePrompt(`Remarks for ${decision}:`, "Add any internal remarks...");
+    const remarks = await simplePrompt(
+      `Remarks for ${decision}:`,
+      "Add any internal remarks...",
+    );
     if (remarks === null) return;
     await api.post(`/approvals/${approvalId}/decide`, {
       ticket_id: ticket!.id,
@@ -278,7 +329,6 @@
   }
 
   let imageAttachments = $derived(ticket?.attachments?.filter(isImage) ?? []);
-  let otherAttachments = $derived(ticket?.attachments?.filter(a => !isImage(a)) ?? []);
 
   let selectedZoomImage = $state<string | null>(null);
 
@@ -289,8 +339,8 @@
 
   let combinedContacts = $derived.by(() => {
     const list = [...recentContacts];
-    assignees.forEach(a => {
-      if (!list.some(c => c.id === a.id) && a.id !== user?.id) {
+    assignees.forEach((a) => {
+      if (!list.some((c) => c.id === a.id) && a.id !== user?.id) {
         list.push({ ...a, last_message: null });
       }
     });
@@ -304,14 +354,16 @@
       await api.post("/messages", {
         content: `Hi, referencing Ticket #${ticket.id}: "${ticket.title}"`,
         receiver_id: Number(sharingToId),
-        ticket_id: ticket.id
+        ticket_id: ticket.id,
       });
-      if (window.location.pathname === '/messages') {
+      if (window.location.pathname === "/messages") {
         window.location.search = `?userId=${sharingToId}`;
       } else {
         (navigate as any)(`/messages?userId=${sharingToId}`);
       }
-    } catch { /* handled */ }
+    } catch {
+      /* handled */
+    }
     shareLoading = false;
   }
 </script>
@@ -328,29 +380,36 @@
     {#if isPendingApprover}
       {@const myApproval = ticket?.approvers?.find(
         (a) =>
-          Number(a.approver_id) === Number(user?.id) &&
-          a.status === "pending",
+          Number(a.approver_id) === Number(user?.id) && a.status === "pending",
       )}
-      <div class="alert alert-primary shadow-md border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div
+        class="alert alert-primary shadow-md border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4"
+      >
         <div class="flex items-center gap-3">
-          <div class="bg-primary-content/20 p-2 rounded-lg text-primary-content">
+          <div
+            class="bg-primary-content/20 p-2 rounded-lg text-primary-content"
+          >
             <ClipboardCheck size={24} />
           </div>
           <div>
             <h3 class="font-bold">Approval Required</h3>
-            <p class="text-xs opacity-90">Please review and provide your decision for this request.</p>
+            <p class="text-xs opacity-90">
+              Please review and provide your decision for this request.
+            </p>
           </div>
         </div>
         <div class="flex gap-2 w-full sm:w-auto">
           <button
             class="btn btn-sm btn-success flex-1 sm:flex-none gap-2"
-            onclick={() => myApproval && handleApproval(myApproval.id, "approved")}
+            onclick={() =>
+              myApproval && handleApproval(myApproval.id, "approved")}
           >
             <CircleCheckBig size={16} /> Approve
           </button>
           <button
             class="btn btn-sm btn-error flex-1 sm:flex-none gap-2"
-            onclick={() => myApproval && handleApproval(myApproval.id, "rejected")}
+            onclick={() =>
+              myApproval && handleApproval(myApproval.id, "rejected")}
           >
             <CircleX size={16} /> Reject
           </button>
@@ -360,10 +419,14 @@
 
     <!-- ─── Header ─────────────────────────────────────────── -->
     <div class="bg-base-100 p-4 rounded-xl shadow-sm border border-base-300">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div
+        class="flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div class="space-y-1">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="badge badge-outline font-mono text-[10px] h-5">#{ticket.id}</span>
+            <span class="badge badge-outline font-mono text-[10px] h-5"
+              >#{ticket.id}</span
+            >
             <StatusBadge status={ticket.status} />
             <PriorityBadge priority={ticket.priority} />
             {#if ticket.sla_breached}
@@ -375,10 +438,18 @@
           <h1 class="text-xl font-bold tracking-tight">{ticket.title}</h1>
           <div class="flex items-center gap-3 text-xs opacity-60">
             <div class="flex items-center gap-1.5">
-              <div class="w-5 h-5 rounded-full bg-neutral flex items-center justify-center text-[9px] text-neutral-content">
-                {ticket.requester ? `${ticket.requester.first_name[0]}${ticket.requester.last_name[0]}` : '?'}
+              <div
+                class="w-5 h-5 rounded-full bg-neutral flex items-center justify-center text-[9px] text-neutral-content"
+              >
+                {ticket.requester
+                  ? `${ticket.requester.first_name[0]}${ticket.requester.last_name[0]}`
+                  : "?"}
               </div>
-              <span>{ticket.requester ? `${ticket.requester.first_name} ${ticket.requester.last_name}` : 'Unknown'}</span>
+              <span
+                >{ticket.requester
+                  ? `${ticket.requester.first_name} ${ticket.requester.last_name}`
+                  : "Unknown"}</span
+              >
             </div>
             <span>•</span>
             <time>{formatDate(ticket.created_at)}</time>
@@ -395,32 +466,46 @@
           <div class="card-body p-4">
             <div class="flex items-center justify-between mb-2">
               <div class="flex items-center gap-2">
-                <h3 class="font-bold text-xs uppercase tracking-wider text-primary/80">Issue Details</h3>
+                <h3
+                  class="font-bold text-xs uppercase tracking-wider text-primary/80"
+                >
+                  Issue Details
+                </h3>
                 <div class="h-px w-24 bg-base-300/50"></div>
               </div>
             </div>
-            <p class="whitespace-pre-wrap text-sm leading-relaxed mb-4">{ticket.description}</p>
+            <div class="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-relaxed mb-4">
+              {@html ticket.description}
+            </div>
 
             <!-- Inline Image Gallery -->
             {#if imageAttachments.length > 0}
               <div class="pt-4 border-t border-base-200">
                 <div class="flex items-center gap-2 mb-3">
-                   <ImageIcon size={14} class="opacity-50" />
-                   <span class="text-[10px] font-bold uppercase tracking-widest opacity-50">Attachments ({imageAttachments.length})</span>
+                  <ImageIcon size={14} class="opacity-50" />
+                  <span
+                    class="text-[10px] font-bold uppercase tracking-widest opacity-50"
+                    >Attachments ({imageAttachments.length})</span
+                  >
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                <div
+                  class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"
+                >
                   {#each imageAttachments as att (att.id)}
-                    <button 
+                    <button
                       type="button"
                       class="aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 hover:border-primary/50 transition-all group relative p-0"
-                      onclick={() => selectedZoomImage = `http://localhost:3000${att.file_url}`}
+                      onclick={() =>
+                        (selectedZoomImage = `http://localhost:3000${att.file_url}`)}
                     >
-                      <img 
-                        src="http://localhost:3000{att.file_url}" 
-                        alt={att.file_name} 
+                      <img
+                        src="http://localhost:3000{att.file_url}"
+                        alt={att.file_name}
                         class="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
-                      <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div
+                        class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      >
                         <Search size={20} class="text-white" />
                       </div>
                     </button>
@@ -449,7 +534,9 @@
                       <Star
                         size={18}
                         fill={star <= csatRating ? "currentColor" : "none"}
-                        class={star <= csatRating ? "text-warning" : "opacity-20"}
+                        class={star <= csatRating
+                          ? "text-warning"
+                          : "opacity-20"}
                       />
                     </button>
                   {/each}
@@ -473,7 +560,9 @@
         {/if}
 
         <!-- Tabs -->
-        <div class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden">
+        <div
+          class="card bg-base-100 shadow-sm border border-base-300 overflow-hidden"
+        >
           <div class="tabs tabs-md tabs-lifted bg-base-200/30">
             <button
               class="tab h-11"
@@ -481,7 +570,9 @@
               onclick={() => (activeTab = "comments")}
             >
               Comments
-              <span class="badge badge-xs badge-neutral ml-1.5">{ticket.comments?.length ?? 0}</span>
+              <span class="badge badge-xs badge-neutral ml-1.5"
+                >{ticket.comments?.length ?? 0}</span
+              >
             </button>
             <button
               class="tab h-11"
@@ -489,7 +580,9 @@
               onclick={() => (activeTab = "attachments")}
             >
               Files
-              <span class="badge badge-xs badge-neutral ml-1.5">{ticket.attachments?.length ?? 0}</span>
+              <span class="badge badge-xs badge-neutral ml-1.5"
+                >{ticket.attachments?.length ?? 0}</span
+              >
             </button>
             <button
               class="tab h-11"
@@ -497,7 +590,9 @@
               onclick={() => (activeTab = "approvals")}
             >
               Approvals
-              <span class="badge badge-xs badge-neutral ml-1.5">{ticket.approvers?.length ?? 0}</span>
+              <span class="badge badge-xs badge-neutral ml-1.5"
+                >{ticket.approvers?.length ?? 0}</span
+              >
             </button>
           </div>
 
@@ -540,26 +635,29 @@
                     <div
                       class="chat-header mb-0.5 text-[10px] font-medium flex items-center gap-1.5"
                     >
-                      <span class="opacity-80">{comment.user
-                        ? `${comment.user.first_name} ${comment.user.last_name}`
-                        : "Unknown"}</span>
+                      <span class="opacity-80"
+                        >{comment.user
+                          ? `${comment.user.first_name} ${comment.user.last_name}`
+                          : "Unknown"}</span
+                      >
                       <time class="opacity-40 font-normal"
                         >{formatDate(comment.created_at)}</time
                       >
                       {#if comment.is_internal}
-                        <span class="text-[9px] text-warning font-bold uppercase tracking-tighter"
+                        <span
+                          class="text-[9px] text-warning font-bold uppercase tracking-tighter"
                           >• INTERNAL</span
                         >
                       {/if}
                     </div>
                     <div
-                      class="chat-bubble min-h-0 py-1.5 px-3 shadow-sm text-sm leading-snug {comment.is_internal
+                      class="chat-bubble min-h-0 py-1.5 px-3 shadow-sm text-sm leading-snug prose prose-sm max-w-none {comment.is_internal
                         ? 'chat-bubble-warning'
                         : Number(comment.user_id) === Number(user?.id)
                           ? 'chat-bubble-primary'
                           : 'chat-bubble-neutral'} whitespace-pre-wrap"
                     >
-                      {comment.content}
+                      {@html comment.content}
                     </div>
                   </div>
                 {:else}
@@ -570,7 +668,9 @@
               </div>
 
               <!-- Comment input -->
-              <div class="bg-base-200/30 p-3 rounded-lg border border-base-300 flex flex-col gap-2">
+              <div
+                class="bg-base-200/30 p-3 rounded-lg border border-base-300 flex flex-col gap-2"
+              >
                 <textarea
                   class="textarea textarea-bordered textarea-sm w-full text-sm bg-base-100"
                   placeholder="Reply..."
@@ -586,7 +686,9 @@
                         class="checkbox checkbox-xs checkbox-warning"
                         bind:checked={isInternal}
                       />
-                      <span class="text-[10px] font-bold uppercase opacity-60">Internal note</span>
+                      <span class="text-[10px] font-bold uppercase opacity-60"
+                        >Internal note</span
+                      >
                     </label>
                   {:else}
                     <div></div>
@@ -596,7 +698,9 @@
                     onclick={submitComment}
                     disabled={!commentText.trim() || commentLoading}
                   >
-                    {#if commentLoading}<span class="loading loading-spinner loading-xs"></span>{/if}
+                    {#if commentLoading}<span
+                        class="loading loading-spinner loading-xs"
+                      ></span>{/if}
                     <Send size={12} /> Send
                   </button>
                 </div>
@@ -608,24 +712,30 @@
                     class="flex items-center gap-3 bg-base-100 rounded-lg p-2 border border-base-200 hover:border-base-300 transition-colors"
                   >
                     {#if isImage(att)}
-                      <ImageIcon size={14} class="opacity-40 shrink-0 text-primary" />
+                      <ImageIcon
+                        size={14}
+                        class="opacity-40 shrink-0 text-primary"
+                      />
                     {:else}
                       <Paperclip size={14} class="opacity-40 shrink-0" />
                     {/if}
-                    
+
                     <div class="flex-1 min-w-0">
                       <p class="text-xs font-medium truncate">
                         {att.file_name}
                       </p>
                       <p class="text-[10px] opacity-40">
-                        {att.type} · {(att.file_size ?? 0) > 0 ? `${(att.file_size! / 1024).toFixed(0)} KB` : "unknown size"}
+                        {att.type} · {(att.file_size ?? 0) > 0
+                          ? `${(att.file_size! / 1024).toFixed(0)} KB`
+                          : "unknown size"}
                       </p>
                     </div>
-                    
+
                     {#if isImage(att)}
-                      <button 
+                      <button
                         class="btn btn-ghost btn-xs h-7 w-7"
-                        onclick={() => selectedZoomImage = `http://localhost:3000${att.file_url}`}
+                        onclick={() =>
+                          (selectedZoomImage = `http://localhost:3000${att.file_url}`)}
                         title="View"
                       >
                         <Search size={12} />
@@ -640,7 +750,7 @@
                     >
                       <Download size={12} />
                     </a>
-                    
+
                     {#if hasRole("admin", "mis")}
                       <button
                         class="btn btn-ghost btn-xs h-7 w-7 text-error"
@@ -652,7 +762,9 @@
                     {/if}
                   </div>
                 {:else}
-                  <div class="text-center py-8 opacity-30 text-xs bg-base-200/50 rounded-lg border border-dashed border-base-300">
+                  <div
+                    class="text-center py-8 opacity-30 text-xs bg-base-200/50 rounded-lg border border-dashed border-base-300"
+                  >
                     <Paperclip size={24} class="mx-auto mb-2 opacity-50" />
                     <p>No files attached to this ticket.</p>
                   </div>
@@ -690,7 +802,9 @@
                     >
                       <option value={undefined}>Assign Approver...</option>
                       {#each allApprovers as a}
-                        <option value={a.id}>{a.first_name} {a.last_name}</option>
+                        <option value={a.id}
+                          >{a.first_name} {a.last_name}</option
+                        >
                       {/each}
                     </select>
                     <button
@@ -709,26 +823,55 @@
                       class="flex items-center gap-3 bg-base-100 rounded-lg p-2.5 border border-base-200"
                     >
                       <div class="avatar avatar-placeholder shrink-0">
-                        <div class="bg-neutral text-neutral-content w-8 h-8 rounded-full">
-                          <span class="text-[10px]">{approval.approver ? `${approval.approver.first_name[0]}${approval.approver.last_name[0]}` : "?"}</span>
+                        <div
+                          class="bg-neutral text-neutral-content w-8 h-8 rounded-full"
+                        >
+                          <span class="text-[10px]"
+                            >{approval.approver
+                              ? `${approval.approver.first_name[0]}${approval.approver.last_name[0]}`
+                              : "?"}</span
+                          >
                         </div>
                       </div>
                       <div class="flex-1 min-w-0">
                         <p class="text-xs font-bold truncate">
-                          {approval.approver ? `${approval.approver.first_name} ${approval.approver.last_name}` : `ID: ${approval.approver_id}`}
+                          {approval.approver
+                            ? `${approval.approver.first_name} ${approval.approver.last_name}`
+                            : `ID: ${approval.approver_id}`}
                         </p>
-                        <span class="text-[9px] uppercase font-bold {approval.status === 'approved' ? 'text-success' : approval.status === 'rejected' ? 'text-error' : 'text-warning'}">
+                        <span
+                          class="text-[9px] uppercase font-bold {approval.status ===
+                          'approved'
+                            ? 'text-success'
+                            : approval.status === 'rejected'
+                              ? 'text-error'
+                              : 'text-warning'}"
+                        >
                           {approval.status}
                         </span>
                       </div>
                       {#if approval.status === "pending" && (approval.approver_id === user?.id || hasRole("admin", "mis"))}
                         <div class="flex gap-1 scale-90 origin-right">
                           {#if approval.approver_id === user?.id}
-                            <button class="btn btn-success btn-xs btn-square" onclick={() => handleApproval(approval.id, "approved")}><CircleCheckBig size={12} /></button>
-                            <button class="btn btn-error btn-xs btn-square" onclick={() => handleApproval(approval.id, "rejected")}><CircleX size={12} /></button>
+                            <button
+                              class="btn btn-success btn-xs btn-square"
+                              onclick={() =>
+                                handleApproval(approval.id, "approved")}
+                              ><CircleCheckBig size={12} /></button
+                            >
+                            <button
+                              class="btn btn-error btn-xs btn-square"
+                              onclick={() =>
+                                handleApproval(approval.id, "rejected")}
+                              ><CircleX size={12} /></button
+                            >
                           {/if}
                           {#if hasRole("admin", "mis")}
-                            <button class="btn btn-ghost btn-xs btn-square text-error" onclick={() => removeApprover(approval.id)}><Trash2 size={12} /></button>
+                            <button
+                              class="btn btn-ghost btn-xs btn-square text-error"
+                              onclick={() => removeApprover(approval.id)}
+                              ><Trash2 size={12} /></button
+                            >
                           {/if}
                         </div>
                       {/if}
@@ -746,15 +889,24 @@
         <!-- Details Card -->
         <div class="card bg-base-100 shadow-sm border border-base-300">
           <div class="card-body p-4 gap-3">
-            <h3 class="font-bold text-[10px] uppercase tracking-widest text-base-content/40">Details</h3>
+            <h3
+              class="font-bold text-[10px] uppercase tracking-widest text-base-content/40"
+            >
+              Details
+            </h3>
 
             <div class="space-y-3">
               <div class="flex flex-col gap-0.5 group/req">
-                <span class="text-[9px] font-bold uppercase opacity-30">Requester</span>
+                <span class="text-[9px] font-bold uppercase opacity-30"
+                  >Requester</span
+                >
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-medium truncate">{ticket?.requester?.first_name} {ticket?.requester?.last_name}</span>
+                  <span class="text-xs font-medium truncate"
+                    >{ticket?.requester?.first_name}
+                    {ticket?.requester?.last_name}</span
+                  >
                   {#if ticket && ticket.requester_id !== user?.id}
-                    <a 
+                    <a
                       href="/messages?userId={ticket.requester_id}"
                       class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/req:opacity-100 transition-opacity text-primary flex items-center justify-center"
                       title="Chat with Requester"
@@ -765,13 +917,21 @@
                 </div>
               </div>
               <div class="flex flex-col gap-0.5 group/ass">
-                <span class="text-[9px] font-bold uppercase opacity-30">Assignee</span>
+                <span class="text-[9px] font-bold uppercase opacity-30"
+                  >Assignee</span
+                >
                 <div class="flex items-center justify-between">
-                  <span class="text-xs font-medium truncate {ticket?.assignee ? '' : 'italic opacity-40'}">
-                    {ticket?.assignee ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}` : "Unassigned"}
+                  <span
+                    class="text-xs font-medium truncate {ticket?.assignee
+                      ? ''
+                      : 'italic opacity-40'}"
+                  >
+                    {ticket?.assignee
+                      ? `${ticket.assignee.first_name} ${ticket.assignee.last_name}`
+                      : "Unassigned"}
                   </span>
                   {#if ticket && ticket.assignee && ticket.assignee_id !== user?.id}
-                    <a 
+                    <a
                       href="/messages?userId={ticket.assignee_id}"
                       class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/ass:opacity-100 transition-opacity text-primary flex items-center justify-center"
                       title="Chat with Assignee"
@@ -784,11 +944,15 @@
               <div class="grid grid-cols-1 gap-2 pt-1 border-t border-base-200">
                 <div class="flex justify-between items-center text-[11px]">
                   <span class="opacity-50">Type</span>
-                  <span class="font-medium">{ticket.request_type?.name ?? "—"}</span>
+                  <span class="font-medium"
+                    >{ticket.request_type?.name ?? "—"}</span
+                  >
                 </div>
                 <div class="flex justify-between items-center text-[11px]">
                   <span class="opacity-50">System</span>
-                  <span class="font-medium truncate max-w-[100px]">{ticket.affected_system?.name ?? "—"}</span>
+                  <span class="font-medium truncate max-w-[100px]"
+                    >{ticket.affected_system?.name ?? "—"}</span
+                  >
                 </div>
               </div>
             </div>
@@ -797,88 +961,117 @@
 
         <!-- Share Card -->
         <div class="card bg-base-100 shadow-sm border border-base-300">
-           <div class="card-body p-4 gap-3">
-              <h3 class="font-bold text-[10px] uppercase tracking-widest text-base-content/40">Share Reference</h3>
-              <div class="space-y-2">
-                 <select 
-                  class="select select-bordered select-sm w-full text-xs h-8 min-h-0 bg-none appearance-none pr-3" 
-                  bind:value={sharingToId}
-                 >
-                    <option value={undefined}>Select contact...</option>
-                    {#each combinedContacts as contact}
-                       <option value={contact.id}>{contact.first_name} {contact.last_name}</option>
-                    {/each}
-                 </select>
-                 <button 
-                  class="btn btn-ghost btn-sm w-full text-xs h-8 min-h-0 gap-2 border border-base-300 shadow-xs" 
-                  onclick={shareReference}
-                  disabled={!sharingToId || shareLoading}
-                 >
-                    <MessageSquare size={14} />
-                    Send to Chat
-                 </button>
-              </div>
-           </div>
+          <div class="card-body p-4 gap-3">
+            <h3
+              class="font-bold text-[10px] uppercase tracking-widest text-base-content/40"
+            >
+              Share Reference
+            </h3>
+            <div class="space-y-2">
+              <select
+                class="select select-bordered select-sm w-full text-xs h-8 min-h-0 bg-none appearance-none pr-3"
+                bind:value={sharingToId}
+              >
+                <option value={undefined}>Select contact...</option>
+                {#each combinedContacts as contact}
+                  <option value={contact.id}
+                    >{contact.first_name} {contact.last_name}</option
+                  >
+                {/each}
+              </select>
+              <button
+                class="btn btn-ghost btn-sm w-full text-xs h-8 min-h-0 gap-2 border border-base-300 shadow-xs"
+                onclick={shareReference}
+                disabled={!sharingToId || shareLoading}
+              >
+                <MessageSquare size={14} />
+                Send to Chat
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Management Card -->
-        {#if canManage}
+        {#if canManage || canClaim}
           <div class="card bg-base-100 shadow-md border border-primary/10">
             <div class="card-body p-4 gap-3">
-              <h3 class="font-bold text-[10px] uppercase tracking-widest text-primary">Management</h3>
-              
+              <h3
+                class="font-bold text-[10px] uppercase tracking-widest text-primary"
+              >
+                Management
+              </h3>
+
               <div class="space-y-3">
-                <div class="form-control">
-                  <select
-                    class="select select-bordered select-sm w-full text-xs h-8 min-h-0"
-                    bind:value={newStatus}
+                {#if canClaim}
+                  <button
+                    class="btn btn-primary btn-sm w-full gap-2 shadow-sm animate-pulse-once"
+                    onclick={claimTicket}
+                    disabled={statusLoading}
                   >
-                    <option value="open">Open</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="pending_approval">Pending Approval</option>
-                    <option value="resolved">Resolved</option>
-                    <option value="closed">Closed</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
-                </div>
-
-                <div class="form-control">
-                  <select
-                    class="select select-bordered select-sm w-full text-xs h-8 min-h-0"
-                    bind:value={assigneeId}
-                  >
-                    <option value={undefined}>Assignee...</option>
-                    {#each assignees as a}
-                      <option value={a.id}>{a.first_name} {a.last_name}</option>
-                    {/each}
-                  </select>
-                </div>
-
-                {#if newStatus === "resolved"}
-                  <textarea
-                    class="textarea textarea-bordered textarea-xs w-full"
-                    rows="2"
-                    placeholder="Resolution notes..."
-                    bind:value={resolutionNotes}
-                  ></textarea>
+                    <Plus size={16} /> Assign to Myself
+                  </button>
+                  <div class="divider my-0 opacity-20"></div>
                 {/if}
 
-                {#if ticket.status === "closed" && newStatus === "open"}
-                  <textarea
-                    class="textarea textarea-bordered textarea-xs w-full"
-                    rows="2"
-                    placeholder="Reopen reason..."
-                    bind:value={reopenReason}
-                  ></textarea>
-                {/if}
+                {#if canManage}
+                  <div class="space-y-3">
+                    <div class="form-control">
+                      <select
+                        class="select select-bordered select-sm w-full text-xs h-8 min-h-0"
+                        bind:value={newStatus}
+                      >
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="pending_approval"
+                          >Pending Approval</option
+                        >
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                        <option value="rejected">Rejected</option>
+                      </select>
+                    </div>
 
-                <button
-                  class="btn btn-primary btn-sm w-full text-xs h-8 min-h-0 shadow-sm"
-                  onclick={updateTicket}
-                  disabled={statusLoading}
-                >
-                  Save Changes
-                </button>
+                    <div class="form-control">
+                      <select
+                        class="select select-bordered select-sm w-full text-xs h-8 min-h-0"
+                        bind:value={assigneeId}
+                      >
+                        <option value={undefined}>Assignee...</option>
+                        {#each assignees as a}
+                          <option value={a.id}
+                            >{a.first_name} {a.last_name}</option
+                          >
+                        {/each}
+                      </select>
+                    </div>
+
+                    {#if newStatus === "resolved"}
+                      <textarea
+                        class="textarea textarea-bordered textarea-xs w-full"
+                        rows="2"
+                        placeholder="Resolution notes..."
+                        bind:value={resolutionNotes}
+                      ></textarea>
+                    {/if}
+
+                    {#if ticket.status === "closed" && newStatus === "open"}
+                      <textarea
+                        class="textarea textarea-bordered textarea-xs w-full"
+                        rows="2"
+                        placeholder="Reopen reason..."
+                        bind:value={reopenReason}
+                      ></textarea>
+                    {/if}
+
+                    <button
+                      class="btn btn-primary btn-sm w-full text-xs h-8 min-h-0 shadow-sm"
+                      onclick={updateTicket}
+                      disabled={statusLoading}
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                {/if}
               </div>
             </div>
           </div>
@@ -891,19 +1084,19 @@
 {#if selectedZoomImage}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div 
+  <div
     class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 animate-in fade-in duration-200"
-    onclick={() => selectedZoomImage = null}
+    onclick={() => (selectedZoomImage = null)}
   >
-    <button 
+    <button
       class="absolute top-4 right-4 btn btn-circle btn-ghost text-white"
-      onclick={() => selectedZoomImage = null}
+      onclick={() => (selectedZoomImage = null)}
     >
       <CircleX size={32} />
     </button>
-    <img 
-      src={selectedZoomImage} 
-      alt="Zoomed preview" 
+    <img
+      src={selectedZoomImage}
+      alt="Zoomed preview"
       class="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-200"
     />
   </div>

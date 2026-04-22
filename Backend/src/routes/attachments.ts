@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
 import { saveFile } from "../plugins/fileUpload";
+import { broadcaster } from "../ws/broadcaster";
 
 export const attachments = new Elysia({ prefix: "/attachments" })
   .use(validator);
@@ -99,6 +100,14 @@ attachments
         });
 
         created.push(attachment);
+      }
+
+      if (created.length > 0) {
+        broadcaster.ticketUpdated(ticket_id, {
+          field: 'attachments',
+          new_value: created.length === 1 ? created[0].file_name : `${created.length} files`,
+          updated_by: `User #${user}`
+        });
       }
 
       return status(201, created.length === 1 ? created[0] : created);

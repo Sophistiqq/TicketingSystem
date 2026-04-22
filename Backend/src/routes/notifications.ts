@@ -1,6 +1,35 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
+import { broadcaster } from "../ws/broadcaster";
+
+export async function createAndPushNotification(
+  userId: number,
+  ticketId: number | null,
+  type: string,
+  message: string,
+  tx?: any
+) {
+  const db = tx || prisma;
+  const notification = await db.notification.create({
+    data: {
+      user_id: userId,
+      ticket_id: ticketId,
+      type: type as any,
+      message,
+    },
+  });
+
+  // Push live
+  broadcaster.notifyUser(userId, {
+    id: notification.id,
+    type: notification.type,
+    message: notification.message,
+    ticket_id: notification.ticket_id,
+  });
+
+  return notification;
+}
 
 export const notifications = new Elysia({ prefix: "/notifications" })
   .use(validator)
@@ -23,20 +52,18 @@ export const notifications = new Elysia({ prefix: "/notifications" })
 
       const skip = (page - 1) * limit;
 
-      const [data, total] = await Promise.all([
-        prisma.notification.findMany({
-          where,
-          include: {
-            ticket: {
-              select: { id: true, title: true, status: true },
-            },
+      const data = await prisma.notification.findMany({
+        where,
+        include: {
+          ticket: {
+            select: { id: true, title: true, status: true },
           },
-          orderBy: { created_at: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.notification.count({ where }),
-      ]);
+        },
+        orderBy: { created_at: "desc" },
+        skip,
+        take: limit,
+      });
+      const total = await prisma.notification.count({ where });
 
       return status(200, {
         data,

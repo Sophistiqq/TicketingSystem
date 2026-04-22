@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onMount } from "svelte";
+  import { themeChange } from "theme-change";
   import { Router } from "sv-router";
   import "./router.svelte";
   import {
@@ -9,11 +11,9 @@
   } from "./stores/user.svelte";
   import { getUnreadCount } from "./stores/notifications.svelte";
   import { getMessageUnreadCount } from "./stores/messages.svelte";
-  import { isChromeHidden } from "./stores/ui.svelte";
   import { navigate, isActive } from "./router.svelte";
   import auth from "./auth.svelte";
   import ModalProvider from "./components/ModalProvider.svelte";
-  import MessagingSidebar from "./components/MessagingSidebar.svelte";
   import {
     LayoutDashboard,
     Ticket,
@@ -45,48 +45,28 @@
   let user = $derived(getCurrentUser());
   let unread = $derived(getUnreadCount());
   let msgUnread = $derived(getMessageUnreadCount());
-  let hideChrome = $derived(isChromeHidden());
   let isDark = $state(true);
+
+  onMount(() => {
+    themeChange(false);
+    const theme = document.documentElement.getAttribute("data-theme");
+    isDark = theme === "ticketing";
+  });
 
   const navItems: NavItem[] = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
     { icon: Plus, label: "New Ticket", href: "/tickets/new" },
     { icon: ListTodo, label: "My Tickets", href: "/my-tickets" },
-    {
-      icon: MessageSquare,
-      label: "Messages",
-      href: "/messages",
-      badge: () => msgUnread,
-    },
-    {
-      icon: ClipboardCheck,
-      label: "My Approvals",
-      href: "/approvals",
-      roles: ["approver", "admin"],
-    },
-    {
-      icon: Bell,
-      label: "Notifications",
-      href: "/notifications",
-      badge: () => unread,
-    },
+    { icon: MessageSquare, label: "Messages", href: "/messages", badge: () => msgUnread },
+    { icon: ClipboardCheck, label: "My Approvals", href: "/approvals", roles: ["approver", "admin"] },
+    { icon: Bell, label: "Notifications", href: "/notifications", badge: () => unread },
   ];
 
   const adminItems: NavItem[] = [
     { icon: Users, label: "Users", href: "/admin/users", roles: ["admin"] },
-    {
-      icon: ScrollText,
-      label: "Audit Log",
-      href: "/admin/audit",
-      roles: ["admin", "mis"],
-    },
+    { icon: ScrollText, label: "Audit Log", href: "/admin/audit", roles: ["admin", "mis"] },
     { icon: Star, label: "CSAT", href: "/admin/csat", roles: ["admin", "mis"] },
-    {
-      icon: Settings,
-      label: "Settings",
-      href: "/admin/settings",
-      roles: ["admin"],
-    },
+    { icon: Settings, label: "Settings", href: "/admin/settings", roles: ["admin"] },
   ];
 
   function canSee(item: NavItem): boolean {
@@ -96,10 +76,9 @@
 
   function toggleTheme() {
     isDark = !isDark;
-    document.documentElement.setAttribute(
-      "data-theme",
-      isDark ? "ticketing" : "ticketing-light",
-    );
+    const newTheme = isDark ? "ticketing" : "ticketing-light";
+    document.documentElement.setAttribute("data-theme", newTheme);
+    localStorage.setItem("theme", newTheme);
   }
 
   function closeDrawer() {
@@ -109,208 +88,87 @@
 </script>
 
 {#if !user}
-  <!-- Public layout (Login / Register) — no chrome -->
   <div class="min-h-screen bg-base-200 flex items-center justify-center">
     <Router />
   </div>
 {:else}
-  <!-- Authenticated layout — DaisyUI drawer -->
-  <div class="drawer lg:drawer-open">
+  <div class="drawer lg:drawer-open min-h-screen">
     <input id="app-drawer" type="checkbox" class="drawer-toggle" />
-
-    <!-- ─── Main content area ─────────────────────────────── -->
-    <div class="drawer-content flex flex-col h-screen overflow-hidden">
+    <div class="drawer-content flex flex-col min-h-screen">
       <!-- Navbar -->
-      {#if !hideChrome}
-        <nav
-          class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2"
-        >
-          <label
-            for="app-drawer"
-            class="btn btn-ghost btn-sm btn-square lg:hidden"
-          >
-            <Menu size={20} />
-          </label>
+      <nav class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2">
+        <label for="app-drawer" class="btn btn-ghost btn-sm btn-square lg:hidden"><Menu size={20} /></label>
+        <div class="flex-1 flex items-center gap-2">
+          {#if !isActive("/")}
+            <button class="btn btn-ghost btn-sm btn-square" onclick={() => navigate(-1)}><ChevronLeft size={20} /></button>
+          {/if}
+        </div>
+        
+        <button class="btn btn-ghost btn-sm btn-square" onclick={toggleTheme}>
+          {#if isDark}<Sun size={18} />{:else}<Moon size={18} />{/if}
+        </button>
 
-          <div class="flex-1 flex items-center gap-2">
-            {#if !isActive("/")}
-              <button
-                class="btn btn-ghost btn-sm btn-square"
-                onclick={() => navigate(-1)}
-                title="Go Back"
-              >
-                <ChevronLeft size={20} />
-              </button>
-            {/if}
-            <h1 class="text-xl font-bold tracking-wide lg:hidden">
-              <a href="/" class="hover:text-primary transition-colors"
-                >Ticketing</a
-              >
-            </h1>
-          </div>
+        <a href="/messages" class="btn btn-ghost btn-sm btn-square indicator" title="Messages">
+          <MessageSquare size={18} />
+          {#if msgUnread > 0}
+            <span class="indicator-item badge badge-primary badge-xs">{msgUnread}</span>
+          {/if}
+        </a>
 
-          <!-- Theme toggle -->
-          <button class="btn btn-ghost btn-sm btn-square" onclick={toggleTheme}>
-            {#if isDark}
-              <Sun size={18} />
-            {:else}
-              <Moon size={18} />
-            {/if}
-          </button>
+        <a href="/notifications" class="btn btn-ghost btn-sm btn-square indicator" title="Notifications">
+          <Bell size={18} />
+          {#if unread > 0}
+            <span class="indicator-item badge badge-primary badge-xs">{unread}</span>
+          {/if}
+        </a>
 
-          <!-- Notification bell -->
-          <a
-            href="/notifications"
-            class="btn btn-ghost btn-sm btn-square indicator"
-          >
-            <Bell size={18} />
-            {#if unread > 0}
-              <span class="indicator-item badge badge-primary badge-xs"
-                >{unread}</span
-              >
-            {/if}
-          </a>
-
-          <!-- User dropdown -->
-          <details class="dropdown dropdown-end">
-            <summary class="btn btn-ghost btn-sm gap-2">
-              <div class="avatar avatar-placeholder">
-                <div class="bg-neutral text-neutral-content w-8 rounded-full">
-                  <span class="text-xs">{userInitials()}</span>
-                </div>
+        <details class="dropdown dropdown-end">
+          <summary class="btn btn-ghost btn-sm gap-2">
+            <div class="avatar avatar-placeholder">
+              <div class="bg-neutral text-neutral-content w-8 rounded-full">
+                <span class="text-xs">{userInitials()}</span>
               </div>
-              <span class="hidden sm:inline text-sm whitespace-nowrap"
-                >{displayName()}</span
-              >
-            </summary>
-            <ul
-              class="dropdown-content menu bg-base-200 rounded-box z-50 w-52 p-2 shadow-lg mt-2"
-            >
-              <li class="menu-title text-xs opacity-60">
-                {user.roles?.map((r) => String(r).toUpperCase()).join(", ") ||
-                  "USER"}
-              </li>
-              <li>
-                <a href="/profile">
-                  <UserIcon size={16} /> Profile
-                </a>
-              </li>
-              <li>
-                <button onclick={() => auth.logout()}>
-                  <LogOut size={16} /> Logout
-                </button>
-              </li>
-            </ul>
-          </details>
-        </nav>
-      {/if}
+            </div>
+            <span class="hidden sm:inline text-sm whitespace-nowrap">{displayName()}</span>
+          </summary>
+          <ul class="dropdown-content menu bg-base-200 rounded-box z-50 w-52 p-2 shadow-lg mt-2">
+            <li class="menu-title text-xs opacity-60">
+              {user.roles?.map((r) => String(r).toUpperCase()).join(", ") || "USER"}
+            </li>
+            <li><a href="/profile"><UserIcon size={16} /> Profile</a></li>
+            <li>
+              <button onclick={() => auth.logout()}><LogOut size={16} /> Logout</button>
+            </li>
+          </ul>
+        </details>
+      </nav>
 
-      <!-- Page content -->
-      <main class="flex-1 {hideChrome ? '' : 'p-4 md:p-6'} overflow-y-auto">
-        <Router />
-      </main>
+      <!-- Main Layout -->
+      <div class="flex flex-1 overflow-hidden">
+        <main class="flex-1 overflow-y-auto p-4 md:p-6">
+          <Router />
+        </main>
+      </div>
     </div>
 
-    <!-- ─── Messaging Sidebar (Right) ──────────────────────── -->
-    {#if !hideChrome}
-      <MessagingSidebar />
-    {/if}
-
-    <!-- ─── Sidebar ───────────────────────────────────────── -->
+    <!-- Navigation Drawer -->
     <div class="drawer-side z-40">
-      <label for="app-drawer" aria-label="close sidebar" class="drawer-overlay"
-      ></label>
-      <aside class="bg-base-200 min-h-full w-72 flex flex-col">
-        <!-- Logo area -->
-        <div class="p-4 border-b border-base-300">
-          <a href="/" onclick={closeDrawer} class="flex items-center gap-3">
-            <div
-              class="bg-primary text-primary-content w-10 h-10 rounded-lg flex items-center justify-center"
-            >
-              <Ticket size={22} />
-            </div>
-            <div>
-              <h2 class="text-lg font-bold leading-tight">Ticketing</h2>
-              <p class="text-xs opacity-50">Internal Support</p>
-            </div>
-          </a>
+      <label for="app-drawer" class="drawer-overlay"></label>
+      <aside class="bg-base-200 w-72 min-h-full flex flex-col border-r border-base-300">
+        <div class="p-6">
+          <h2 class="text-xl font-black">TICKETING</h2>
         </div>
-
-        <!-- Navigation -->
-        <ul class="menu menu-md flex-1 p-0 py-4 gap-0 w-full">
+        <ul class="menu menu-md flex-1 p-0 py-4 w-full">
           {#each navItems as item}
             {#if canSee(item)}
-              <li class="w-full">
-                <a
-                  href={item.href}
-                  onclick={closeDrawer}
-                  class="flex items-center gap-3 px-6 py-4 rounded-none transition-all active:bg-primary active:text-primary-content {isActive(
-                    item.href as any,
-                  )
-                    ? 'bg-primary/10 text-primary font-bold border-r-4 border-primary'
-                    : 'hover:bg-base-300 opacity-70 hover:opacity-100'}"
-                >
-                  <item.icon size={20} />
-                  <span class="flex-1">{item.label}</span>
-                  {#if item.badge && item.badge() > 0}
-                    <span class="badge badge-primary badge-sm"
-                      >{item.badge()}</span
-                    >
-                  {/if}
+              <li>
+                <a href={item.href} onclick={closeDrawer} class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(item.href as any) ? 'bg-primary/10 text-primary font-bold' : ''}">
+                  <item.icon size={20} /> {item.label}
                 </a>
               </li>
             {/if}
           {/each}
-
-          <!-- Admin section divider -->
-          {#if adminItems.some(canSee)}
-            <li
-              class="menu-title mt-8 px-6 text-[10px] uppercase tracking-widest font-black opacity-30 mb-2"
-            >
-              Administration
-            </li>
-            {#each adminItems as item}
-              {#if canSee(item)}
-                <li class="w-full">
-                  <a
-                    href={item.href}
-                    onclick={closeDrawer}
-                    class="flex items-center gap-3 px-6 py-4 rounded-none transition-all active:bg-primary active:text-primary-content {isActive(
-                      item.href as any,
-                    )
-                      ? 'bg-primary/10 text-primary font-bold border-r-4 border-primary'
-                      : 'hover:bg-base-300 opacity-70 hover:opacity-100'}"
-                  >
-                    <item.icon size={20} />
-                    <span class="flex-1">{item.label}</span>
-                  </a>
-                </li>
-              {/if}
-            {/each}
-          {/if}
         </ul>
-
-        <!-- User footer -->
-        <div class="p-4 border-t border-base-300">
-          <div class="flex items-center gap-3">
-            <div class="avatar avatar-placeholder">
-              <div class="bg-neutral text-neutral-content w-10 rounded-full">
-                <span class="text-sm">{userInitials()}</span>
-              </div>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium truncate">{displayName()}</p>
-              <p class="text-xs opacity-50 truncate">{user.email}</p>
-            </div>
-            <button
-              class="btn btn-ghost btn-sm btn-square"
-              onclick={() => auth.logout()}
-              title="Logout"
-            >
-              <LogOut size={16} />
-            </button>
-          </div>
-        </div>
       </aside>
     </div>
   </div>

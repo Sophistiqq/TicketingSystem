@@ -82,7 +82,10 @@ model Department {
   description String?
   is_active   Boolean @default(true)
 
-  users User[]
+  users            User[]
+  affected_systems AffectedSystem[]
+  request_types    RequestType[]
+  tickets          Ticket[]
 }
 
 /// Systems or modules that tickets can be filed against
@@ -92,6 +95,9 @@ model AffectedSystem {
   name        String  @unique
   description String?
   is_active   Boolean @default(true)
+
+  department_id Int?
+  department    Department? @relation(fields: [department_id], references: [id])
 
   tickets Ticket[]
 }
@@ -104,6 +110,9 @@ model RequestType {
   description                  String?
   requires_approval_by_default Boolean @default(false)
   is_active                    Boolean @default(true)
+
+  department_id Int?
+  department    Department? @relation(fields: [department_id], references: [id])
 
   tickets Ticket[]
 }
@@ -194,6 +203,9 @@ model Ticket {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  department_id Int?
+  department    Department? @relation(fields: [department_id], references: [id])
 
   requester_id Int
   requester    User @relation("TicketRequester", fields: [requester_id], references: [id])

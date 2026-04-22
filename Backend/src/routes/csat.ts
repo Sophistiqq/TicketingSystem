@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
+import { broadcaster } from "../ws/broadcaster";
 
 export const csat = new Elysia({ prefix: "/csat" })
   .use(validator)
@@ -46,6 +47,13 @@ export const csat = new Elysia({ prefix: "/csat" })
           resolution_time_ms: resolutionTimeMs,
           agent_id: ticket.assignee_id,
         },
+      });
+
+      // Broadcast update
+      broadcaster.ticketUpdated(body.ticket_id, {
+        field: 'csat',
+        new_value: `${body.rating}/5 stars`,
+        updated_by: `Requester #${user}`
       });
 
       // Audit log
@@ -172,20 +180,18 @@ export const csat = new Elysia({ prefix: "/csat" })
       const { page = 1, limit = 20 } = query;
       const skip = (page - 1) * limit;
 
-      const [data, total] = await Promise.all([
-        prisma.cSAT.findMany({
-          where: { agent_id: user },
-          include: {
-            ticket: {
-              select: { id: true, title: true, status: true },
-            },
+      const data = await prisma.cSAT.findMany({
+        where: { agent_id: user },
+        include: {
+          ticket: {
+            select: { id: true, title: true, status: true },
           },
-          orderBy: { submitted_at: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.cSAT.count({ where: { agent_id: user } }),
-      ]);
+        },
+        orderBy: { submitted_at: "desc" },
+        skip,
+        take: limit,
+      });
+      const total = await prisma.cSAT.count({ where: { agent_id: user } });
 
       return status(200, {
         data,

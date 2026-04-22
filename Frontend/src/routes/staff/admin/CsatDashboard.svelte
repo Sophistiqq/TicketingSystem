@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api } from "../../../lib/api";
-  import type { CSATStats, CSAT, PaginatedResponse } from "../../../lib/types";
-  import { Star, TrendingUp, Users, BarChart3 } from "lucide-svelte";
+  import type { CSATStats } from "../../../lib/types";
+  import { Star, TrendingUp, Users, ChartColumn } from "lucide-svelte";
   import StatsCard from "../../../components/StatsCard.svelte";
 
   let stats = $state<CSATStats | null>(null);
@@ -21,19 +21,10 @@
     try {
       const res = await api.get<CSATStats>(`/csat/stats?${params}`);
       if (res) stats = res;
-    } catch { /* handled */ }
+    } catch {
+      /* handled */
+    }
     loading = false;
-  }
-
-  function ratingLabel(n: number): string {
-    const labels: Record<number, string> = {
-      1: "Very Poor",
-      2: "Poor",
-      3: "Average",
-      4: "Good",
-      5: "Excellent",
-    };
-    return labels[n] ?? String(n);
   }
 
   function ratingColor(n: number): string {
@@ -54,14 +45,31 @@
     <div class="flex flex-wrap items-end gap-3">
       <fieldset class="fieldset">
         <label class="label text-xs" for="csat-start">Start Date</label>
-        <input id="csat-start" type="date" class="input input-bordered input-sm" bind:value={startDate} />
+        <input
+          id="csat-start"
+          type="date"
+          class="input input-bordered input-sm"
+          bind:value={startDate}
+        />
       </fieldset>
       <fieldset class="fieldset">
         <label class="label text-xs" for="csat-end">End Date</label>
-        <input id="csat-end" type="date" class="input input-bordered input-sm" bind:value={endDate} />
+        <input
+          id="csat-end"
+          type="date"
+          class="input input-bordered input-sm"
+          bind:value={endDate}
+        />
       </fieldset>
       <button class="btn btn-primary btn-sm" onclick={loadStats}>Apply</button>
-      <button class="btn btn-ghost btn-sm" onclick={() => { startDate = ""; endDate = ""; loadStats(); }}>Clear</button>
+      <button
+        class="btn btn-ghost btn-sm"
+        onclick={() => {
+          startDate = "";
+          endDate = "";
+          loadStats();
+        }}>Clear</button
+      >
     </div>
   </div>
 
@@ -71,7 +79,9 @@
     </div>
   {:else if stats}
     <!-- Stats cards -->
-    <div class="stats stats-vertical sm:stats-horizontal shadow-sm bg-base-200 w-full overflow-hidden border border-base-300">
+    <div
+      class="stats stats-vertical sm:stats-horizontal shadow-sm bg-base-200 w-full overflow-hidden border border-base-300"
+    >
       <StatsCard
         icon={Star}
         label="Average Rating"
@@ -89,7 +99,7 @@
         icon={TrendingUp}
         label="Satisfaction Rate"
         value={stats.total_responses > 0
-          ? `${Math.round(((stats.distribution?.[4] ?? 0) + (stats.distribution?.[5] ?? 0)) / stats.total_responses * 100)}%`
+          ? `${Math.round((((stats.distribution?.[4] ?? 0) + (stats.distribution?.[5] ?? 0)) / stats.total_responses) * 100)}%`
           : "—"}
         sub="rated 4 or 5"
         color="success"
@@ -103,7 +113,10 @@
         <div class="flex flex-col gap-3">
           {#each [5, 4, 3, 2, 1] as rating}
             {@const count = stats.distribution?.[rating] ?? 0}
-            {@const pct = stats.total_responses > 0 ? (count / stats.total_responses) * 100 : 0}
+            {@const pct =
+              stats.total_responses > 0
+                ? (count / stats.total_responses) * 100
+                : 0}
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-1 w-24 shrink-0">
                 {#each Array(rating) as _}
@@ -111,9 +124,16 @@
                 {/each}
               </div>
               <div class="flex-1 bg-base-300 rounded-full h-4 overflow-hidden">
-                <div class="{ratingColor(rating)} h-full rounded-full transition-all duration-500" style="width: {pct}%"></div>
+                <div
+                  class="{ratingColor(
+                    rating,
+                  )} h-full rounded-full transition-all duration-500"
+                  style="width: {pct}%"
+                ></div>
               </div>
-              <span class="text-sm font-mono w-16 text-right">{count} ({pct.toFixed(0)}%)</span>
+              <span class="text-sm font-mono w-16 text-right"
+                >{count} ({pct.toFixed(0)}%)</span
+              >
             </div>
           {/each}
         </div>
@@ -122,9 +142,11 @@
   {:else}
     <div class="card bg-base-200 shadow-sm">
       <div class="card-body items-center text-center py-16">
-        <BarChart3 size={48} class="opacity-20 mb-2" />
+        <ChartColumn size={48} class="opacity-20 mb-2" />
         <h2 class="text-lg font-semibold opacity-60">No data</h2>
-        <p class="text-sm opacity-40">No CSAT responses in the selected period.</p>
+        <p class="text-sm opacity-40">
+          No CSAT responses in the selected period.
+        </p>
       </div>
     </div>
   {/if}

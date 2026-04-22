@@ -1,6 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
+import { createAndPushNotification } from "./notifications";
+import { broadcaster } from "../ws/broadcaster";
 
 export const approvals = new Elysia({ prefix: "/approvals" })
   .use(validator);
@@ -118,27 +120,23 @@ approvals
         .map((u) => `${u.first_name} ${u.last_name} (${u.username})`)
         .join(", ");
 
-      // Notify each approver
-      for (const approverId of newApproverIds) {
-        await prisma.notification.create({
-          data: {
-            user_id: approverId,
-            ticket_id: body.ticket_id,
-            type: "approval_requested",
-            message: `You have been requested to approve ticket: ${ticket.title}`,
-          },
-        });
-      }
-
-      // Notify requester
-      await prisma.notification.create({
-        data: {
-          user_id: ticket.requester_id,
-          ticket_id: body.ticket_id,
-          type: "approval_requested",
-          message: `Your ticket "${ticket.title}" is pending approval.`,
-        },
-      });
+      // Notify each approver and the requester
+      await Promise.all([
+        ...newApproverIds.map((approverId: number) =>
+          createAndPushNotification(
+            approverId,
+            body.ticket_id,
+            "approval_requested",
+            `You have been requested to approve ticket: ${ticket.title}`,
+          )
+        ),
+        createAndPushNotification(
+          ticket.requester_id,
+          body.ticket_id,
+          "approval_requested",
+          `Your ticket "${ticket.title}" is pending approval.`,
+        )
+      ]);
 
       // Update ticket status to pending_approval if not already
       if (ticket.status !== "pending_approval") {
@@ -282,14 +280,21 @@ approvals
           data: { status: "rejected" },
         });
 
-        await prisma.notification.create({
-          data: {
-            user_id: ticket.requester_id,
-            ticket_id: body.ticket_id,
-            type: "approval_decided",
-            message: `Your ticket "${ticket.title}" has been rejected.`,
-          },
-        });
+        await Promise.all([
+          createAndPushNotification(
+            ticket.requester_id,
+            body.ticket_id,
+            "approval_decided",
+            `Your ticket "${ticket.title}" has been rejected.`,
+          ),
+          broadcaster.ticketUpdated(body.ticket_id, {
+            field: 'status',
+            old_value: ticket.status,
+            new_value: 'rejected',
+            status: 'rejected',
+            updated_by: `Approver #${user}`
+          })
+        ]);
 
         return status(200, {
           message: `Ticket ${body.decision}`,
@@ -298,32 +303,40 @@ approvals
       } else if (allDecided && allApproved) {
         await prisma.ticket.update({
           where: { id: body.ticket_id },
-          data: { status: "in_progress" },
-        });
-
-        await prisma.notification.create({
-          data: {
-            user_id: ticket.requester_id,
-            ticket_id: body.ticket_id,
-            type: "approval_decided",
-            message: `Your ticket "${ticket.title}" has been approved.`,
+          data: { 
+            status: "in_progress",
+            started_at: new Date()
           },
         });
 
-        // Notify MIS for assignment
+        // Notify requester and MIS for assignment
         const misUsers = await prisma.user.findMany({
           where: { roles: { some: { role: "mis" } }, is_active: true },
         });
-        for (const misUser of misUsers) {
-          await prisma.notification.create({
-            data: {
-              user_id: misUser.id,
-              ticket_id: body.ticket_id,
-              type: "approval_decided",
-              message: `Ticket "${ticket.title}" has been approved and needs assignment.`,
-            },
-          });
-        }
+        
+        await Promise.all([
+          createAndPushNotification(
+            ticket.requester_id,
+            body.ticket_id,
+            "approval_decided",
+            `Your ticket "${ticket.title}" has been approved.`,
+          ),
+          ...misUsers.map(misUser => 
+            createAndPushNotification(
+              misUser.id,
+              body.ticket_id,
+              "approval_decided",
+              `Ticket "${ticket.title}" has been approved and needs assignment.`,
+            )
+          ),
+          broadcaster.ticketUpdated(body.ticket_id, {
+            field: 'status',
+            old_value: ticket.status,
+            new_value: 'in_progress',
+            status: 'in_progress',
+            updated_by: `Approver #${user}`
+          })
+        ]);
 
         return status(200, {
           message: `Ticket ${body.decision}`,

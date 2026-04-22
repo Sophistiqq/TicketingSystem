@@ -18,13 +18,20 @@
     Plus,
     ClipboardCheck,
     UserCheck,
+    Briefcase,
   } from "lucide-svelte";
+  import SearchableSelect from "../../components/SearchableSelect.svelte";
+  import { getDepartments } from "../../stores/reference.svelte";
 
   let user = $derived(getCurrentUser());
   let tickets = $state<Ticket[]>([]);
   let pendingApprovals = $state<TicketApprover[]>([]);
   let activeUsers = $state<User[]>([]);
+  let departments = $derived(getDepartments());
   let loading = $state(true);
+
+  // Filters
+  let departmentId = $state<number | undefined>(undefined);
 
   // Stats
   let totalOpen = $state(0);
@@ -33,34 +40,39 @@
   let totalResolved = $state(0);
   let totalPendingApprovals = $state(0);
   let totalAssignedToMe = $state(0);
+  let totalDepartmentUnassigned = $state(0);
 
   let totalTickets = $derived(
     totalOpen + totalInProgress + totalOverdue + totalResolved,
   );
 
-  onMount(async () => {
+  async function loadDashboardData() {
+    loading = true;
     try {
+      const deptParam = departmentId ? `&department_id=${departmentId}` : "";
+
       // Fetch recent tickets
       const res = await api.get<PaginatedResponse<Ticket>>(
-        "/tickets/?page=1&limit=10&sort=created_at&order=desc",
+        `/tickets/?page=1&limit=10&sort=created_at&order=desc${deptParam}`,
       );
       if (res) {
         tickets = res.data;
       }
 
-      // Fetch active users for messaging
-      api.get<User[]>("/messages/active").then((res) => {
-        if (res) activeUsers = res;
-      });
-
       // Get accurate counts from filtered queries
       const queries = [
-        api.get<PaginatedResponse<Ticket>>("/tickets/?status=open&limit=1"),
         api.get<PaginatedResponse<Ticket>>(
-          "/tickets/?status=in_progress&limit=1",
+          `/tickets/?status=open&limit=1${deptParam}`,
         ),
-        api.get<PaginatedResponse<Ticket>>("/tickets/?overdue=true&limit=1"),
-        api.get<PaginatedResponse<Ticket>>("/tickets/?status=resolved&limit=1"),
+        api.get<PaginatedResponse<Ticket>>(
+          `/tickets/?status=in_progress&limit=1${deptParam}`,
+        ),
+        api.get<PaginatedResponse<Ticket>>(
+          `/tickets/?overdue=true&limit=1${deptParam}`,
+        ),
+        api.get<PaginatedResponse<Ticket>>(
+          `/tickets/?status=resolved&limit=1${deptParam}`,
+        ),
       ];
 
       // If staff, also check assigned to me
@@ -70,6 +82,15 @@
             `/tickets/?assignee_id=${user?.id}&limit=1`,
           ),
         );
+        
+        // Also check unassigned in my department
+        if (user?.department_id) {
+          queries.push(
+            api.get<PaginatedResponse<Ticket>>(
+              `/tickets/?department_id=${user.department_id}&assignee_id=null&status=open&limit=1`,
+            ),
+          );
+        }
       }
 
       const results = await Promise.all(queries);
@@ -78,19 +99,35 @@
       if (results[2]) totalOverdue = results[2].pagination.total;
       if (results[3]) totalResolved = results[3].pagination.total;
       if (results[4]) totalAssignedToMe = results[4].pagination.total;
-
-      // If approver, get pending approvals
-      if (hasRole("approver", "admin")) {
-        const appRes = await api.get<TicketApprover[]>("/approvals/my/pending");
-        if (appRes) {
-          pendingApprovals = appRes;
-          totalPendingApprovals = appRes.length;
-        }
-      }
+      if (results[5]) totalDepartmentUnassigned = results[5].pagination.total;
     } catch {
       // handled
     } finally {
       loading = false;
+    }
+  }
+
+  onMount(async () => {
+    await loadDashboardData();
+
+    // Fetch active users for messaging
+    api.get<User[]>("/messages/active").then((res) => {
+      if (res) activeUsers = res;
+    });
+
+    // If approver, get pending approvals
+    if (hasRole("approver", "admin")) {
+      const appRes = await api.get<TicketApprover[]>("/approvals/my/pending");
+      if (appRes) {
+        pendingApprovals = appRes;
+        totalPendingApprovals = appRes.length;
+      }
+    }
+  });
+
+  $effect(() => {
+    if (departmentId !== undefined) {
+      loadDashboardData();
     }
   });
 </script>
@@ -132,6 +169,15 @@
         value={totalAssignedToMe}
         color="secondary"
         sub="Assigned to you"
+      />
+    {/if}
+    {#if hasRole("admin", "mis") && user?.department_id}
+      <StatsCard
+        icon={Briefcase}
+        label="Dept Unassigned"
+        value={totalDepartmentUnassigned}
+        color="accent"
+        sub="Open in your dept"
       />
     {/if}
     <StatsCard
@@ -178,9 +224,18 @@
     <!-- Recent Tickets (2/3) -->
     <div class="xl:col-span-2 flex flex-col gap-4">
       <div class="card bg-base-200 shadow-sm overflow-hidden">
-        <div class="flex items-center justify-between px-5 pt-4 pb-2">
-          <h2 class="card-title text-lg font-bold">Recent Tickets</h2>
-          <a href="/my-tickets" class="btn btn-ghost btn-sm">View All</a>
+        <div class="flex flex-wrap items-center justify-between px-5 pt-4 pb-2 gap-4">
+          <h2 class="card-title text-lg font-bold shrink-0">Recent Tickets</h2>
+          <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+            <div class="w-48">
+              <SearchableSelect
+                items={departments}
+                bind:value={departmentId}
+                placeholder="All Departments"
+              />
+            </div>
+            <a href="/my-tickets" class="btn btn-ghost btn-sm shrink-0">View All</a>
+          </div>
         </div>
         {#if loading}
           <div class="flex justify-center py-12">

@@ -40,20 +40,18 @@ export const users = new Elysia({ prefix: "/users" })
 
       const skip = (page - 1) * limit;
 
-      const [data, total] = await Promise.all([
-        prisma.user.findMany({
-          where,
-          omit: USER_OMIT,
-          include: {
-            department: true,
-            roles: true,
-          },
-          orderBy: { created_at: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.user.count({ where }),
-      ]);
+      const data = await prisma.user.findMany({
+        where,
+        omit: USER_OMIT,
+        include: {
+          department: true,
+          roles: true,
+        },
+        orderBy: { created_at: "desc" },
+        skip,
+        take: limit,
+      });
+      const total = await prisma.user.count({ where });
 
       return status(200, {
         data,

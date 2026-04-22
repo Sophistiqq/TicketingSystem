@@ -24,20 +24,18 @@ export const audit = new Elysia({ prefix: "/audit" })
 
       const skip = (page - 1) * limit;
 
-      const [data, total] = await Promise.all([
-        prisma.auditLog.findMany({
-          where,
-          include: {
-            performed_by: {
-              select: { id: true, first_name: true, last_name: true, username: true },
-            },
+      const data = await prisma.auditLog.findMany({
+        where,
+        include: {
+          performed_by: {
+            select: { id: true, first_name: true, last_name: true, username: true },
           },
-          orderBy: { created_at: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.auditLog.count({ where }),
-      ]);
+        },
+        orderBy: { created_at: "desc" },
+        skip,
+        take: limit,
+      });
+      const total = await prisma.auditLog.count({ where });
 
       return status(200, {
         data,
@@ -118,23 +116,21 @@ export const audit = new Elysia({ prefix: "/audit" })
 
     const skip = (page - 1) * limit;
 
-    const [data, total] = await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        include: {
-          ticket: {
-            select: { id: true, title: true, status: true },
-          },
-          performed_by: {
-            select: { id: true, first_name: true, last_name: true, username: true },
-          },
+    const data = await prisma.auditLog.findMany({
+      where,
+      include: {
+        ticket: {
+          select: { id: true, title: true, status: true },
         },
-        orderBy: { created_at: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.auditLog.count({ where }),
-    ]);
+        performed_by: {
+          select: { id: true, first_name: true, last_name: true, username: true },
+        },
+      },
+      orderBy: { created_at: "desc" },
+      skip,
+      take: limit,
+    });
+    const total = await prisma.auditLog.count({ where });
 
     return status(200, {
       data,

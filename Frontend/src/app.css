@@ -1,15 +1,46 @@
 @import "tailwindcss";
+@plugin "daisyui";
+@plugin "@tailwindcss/typography";
 
-@plugin "daisyui" {
-  themes: bumblebee --default;
+@plugin "daisyui/theme" {
+  name: "dracula";
+  default: true;
+  prefersdark: true;
+  color-scheme: "dark";
+  --color-base-100: oklch(28.822% 0.022 277.508);
+  --color-base-200: oklch(26.805% 0.02 277.508);
+  --color-base-300: oklch(24.787% 0.019 277.508);
+  --color-base-content: oklch(97.747% 0.007 106.545);
+  --color-primary: oklch(80% 0.105 251.813);
+  --color-primary-content: oklch(20% 0.042 265.755);
+  --color-secondary: oklch(90% 0.182 98.111);
+  --color-secondary-content: oklch(14.84% 0.029 301.883);
+  --color-accent: oklch(62% 0.265 303.9);
+  --color-accent-content: oklch(16.678% 0.024 66.558);
+  --color-neutral: oklch(39.445% 0.032 275.524);
+  --color-neutral-content: oklch(87.889% 0.006 275.524);
+  --color-info: oklch(88.263% 0.093 212.846);
+  --color-info-content: oklch(17.652% 0.018 212.846);
+  --color-success: oklch(87.099% 0.219 148.024);
+  --color-success-content: oklch(17.419% 0.043 148.024);
+  --color-warning: oklch(83% 0.128 66.29);
+  --color-warning-content: oklch(19.106% 0.026 112.757);
+  --color-error: oklch(68.22% 0.206 24.43);
+  --color-error-content: oklch(13.644% 0.041 24.43);
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.25rem;
+  --size-selector: 0.1875rem;
+  --size-field: 0.1875rem;
+  --border: 0.5px;
+  --depth: 0;
+  --noise: 0;
 }
-
-;
 
 
 /* ── Font overrides ────────────────────────────────────────── */
 @theme {
-  --font-sans: 'Ubuntu', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
 }
 
 h1,
@@ -20,4 +51,18 @@ h5,
 h6 {
   font-family: 'Teko', sans-serif;
   letter-spacing: 0.025em;
+}
+
+/* ── Prosetable — better table rendering for user content ── */
+.prose table {
+  @apply table table-sm border border-base-300;
+}
+
+.prose thead {
+  @apply bg-base-200;
+}
+
+.prose th,
+.prose td {
+  @apply border border-base-300;
 }

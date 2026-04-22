@@ -1,6 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
+import { createAndPushNotification } from "./notifications";
+import { broadcaster } from "../ws/broadcaster";
 
 export const comments = new Elysia({ prefix: "/comments" })
   .use(validator);
@@ -97,19 +99,28 @@ comments
       for (const a of ticket.approvers) notifyUserIds.add(a.approver_id);
       notifyUserIds.delete(user); // Don't notify the commenter
 
-      for (const notifyId of notifyUserIds) {
-        // Don't notify requesters about internal notes
-        if (comment.is_internal && notifyId === ticket.requester_id) continue;
+      // Parallelize all notifications and broadcasts
+      await Promise.all([
+        ...Array.from(notifyUserIds).map(notifyId => {
+          // Don't notify requesters about internal notes
+          if (comment.is_internal && notifyId === ticket.requester_id) return Promise.resolve();
 
-        await prisma.notification.create({
-          data: {
-            user_id: notifyId,
-            ticket_id: body.ticket_id,
-            type: "comment_added",
-            message: `New ${comment.is_internal ? "internal note" : "comment"} on ticket: ${ticket.title}`,
-          },
-        });
-      }
+          return createAndPushNotification(
+            notifyId,
+            body.ticket_id,
+            "comment_added",
+            `New ${comment.is_internal ? "internal note" : "comment"} on ticket: ${ticket.title}`,
+          );
+        }),
+        // Push to ticket channel (not internal notes)
+        !comment.is_internal ? broadcaster.commentAdded(body.ticket_id, {
+          id: comment.id,
+          content: comment.content,
+          is_internal: comment.is_internal,
+          user: comment.user,
+          created_at: comment.created_at
+        }) : Promise.resolve()
+      ]);
 
       // Audit log
       await prisma.auditLog.create({

@@ -2,9 +2,13 @@
   import { onMount } from "svelte";
   import { api } from "../../../lib/api";
   import { refreshReferenceData } from "../../../stores/reference.svelte";
-  import type { Department, AffectedSystem, RequestType } from "../../../lib/types";
+  import type {
+    Department,
+    AffectedSystem,
+    RequestType,
+  } from "../../../lib/types";
   import { simpleConfirm } from "../../../stores/ui.svelte";
-  import { Plus, Pencil, Trash2, Settings as SettingsIcon } from "lucide-svelte";
+  import { Plus, Pencil, Trash2 } from "lucide-svelte";
 
   // All reference data
   let departments = $state<Department[]>([]);
@@ -28,9 +32,11 @@
 
   // Derived items based on active tab
   let items = $derived(
-    activeTab === "departments" ? departments :
-    activeTab === "systems" ? systems :
-    requestTypes
+    activeTab === "departments"
+      ? departments
+      : activeTab === "systems"
+        ? systems
+        : requestTypes,
   );
 
   onMount(() => loadAll());
@@ -46,7 +52,9 @@
       departments = d ?? [];
       systems = s ?? [];
       requestTypes = r ?? [];
-    } catch { /* handled */ }
+    } catch {
+      /* handled */
+    }
     loading = false;
   }
 
@@ -136,13 +144,28 @@
 
   <!-- Tabs -->
   <div role="tablist" class="tabs tabs-bordered">
-    <button role="tab" class="tab" class:tab-active={activeTab === "departments"} onclick={() => (activeTab = "departments")}>
+    <button
+      role="tab"
+      class="tab"
+      class:tab-active={activeTab === "departments"}
+      onclick={() => (activeTab = "departments")}
+    >
       Departments ({departments.length})
     </button>
-    <button role="tab" class="tab" class:tab-active={activeTab === "systems"} onclick={() => (activeTab = "systems")}>
+    <button
+      role="tab"
+      class="tab"
+      class:tab-active={activeTab === "systems"}
+      onclick={() => (activeTab = "systems")}
+    >
       Affected Systems ({systems.length})
     </button>
-    <button role="tab" class="tab" class:tab-active={activeTab === "types"} onclick={() => (activeTab = "types")}>
+    <button
+      role="tab"
+      class="tab"
+      class:tab-active={activeTab === "types"}
+      onclick={() => (activeTab = "types")}
+    >
       Request Types ({requestTypes.length})
     </button>
   </div>
@@ -154,7 +177,10 @@
   {:else}
     <!-- Add button -->
     <div class="flex justify-end">
-      <button class="btn btn-primary btn-sm gap-2" onclick={() => openCreate(activeTab)}>
+      <button
+        class="btn btn-primary btn-sm gap-2"
+        onclick={() => openCreate(activeTab)}
+      >
         <Plus size={16} /> Add {getTabLabel(activeTab).replace(/s$/, "")}
       </button>
     </div>
@@ -181,29 +207,52 @@
                 <tr class="hover:bg-base-300/30">
                   <td class="font-mono text-xs opacity-60">{item.id}</td>
                   <td class="font-medium">{item.name}</td>
-                  <td class="text-sm opacity-70 max-w-[300px] truncate">{item.description ?? "—"}</td>
+                  <td class="text-sm opacity-70 max-w-[300px] truncate"
+                    >{item.description ?? "—"}</td
+                  >
                   {#if activeTab === "types"}
                     <td>
-                      <span class="badge badge-xs {(item as RequestType).requires_approval_by_default ? 'badge-warning' : 'badge-ghost'}">
-                        {(item as RequestType).requires_approval_by_default ? "Yes" : "No"}
+                      <span
+                        class="badge badge-xs {(item as RequestType)
+                          .requires_approval_by_default
+                          ? 'badge-warning'
+                          : 'badge-ghost'}"
+                      >
+                        {(item as RequestType).requires_approval_by_default
+                          ? "Yes"
+                          : "No"}
                       </span>
                     </td>
                   {/if}
                   <td>
-                    <span class="badge badge-xs {item.is_active ? 'badge-success' : 'badge-error'}">
+                    <span
+                      class="badge badge-xs {item.is_active
+                        ? 'badge-success'
+                        : 'badge-error'}"
+                    >
                       {item.is_active ? "Active" : "Inactive"}
                     </span>
                   </td>
                   <td>
                     <div class="flex gap-1">
-                      <button class="btn btn-ghost btn-xs" onclick={() => openEdit(activeTab, item)}><Pencil size={14} /></button>
-                      <button class="btn btn-ghost btn-xs text-error" onclick={() => remove(activeTab, item.id)}><Trash2 size={14} /></button>
+                      <button
+                        class="btn btn-ghost btn-xs"
+                        onclick={() => openEdit(activeTab, item)}
+                        ><Pencil size={14} /></button
+                      >
+                      <button
+                        class="btn btn-ghost btn-xs text-error"
+                        onclick={() => remove(activeTab, item.id)}
+                        ><Trash2 size={14} /></button
+                      >
                     </div>
                   </td>
                 </tr>
               {:else}
                 <tr>
-                  <td colspan="6" class="text-center py-8 opacity-50">No items</td>
+                  <td colspan="6" class="text-center py-8 opacity-50"
+                    >No items</td
+                  >
                 </tr>
               {/each}
             </tbody>
@@ -219,39 +268,70 @@
   <div class="modal modal-open">
     <div class="modal-box max-w-md">
       <h3 class="text-lg font-bold">
-        {editingItem ? "Edit" : "Create"} {getTabLabel(modalType).replace(/s$/, "")}
+        {editingItem ? "Edit" : "Create"}
+        {getTabLabel(modalType).replace(/s$/, "")}
       </h3>
       {#if modalError}
-        <div role="alert" class="alert alert-error alert-soft text-sm mt-3">{modalError}</div>
+        <div role="alert" class="alert alert-error alert-soft text-sm mt-3">
+          {modalError}
+        </div>
       {/if}
       <form onsubmit={save} class="flex flex-col gap-3 mt-4">
         <fieldset class="fieldset">
           <label class="label text-xs" for="ref-name">Name</label>
-          <input id="ref-name" type="text" class="input input-bordered input-sm w-full" required bind:value={formName} />
+          <input
+            id="ref-name"
+            type="text"
+            class="input input-bordered input-sm w-full"
+            required
+            bind:value={formName}
+          />
         </fieldset>
         <fieldset class="fieldset">
           <label class="label text-xs" for="ref-desc">Description</label>
-          <textarea id="ref-desc" class="textarea textarea-bordered textarea-sm w-full" rows="2" bind:value={formDesc}></textarea>
+          <textarea
+            id="ref-desc"
+            class="textarea textarea-bordered textarea-sm w-full"
+            rows="2"
+            bind:value={formDesc}
+          ></textarea>
         </fieldset>
         {#if modalType === "types"}
           <label class="label cursor-pointer justify-start gap-2">
-            <input type="checkbox" class="checkbox checkbox-sm checkbox-warning" bind:checked={formApproval} />
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-warning"
+              bind:checked={formApproval}
+            />
             <span class="text-sm">Requires approval by default</span>
           </label>
         {/if}
         <label class="label cursor-pointer justify-start gap-2">
-          <input type="checkbox" class="checkbox checkbox-sm" bind:checked={formActive} />
+          <input
+            type="checkbox"
+            class="checkbox checkbox-sm"
+            bind:checked={formActive}
+          />
           <span class="text-sm">Active</span>
         </label>
         <div class="modal-action">
-          <button type="button" class="btn btn-ghost" onclick={() => (showModal = false)}>Cancel</button>
+          <button
+            type="button"
+            class="btn btn-ghost"
+            onclick={() => (showModal = false)}>Cancel</button
+          >
           <button type="submit" class="btn btn-primary" disabled={modalLoading}>
-            {#if modalLoading}<span class="loading loading-spinner loading-xs"></span>{/if}
+            {#if modalLoading}<span class="loading loading-spinner loading-xs"
+              ></span>{/if}
             {editingItem ? "Save" : "Create"}
           </button>
         </div>
       </form>
     </div>
-    <button class="modal-backdrop" onclick={() => (showModal = false)} aria-label="close"></button>
+    <button
+      class="modal-backdrop"
+      onclick={() => (showModal = false)}
+      aria-label="close"
+    ></button>
   </div>
 {/if}

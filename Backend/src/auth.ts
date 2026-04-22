@@ -266,4 +266,14 @@ export const auth = new Elysia({ prefix: "/auth" })
     return status(200, { message: "Logout Success" });
   }, {
     isAuth: true
-  });
+  })
+
+  .get('/ws-token', async ({ user, roles, jwt_token, status }) => {
+    if (!user) return status(401)
+    const shortToken = await jwt_token.sign({
+      sub: user.toString(),
+      roles: roles,
+      exp: Math.floor(Date.now() / 1000) + 60 // 60 seconds only
+    })
+    return status(200, { token: shortToken })
+  }, { isAuth: true });

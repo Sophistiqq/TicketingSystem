@@ -1,17 +1,22 @@
 <script lang="ts">
   import { api } from "../../lib/api";
-  import { getCurrentUser, setCurrentUser, displayName, userInitials } from "../../stores/user.svelte";
-  import { CircleUser, Save, Lock, Mail, User as UserIcon } from "lucide-svelte";
+  import {
+    getCurrentUser,
+    setCurrentUser,
+    displayName,
+    userInitials,
+  } from "../../stores/user.svelte";
+  import { Save, Lock, User as UserIcon } from "lucide-svelte";
 
   let user = $derived(getCurrentUser());
-  
+
   let firstName = $state("");
   let lastName = $state("");
   let email = $state("");
   let username = $state("");
   let password = $state("");
   let confirmPassword = $state("");
-  
+
   let loading = $state(false);
   let error = $state("");
   let success = $state("");
@@ -30,7 +35,7 @@
     e.preventDefault();
     error = "";
     success = "";
-    
+
     if (password && password !== confirmPassword) {
       error = "Passwords do not match";
       return;
@@ -42,7 +47,7 @@
         first_name: firstName,
         last_name: lastName,
         email,
-        username
+        username,
       };
       if (password) body.password = password;
 
@@ -64,14 +69,18 @@
 <div class="max-w-2xl mx-auto flex flex-col gap-6">
   <div>
     <h1 class="text-3xl font-bold">My Profile</h1>
-    <p class="text-sm opacity-60 mt-1">Manage your account information and password</p>
+    <p class="text-sm opacity-60 mt-1">
+      Manage your account information and password
+    </p>
   </div>
 
   {#if error}
     <div role="alert" class="alert alert-error alert-soft text-sm">{error}</div>
   {/if}
   {#if success}
-    <div role="alert" class="alert alert-success alert-soft text-sm">{success}</div>
+    <div role="alert" class="alert alert-success alert-soft text-sm">
+      {success}
+    </div>
   {/if}
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -85,7 +94,9 @@
             </div>
           </div>
           <h2 class="font-bold text-lg">{displayName()}</h2>
-          <p class="text-xs opacity-50 uppercase tracking-widest font-bold mt-1">
+          <p
+            class="text-xs opacity-50 uppercase tracking-widest font-bold mt-1"
+          >
             {user?.roles?.join(", ") || "User"}
           </p>
           <div class="badge badge-neutral mt-4 badge-sm">ID: {user?.id}</div>
@@ -95,33 +106,74 @@
 
     <!-- Main Form -->
     <div class="md:col-span-2">
-      <form onsubmit={handleUpdate} class="card bg-base-200 shadow-sm border border-base-300">
+      <form
+        onsubmit={handleUpdate}
+        class="card bg-base-200 shadow-sm border border-base-300"
+      >
         <div class="card-body gap-4 p-6">
           <div class="flex items-center gap-2 mb-2">
             <UserIcon size={16} class="text-primary" />
-            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">Personal Information</h3>
+            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">
+              Personal Information
+            </h3>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <fieldset class="fieldset">
-              <label class="label text-xs font-bold uppercase opacity-50" for="p-first">First Name</label>
-              <input id="p-first" type="text" class="input input-bordered input-sm w-full" bind:value={firstName} required />
+              <label
+                class="label text-xs font-bold uppercase opacity-50"
+                for="p-first">First Name</label
+              >
+              <input
+                id="p-first"
+                type="text"
+                class="input input-bordered input-sm w-full"
+                bind:value={firstName}
+                required
+              />
             </fieldset>
             <fieldset class="fieldset">
-              <label class="label text-xs font-bold uppercase opacity-50" for="p-last">Last Name</label>
-              <input id="p-last" type="text" class="input input-bordered input-sm w-full" bind:value={lastName} required />
+              <label
+                class="label text-xs font-bold uppercase opacity-50"
+                for="p-last">Last Name</label
+              >
+              <input
+                id="p-last"
+                type="text"
+                class="input input-bordered input-sm w-full"
+                bind:value={lastName}
+                required
+              />
             </fieldset>
           </div>
 
           <fieldset class="fieldset">
-            <label class="label text-xs font-bold uppercase opacity-50" for="p-username">Username</label>
-            <input id="p-username" type="text" class="input input-bordered input-sm w-full" bind:value={username} required />
+            <label
+              class="label text-xs font-bold uppercase opacity-50"
+              for="p-username">Username</label
+            >
+            <input
+              id="p-username"
+              type="text"
+              class="input input-bordered input-sm w-full"
+              bind:value={username}
+              required
+            />
           </fieldset>
 
           <fieldset class="fieldset">
-            <label class="label text-xs font-bold uppercase opacity-50" for="p-email">Email Address</label>
+            <label
+              class="label text-xs font-bold uppercase opacity-50"
+              for="p-email">Email Address</label
+            >
             <div class="input-group">
-               <input id="p-email" type="email" class="input input-bordered input-sm w-full" bind:value={email} required />
+              <input
+                id="p-email"
+                type="email"
+                class="input input-bordered input-sm w-full"
+                bind:value={email}
+                required
+              />
             </div>
           </fieldset>
 
@@ -129,24 +181,50 @@
 
           <div class="flex items-center gap-2 mb-2">
             <Lock size={16} class="text-warning" />
-            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">Change Password</h3>
+            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">
+              Change Password
+            </h3>
           </div>
-          <p class="text-[10px] opacity-50 -mt-2 mb-2">Leave blank if you don't want to change it</p>
+          <p class="text-[10px] opacity-50 -mt-2 mb-2">
+            Leave blank if you don't want to change it
+          </p>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <fieldset class="fieldset">
-              <label class="label text-xs font-bold uppercase opacity-50" for="p-pass">New Password</label>
-              <input id="p-pass" type="password" class="input input-bordered input-sm w-full" bind:value={password} minlength="8" />
+              <label
+                class="label text-xs font-bold uppercase opacity-50"
+                for="p-pass">New Password</label
+              >
+              <input
+                id="p-pass"
+                type="password"
+                class="input input-bordered input-sm w-full"
+                bind:value={password}
+                minlength="8"
+              />
             </fieldset>
             <fieldset class="fieldset">
-              <label class="label text-xs font-bold uppercase opacity-50" for="p-confirm">Confirm New Password</label>
-              <input id="p-confirm" type="password" class="input input-bordered input-sm w-full" bind:value={confirmPassword} />
+              <label
+                class="label text-xs font-bold uppercase opacity-50"
+                for="p-confirm">Confirm New Password</label
+              >
+              <input
+                id="p-confirm"
+                type="password"
+                class="input input-bordered input-sm w-full"
+                bind:value={confirmPassword}
+              />
             </fieldset>
           </div>
 
           <div class="card-actions justify-end mt-4">
-            <button class="btn btn-primary btn-sm px-6 gap-2" type="submit" disabled={loading}>
-              {#if loading}<span class="loading loading-spinner loading-xs"></span>{/if}
+            <button
+              class="btn btn-primary btn-sm px-6 gap-2"
+              type="submit"
+              disabled={loading}
+            >
+              {#if loading}<span class="loading loading-spinner loading-xs"
+                ></span>{/if}
               <Save size={14} /> Update Profile
             </button>
           </div>
@@ -155,3 +233,4 @@
     </div>
   </div>
 </div>
+

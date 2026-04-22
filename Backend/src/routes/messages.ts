@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
+import { broadcaster } from "../ws/broadcaster";
 
 export const messages = new Elysia({ prefix: "/messages" })
   .use(validator)
@@ -9,10 +10,10 @@ export const messages = new Elysia({ prefix: "/messages" })
   .get(
     "/active",
     async ({ status }) => {
-      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
       const activeUsers = await prisma.user.findMany({
         where: {
-          last_active: { gte: fifteenMinutesAgo },
+          last_active: { gte: fiveMinutesAgo },
           is_active: true,
         },
         select: {
@@ -25,6 +26,9 @@ export const messages = new Elysia({ prefix: "/messages" })
         },
         orderBy: { last_active: "desc" },
       });
+
+      // remove self from the list
+      activeUsers.shift();
       return status(200, activeUsers);
     },
     { isAuth: true }
@@ -145,7 +149,8 @@ export const messages = new Elysia({ prefix: "/messages" })
       });
 
       // For each contact, get the last message
-      const results = await Promise.all(contacts.map(async (contact) => {
+      const results = [];
+      for (const contact of contacts) {
         const lastMsg = await prisma.message.findFirst({
           where: {
             OR: [
@@ -156,11 +161,11 @@ export const messages = new Elysia({ prefix: "/messages" })
           orderBy: { created_at: 'desc' },
           include: { ticket: { select: { title: true } } }
         });
-        return {
+        results.push({
           ...contact,
           last_message: lastMsg
-        };
-      }));
+        });
+      }
 
       // Sort by last message date
       results.sort((a, b) => {
@@ -193,7 +198,7 @@ export const messages = new Elysia({ prefix: "/messages" })
       });
 
       // Mark unread messages as read
-      await prisma.message.updateMany({
+      const updated = await prisma.message.updateMany({
         where: {
           sender_id: params.contactId,
           receiver_id: user,
@@ -201,6 +206,10 @@ export const messages = new Elysia({ prefix: "/messages" })
         },
         data: { is_read: true }
       });
+
+      if (updated.count > 0) {
+        broadcaster.messagesRead(params.contactId, user);
+      }
 
       return status(200, messages);
     },
@@ -226,6 +235,17 @@ export const messages = new Elysia({ prefix: "/messages" })
           ticket: { select: { id: true, title: true } }
         }
       });
+
+      broadcaster.messageSent(body.receiver_id, {
+        id: message.id,
+        content: message.content,
+        sender: message.sender,
+        sender_id: user,
+        receiver_id: body.receiver_id,
+        ticket_id: message.ticket_id ?? null,
+        created_at: message.created_at
+      });
+
       return status(201, message);
     },
     {

@@ -110,8 +110,8 @@
           onclick={() => {
             if (!notif.is_read) markAsRead(notif.id);
             if (notif.ticket_id)
-              navigate("/tickets/:id", {
-                params: { id: notif.ticket_id.toString() },
+              (navigate as any)("/tickets/:id", {
+                params: { id: String(notif.ticket_id) },
               });
           }}
           onkeydown={(e) => {

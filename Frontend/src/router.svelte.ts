@@ -7,6 +7,7 @@ import { setCurrentUser, getCurrentUser } from './stores/user.svelte';
 import { startPolling } from './stores/notifications.svelte';
 import { fetchReferenceData } from './stores/reference.svelte';
 import { startMessagePolling } from './stores/messages.svelte';
+import { ws } from './lib/ws';
 
 // ── Route components ────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export const { p, navigate, isActive, route } = createRouter({
             startPolling();
             fetchReferenceData();
             startMessagePolling();
+            ws.connect();
           }
         } catch {
           setCurrentUser(null);

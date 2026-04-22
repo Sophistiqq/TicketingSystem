@@ -46,6 +46,7 @@ export type AffectedSystem = {
   name: string;
   description?: string;
   is_active: boolean;
+  department_id?: number | null;
 };
 
 export type RequestType = {
@@ -54,6 +55,7 @@ export type RequestType = {
   description?: string;
   requires_approval_by_default: boolean;
   is_active: boolean;
+  department_id?: number | null;
 };
 
 // ── Users ───────────────────────────────────────────────────
@@ -102,6 +104,8 @@ export type Ticket = {
   request_type?: RequestType;
   affected_system_id?: number;
   affected_system?: AffectedSystem;
+  department_id?: number | null;
+  department?: Department;
   approvers?: TicketApprover[];
   attachments?: Attachment[];
   comments?: TicketComment[];

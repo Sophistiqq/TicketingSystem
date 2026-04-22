@@ -68,9 +68,9 @@
       const res = await api.get<PaginatedResponse<User>>(`/users/?${params}`);
       if (res) {
         // Flatten roles if they are objects
-        users = res.data.map(u => ({
+        users = res.data.map((u: any) => ({
           ...u,
-          roles: u.roles.map(r => typeof r === 'object' ? (r as any).role : r)
+          roles: u.roles.map((r: any) => typeof r === 'object' ? r.role : r)
         }));
         pagination = res.pagination;
       }

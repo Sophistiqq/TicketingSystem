@@ -6,6 +6,10 @@ if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required")
 }
 
+// Cache to throttle last_active updates (User ID -> Last Update Timestamp)
+const lastActiveCache = new Map<number, number>();
+const THROTTLE_MS = 60 * 1000; // 1 minute
+
 export const validator = new Elysia()
   .use(jwt({
     name: "jwt_token",
@@ -22,11 +26,17 @@ export const validator = new Elysia()
       const userId = Number(token.sub)
       if (!Number.isInteger(userId)) return status(400)
 
-      // Background update of last_active
-      prisma.user.update({
-        where: { id: userId },
-        data: { last_active: new Date() }
-      }).catch(console.error);
+      // Throttle background update of last_active
+      const now = Date.now();
+      const lastUpdate = lastActiveCache.get(userId) || 0;
+      
+      if (now - lastUpdate > THROTTLE_MS) {
+        lastActiveCache.set(userId, now);
+        prisma.user.update({
+          where: { id: userId },
+          data: { last_active: new Date() }
+        }).catch(console.error);
+      }
 
       return {
         user: userId,

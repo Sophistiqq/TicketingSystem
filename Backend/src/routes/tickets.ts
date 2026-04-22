@@ -1,6 +1,8 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
+import { broadcaster } from "../ws/broadcaster";
+import { createAndPushNotification } from "./notifications";
 
 export const tickets = new Elysia({ prefix: "/tickets" })
   .use(validator);
@@ -14,20 +16,6 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   closed: ["open"], // reopen
   rejected: ["open", "in_progress"],
 };
-
-/**
- * Create a notification for a user
- */
-async function createNotification(
-  userId: number,
-  ticketId: number,
-  type: string,
-  message: string,
-) {
-  await prisma.notification.create({
-    data: { user_id: userId, ticket_id: ticketId, type: type as any, message },
-  });
-}
 
 /**
  * Create an audit log entry
@@ -64,6 +52,7 @@ tickets
         requester_id,
         affected_system_id,
         request_type_id,
+        department_id,
         search,
         overdue,
         page = 1,
@@ -80,6 +69,7 @@ tickets
       }
       if (assignee_id) where.assignee_id = assignee_id;
       if (requester_id) where.requester_id = requester_id;
+      if (department_id) where.department_id = department_id;
       if (ticketStatus) where.status = ticketStatus;
       if (priority) where.priority = priority;
       if (affected_system_id) where.affected_system_id = affected_system_id;
@@ -114,27 +104,25 @@ tickets
         },
       });
 
-      const [data, total] = await Promise.all([
-        prisma.ticket.findMany({
-          where,
-          include: {
-            requester: { omit: { password: true } },
-            assignee: { omit: { password: true } },
-            request_type: true,
-            affected_system: true,
-            _count: {
-              select: {
-                attachments: true,
-                resolution_attempts: true,
-              },
+      const data = await prisma.ticket.findMany({
+        where,
+        include: {
+          requester: { omit: { password: true } },
+          assignee: { omit: { password: true } },
+          request_type: true,
+          affected_system: true,
+          _count: {
+            select: {
+              attachments: true,
+              resolution_attempts: true,
             },
           },
-          orderBy,
-          skip,
-          take: limit,
-        }),
-        prisma.ticket.count({ where }),
-      ]);
+        },
+        orderBy,
+        skip,
+        take: limit,
+      });
+      const total = await prisma.ticket.count({ where });
 
       return status(200, {
         data,
@@ -149,6 +137,7 @@ tickets
         requester_id: t.Optional(t.Numeric()),
         affected_system_id: t.Optional(t.Numeric()),
         request_type_id: t.Optional(t.Numeric()),
+        department_id: t.Optional(t.Numeric()),
         search: t.Optional(t.String()),
         overdue: t.Optional(t.String()),
         page: t.Optional(t.Numeric({ minimum: 1 })),
@@ -176,8 +165,8 @@ tickets
         include: {
           requester: { omit: { password: true } },
           assignee: { omit: { password: true } },
-          request_type: true,
-          affected_system: true,
+          request_type: { select: { id: true, name: true, department_id: true } },
+          affected_system: { select: { id: true, name: true, department_id: true } },
           approvers: { include: { approver: { omit: { password: true } } } },
           attachments: true,
           resolution_attempts: {
@@ -220,108 +209,156 @@ tickets
   // Create ticket
   .post(
     "/",
-    async ({ body, user, status }) => {
-      const requestType = body.request_type_id
-        ? await prisma.requestType.findUnique({
-            where: { id: body.request_type_id },
-          })
-        : null;
+    async ({ body, user }) => {
+      return await prisma.$transaction(async (tx) => {
+        // 1. Resolve Request Type with fallback
+        let requestTypeId = body.request_type_id;
+        if (!requestTypeId) {
+          const others = await tx.requestType.findUnique({ where: { name: "Others" } });
+          requestTypeId = others?.id;
+        }
 
-      const requiresApproval =
-        body.requires_approval ??
-        requestType?.requires_approval_by_default ??
-        false;
+        const requestType = requestTypeId
+          ? await tx.requestType.findUnique({ where: { id: requestTypeId } })
+          : null;
 
-      const ticket = await prisma.ticket.create({
-        data: {
-          title: body.title,
-          description: body.description,
-          priority: (body.priority ?? "medium") as any,
-          requester_id: user,
-          request_type_id: body.request_type_id ?? null,
-          affected_system_id: body.affected_system_id ?? null,
-          requires_approval: requiresApproval,
-          status: requiresApproval ? "pending_approval" : "open",
-          due_date: body.due_date ? new Date(body.due_date) : null,
-        },
-        include: {
-          requester: { omit: { password: true } },
-          request_type: true,
-          affected_system: true,
-        },
-      });
+        // 2. Resolve Affected System with fallback
+        let affectedSystemId = body.affected_system_id;
+        if (!affectedSystemId) {
+          const others = await tx.affectedSystem.findUnique({ where: { name: "Others" } });
+          affectedSystemId = others?.id;
+        }
 
-      // Automatic Default Approver Assignment
-      if (requiresApproval) {
-        // Find first active admin/MIS as default approver
-        // Find default approver: prioritize 'approver' role, fallback to 'admin'/'mis'
-        let defaultApprover = await prisma.user.findFirst({
-          where: {
-            is_active: true,
-            roles: { some: { role: 'approver' } },
+        // 3. Resolve Targeted Department
+        let departmentId = body.department_id;
+        if (!departmentId) {
+          // Fallback order: Affected System -> Request Type -> Default MIS
+          const system = affectedSystemId
+            ? await tx.affectedSystem.findUnique({ where: { id: affectedSystemId } })
+            : null;
+          
+          if (system?.department_id) {
+            departmentId = system.department_id;
+          } else {
+            const rt = requestTypeId
+              ? await tx.requestType.findUnique({ where: { id: requestTypeId } })
+              : null;
+            if (rt?.department_id) {
+              departmentId = rt.department_id;
+            } else {
+              // Final fallback: Find 'MIS' department
+              const misDept = await tx.department.findUnique({ where: { name: "MIS" } });
+              departmentId = misDept?.id;
+            }
+          }
+        }
+
+        // 4. Determine Approval Workflow
+        const requiresApproval = body.requires_approval ?? requestType?.requires_approval_by_default ?? false;
+        const priority = (body.priority ?? "medium") as any;
+
+        // 5. Automatic SLA Calculation (if not provided)
+        let dueDate = body.due_date ? new Date(body.due_date) : null;
+        if (!dueDate) {
+          const now = new Date();
+          if (priority === "critical") dueDate = new Date(now.getTime() + 4 * 60 * 60 * 1000); // 4h
+          else if (priority === "high") dueDate = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24h
+          else if (priority === "medium") dueDate = new Date(now.getTime() + 72 * 60 * 60 * 1000); // 3 days
+          else dueDate = new Date(now.getTime() + 120 * 60 * 60 * 1000); // 5 days
+        }
+
+        // 6. Create Ticket
+        const ticket = await tx.ticket.create({
+          data: {
+            title: body.title,
+            description: body.description,
+            priority,
+            requester_id: user,
+            request_type_id: requestTypeId,
+            affected_system_id: affectedSystemId,
+            department_id: departmentId,
+            requires_approval: requiresApproval,
+            status: requiresApproval ? "pending_approval" : "open",
+            due_date: dueDate,
+          },
+          include: {
+            requester: { omit: { password: true } },
+            request_type: true,
+            affected_system: true,
+            department: true,
           },
         });
 
-        if (!defaultApprover) {
-          defaultApprover = await prisma.user.findFirst({
-            where: {
-              is_active: true,
-              roles: { some: { role: { in: ['admin', 'mis'] } } },
-            },
-          });
-        }
-
-        if (defaultApprover) {
-          await prisma.ticketApprover.create({
-            data: {
-              ticket_id: ticket.id,
-              approver_id: defaultApprover.id,
-              status: 'pending',
-            },
-          });
-
-          await createNotification(
-            defaultApprover.id,
-            ticket.id,
-            'approval_requested',
-            `New approval request for ticket #${ticket.id}: ${ticket.title}`,
-          );
-          
-          await createAuditLog(
-            ticket.id,
-            user, // The requester who triggered the approval
-            'approvers_added',
-            null,
-            `${defaultApprover.first_name} ${defaultApprover.last_name}`,
-            'Automatically assigned default approver'
-          );
-        }
-      }
-
-      // Notify MIS team for assignment (if not pending approval)
-      if (!requiresApproval) {
-        const misUsers = await prisma.user.findMany({
-          where: { roles: { some: { role: "mis" } }, is_active: true },
+        // 7. Audit initial creation
+        await tx.auditLog.create({
+          data: {
+            ticket_id: ticket.id,
+            performed_by_id: user,
+            action: "ticket_created",
+            new_value: ticket.status,
+            notes: `Ticket created for ${ticket.department?.name ?? 'Unknown'} department with priority ${priority}. SLA set to ${dueDate?.toLocaleString() ?? 'none'}.`
+          }
         });
-        for (const misUser of misUsers) {
-          await createNotification(
-            misUser.id,
-            ticket.id,
-            "ticket_created",
-            `New ticket created: ${ticket.title}`,
-          );
-        }
-      }
 
-      return status(201, ticket);
+        // 7. Handle Approvers if needed
+        if (requiresApproval) {
+          let defaultApprover = await tx.user.findFirst({
+            where: { is_active: true, roles: { some: { role: 'approver' } } },
+          });
+
+          if (!defaultApprover) {
+            defaultApprover = await tx.user.findFirst({
+              where: { is_active: true, roles: { some: { role: { in: ['admin', 'mis'] } } } },
+            });
+          }
+
+          if (defaultApprover) {
+            await tx.ticketApprover.create({
+              data: {
+                ticket_id: ticket.id,
+                approver_id: defaultApprover.id,
+                status: 'pending',
+              },
+            });
+
+            await createAndPushNotification(
+              defaultApprover.id,
+              ticket.id,
+              'approval_requested',
+              `New approval request for ticket #${ticket.id}: ${ticket.title}`,
+              tx
+            );
+          }
+        }
+
+        // 8. Notify MIS if no approval needed
+        if (!requiresApproval) {
+          const misUsers = await tx.user.findMany({
+            where: { roles: { some: { role: "mis" } }, is_active: true },
+          });
+
+          for (const misUser of misUsers) {
+            await createAndPushNotification(
+              misUser.id,
+              ticket.id,
+              "ticket_created",
+              `New ticket created: ${ticket.title}`,
+              tx
+            );
+          }
+        }
+
+        return ticket;
+      });
     },
     {
       body: t.Object({
-        title: t.String(),
-        description: t.String(),
+        title: t.String({ minLength: 5 }),
+        description: t.String({ minLength: 20 }),
         priority: t.Optional(t.String()),
         request_type_id: t.Optional(t.Numeric()),
         affected_system_id: t.Optional(t.Numeric()),
+        department_id: t.Optional(t.Numeric()),
         requires_approval: t.Optional(t.Boolean()),
         due_date: t.Optional(t.String({ format: "date-time" })),
       }),
@@ -407,7 +444,7 @@ tickets
             },
           });
 
-          await createNotification(
+          await createAndPushNotification(
             ticket.requester_id,
             params.id,
             "ticket_resolved",
@@ -432,7 +469,7 @@ tickets
           }
           updateData.reopen_count = { increment: 1 };
 
-          await createNotification(
+          await createAndPushNotification(
             ticket.requester_id,
             params.id,
             "ticket_reopened",
@@ -476,7 +513,7 @@ tickets
         updateData.assignee_id = body.assignee_id;
 
         if (body.assignee_id) {
-          await createNotification(
+          await createAndPushNotification(
             body.assignee_id,
             params.id,
             "ticket_assigned",
@@ -544,6 +581,17 @@ tickets
         },
       });
 
+      // Broadcast ticket update to subscribers
+      if (Object.keys(updateData).length > 0) {
+        broadcaster.ticketUpdated(params.id, {
+          field: Object.keys(updateData).join(', '),
+          old_value: null, // Simplification
+          new_value: null, // Simplification
+          status: updated.status,
+          updated_by: `User #${user}`
+        });
+      }
+
       return status(200, updated);
     },
     {
@@ -565,7 +613,7 @@ tickets
   // Delete ticket (admin/MIS only)
   .delete(
     "/:id",
-    async ({ params, status }) => {
+    async ({ params, user, status }) => {
       const ticket = await prisma.ticket.findUnique({
         where: { id: params.id },
       });
@@ -575,6 +623,16 @@ tickets
         where: { id: params.id },
         data: { status: "closed" },
       });
+
+      // Broadcast ticket update
+      broadcaster.ticketUpdated(params.id, {
+        field: 'status',
+        old_value: ticket.status,
+        new_value: 'closed',
+        status: 'closed',
+        updated_by: `User #${user}`
+      });
+
       return status(204);
     },
     {
@@ -590,20 +648,18 @@ tickets
       const { page = 1, limit = 20 } = query;
       const skip = (page - 1) * limit;
 
-      const [data, total] = await Promise.all([
-        prisma.ticket.findMany({
-          where: { requester_id: user },
-          include: {
-            assignee: { omit: { password: true } },
-            request_type: true,
-            affected_system: true,
-          },
-          orderBy: { created_at: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.ticket.count({ where: { requester_id: user } }),
-      ]);
+      const data = await prisma.ticket.findMany({
+        where: { requester_id: user },
+        include: {
+          assignee: { omit: { password: true } },
+          request_type: true,
+          affected_system: true,
+        },
+        orderBy: { created_at: "desc" },
+        skip,
+        take: limit,
+      });
+      const total = await prisma.ticket.count({ where: { requester_id: user } });
 
       return status(200, {
         data,
@@ -626,20 +682,18 @@ tickets
       const { page = 1, limit = 20 } = query;
       const skip = (page - 1) * limit;
 
-      const [data, total] = await Promise.all([
-        prisma.ticket.findMany({
-          where: { assignee_id: user },
-          include: {
-            requester: { omit: { password: true } },
-            request_type: true,
-            affected_system: true,
-          },
-          orderBy: { created_at: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.ticket.count({ where: { assignee_id: user } }),
-      ]);
+      const data = await prisma.ticket.findMany({
+        where: { assignee_id: user },
+        include: {
+          requester: { omit: { password: true } },
+          request_type: true,
+          affected_system: true,
+        },
+        orderBy: { created_at: "desc" },
+        skip,
+        take: limit,
+      });
+      const total = await prisma.ticket.count({ where: { assignee_id: user } });
 
       return status(200, {
         data,

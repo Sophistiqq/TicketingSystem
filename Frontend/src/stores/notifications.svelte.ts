@@ -54,6 +54,11 @@ export async function markAllAsRead() {
   unreadCount = 0;
 }
 
+export function pushNotification(notification: any) {
+  notifications = [notification, ...notifications];
+  unreadCount++;
+}
+
 export function startPolling(intervalMs = 30_000) {
   stopPolling();
   fetchUnreadCount();

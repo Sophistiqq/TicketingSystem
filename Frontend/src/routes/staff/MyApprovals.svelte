@@ -10,7 +10,6 @@
     ClipboardCheck,
     Clock,
     Eye,
-    ChevronDown,
     ChevronUp,
     User,
     Tag,
@@ -36,9 +35,12 @@
     approval: TicketApprover,
     decision: "approved" | "rejected",
   ) {
-    const remarks = await simplePrompt(`Remarks for ${decision}: (Optional)`, "Add any internal remarks...");
+    const remarks = await simplePrompt(
+      `Remarks for ${decision}: (Optional)`,
+      "Add any internal remarks...",
+    );
     // If user clicks Cancel, prompt returns null.
-    if (remarks === null) return; 
+    if (remarks === null) return;
 
     try {
       await api.post(`/approvals/${approval.id}/decide`, {
@@ -61,7 +63,9 @@
 <div class="flex flex-col gap-6 max-w-5xl mx-auto w-full px-4">
   <div>
     <h1 class="text-3xl font-bold">My Approvals</h1>
-    <p class="text-sm opacity-60 mt-1 text-primary">Tickets awaiting your authorization</p>
+    <p class="text-sm opacity-60 mt-1 text-primary">
+      Tickets awaiting your authorization
+    </p>
   </div>
 
   {#if loading}
@@ -79,15 +83,21 @@
   {:else}
     <div class="grid gap-4">
       {#each approvals as approval (approval.id)}
-        <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-all overflow-hidden">
+        <div
+          class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-all overflow-hidden"
+        >
           <div class="card-body p-5 gap-4">
-            <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div
+              class="flex flex-col md:flex-row md:items-start justify-between gap-4"
+            >
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
-                   <span class="text-[10px] font-mono opacity-50">#{approval.ticket_id}</span>
-                   {#if approval.ticket?.status}
-                     <StatusBadge status={approval.ticket.status} />
-                   {/if}
+                  <span class="text-[10px] font-mono opacity-50"
+                    >#{approval.ticket_id}</span
+                  >
+                  {#if approval.ticket?.status}
+                    <StatusBadge status={approval.ticket.status} />
+                  {/if}
                 </div>
                 <a
                   href="/tickets/{approval.ticket_id}"
@@ -95,16 +105,25 @@
                 >
                   {approval.ticket?.title ?? `Ticket #${approval.ticket_id}`}
                 </a>
-                
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs opacity-60">
+
+                <div
+                  class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs opacity-60"
+                >
                   <div class="flex items-center gap-1">
                     <Clock size={12} />
-                    <span>Requested {new Date(approval.created_at).toLocaleDateString()}</span>
+                    <span
+                      >Requested {new Date(
+                        approval.created_at,
+                      ).toLocaleDateString()}</span
+                    >
                   </div>
                   {#if approval.ticket?.requester}
                     <div class="flex items-center gap-1">
                       <User size={12} />
-                      <span>By {approval.ticket.requester.first_name} {approval.ticket.requester.last_name}</span>
+                      <span
+                        >By {approval.ticket.requester.first_name}
+                        {approval.ticket.requester.last_name}</span
+                      >
                     </div>
                   {/if}
                   {#if approval.ticket?.request_type}
@@ -117,7 +136,7 @@
               </div>
 
               <div class="flex gap-2 items-center">
-                <button 
+                <button
                   class="btn btn-ghost btn-sm gap-2"
                   onclick={() => toggleExpand(approval.id)}
                 >
@@ -144,13 +163,25 @@
             </div>
 
             {#if expandedId === approval.id}
-              <div class="mt-2 p-4 bg-base-200/50 rounded-xl animate-in fade-in slide-in-from-top-2">
-                <h4 class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2">Ticket Description</h4>
+              <div
+                class="mt-2 p-4 bg-base-200/50 rounded-xl animate-in fade-in slide-in-from-top-2"
+              >
+                <h4
+                  class="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-2"
+                >
+                  Ticket Description
+                </h4>
                 <p class="text-sm leading-relaxed whitespace-pre-wrap">
                   {approval.ticket?.description ?? "No description provided."}
                 </p>
-                <div class="mt-4 pt-4 border-t border-base-300 flex justify-end">
-                   <a href="/tickets/{approval.ticket_id}" class="btn btn-link btn-xs text-primary no-underline">View Full Ticket History →</a>
+                <div
+                  class="mt-4 pt-4 border-t border-base-300 flex justify-end"
+                >
+                  <a
+                    href="/tickets/{approval.ticket_id}"
+                    class="btn btn-link btn-xs text-primary no-underline"
+                    >View Full Ticket History →</a
+                  >
                 </div>
               </div>
             {/if}

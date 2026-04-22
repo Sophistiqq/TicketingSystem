@@ -3,6 +3,8 @@ import swagger from "@elysiajs/swagger";
 import { auth } from "./auth";
 import { validator } from "./plugins/authValidator";
 import cors from "@elysiajs/cors";
+import { wsHandler } from "./ws/wsHandler";
+import { registerApp } from "./ws/broadcaster";
 import {
   reference,
   users,
@@ -23,6 +25,7 @@ const app = new Elysia()
   .use(swagger())
   .use(auth)
   .use(validator)
+  .use(wsHandler)
   .use(reference)
   .use(users)
   .use(tickets)
@@ -76,6 +79,10 @@ const app = new Elysia()
 
 
   .listen(PORT);
+
+export type App = typeof app;
+
+registerApp(app);
 
 console.log(
   `🦊 Elysia is running at ${app.server?.hostname}:${app.server?.port}`

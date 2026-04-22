@@ -19,6 +19,10 @@ export async function fetchMessageUnreadCount() {
   }
 }
 
+export function incrementMessageUnreadCount() {
+  unreadCount++;
+}
+
 export function startMessagePolling(intervalMs = 30_000) {
   stopMessagePolling();
   fetchMessageUnreadCount();
