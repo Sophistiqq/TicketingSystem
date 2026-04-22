@@ -51,8 +51,8 @@
         >
           <td class="font-mono text-xs opacity-60">#{ticket.id}</td>
           <td>
-            <div class="flex items-center gap-2">
-              <span class="font-medium">{ticket.title}</span>
+            <div class="flex items-center gap-2 max-w-xs">
+              <span class="font-medium truncate">{ticket.title}</span>
               {#if ticket.sla_breached}
                 <span class="badge badge-error badge-xs gap-1 shrink-0">
                   <TriangleAlert size={10} />
