@@ -1,0 +1,2747 @@
+openapi: 3.0.3
+info:
+  title: Elysia Documentation
+  description: Development documentation
+  version: 0.0.0
+paths:
+  /auth/register:
+    post:
+      parameters: []
+      operationId: postAuthRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  minLength: 3
+                  maxLength: 50
+                  type: string
+                password:
+                  minLength: 8
+                  type: string
+                email:
+                  format: email
+                  type: string
+                first_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                last_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                position:
+                  maxLength: 100
+                  type: string
+                department_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+              required:
+                - username
+                - password
+                - email
+                - first_name
+                - last_name
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                username:
+                  minLength: 3
+                  maxLength: 50
+                  type: string
+                password:
+                  minLength: 8
+                  type: string
+                email:
+                  format: email
+                  type: string
+                first_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                last_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                position:
+                  maxLength: 100
+                  type: string
+                department_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+              required:
+                - username
+                - password
+                - email
+                - first_name
+                - last_name
+          text/plain:
+            schema:
+              type: object
+              properties:
+                username:
+                  minLength: 3
+                  maxLength: 50
+                  type: string
+                password:
+                  minLength: 8
+                  type: string
+                email:
+                  format: email
+                  type: string
+                first_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                last_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                position:
+                  maxLength: 100
+                  type: string
+                department_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+              required:
+                - username
+                - password
+                - email
+                - first_name
+                - last_name
+      responses:
+        "200": {}
+  /auth/login:
+    post:
+      parameters: []
+      operationId: postAuthLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  minLength: 1
+                  type: string
+                password:
+                  minLength: 1
+                  type: string
+              required:
+                - username
+                - password
+              additionalProperties: false
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                username:
+                  minLength: 1
+                  type: string
+                password:
+                  minLength: 1
+                  type: string
+              required:
+                - username
+                - password
+              additionalProperties: false
+          text/plain:
+            schema:
+              type: object
+              properties:
+                username:
+                  minLength: 1
+                  type: string
+                password:
+                  minLength: 1
+                  type: string
+              required:
+                - username
+                - password
+              additionalProperties: false
+      responses:
+        "200": {}
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      responses:
+        "200": {}
+    patch:
+      parameters: []
+      operationId: patchAuthMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                last_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                email:
+                  format: email
+                  type: string
+                username:
+                  minLength: 3
+                  maxLength: 50
+                  type: string
+                password:
+                  minLength: 8
+                  type: string
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                last_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                email:
+                  format: email
+                  type: string
+                username:
+                  minLength: 3
+                  maxLength: 50
+                  type: string
+                password:
+                  minLength: 8
+                  type: string
+          text/plain:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                last_name:
+                  minLength: 1
+                  maxLength: 50
+                  type: string
+                email:
+                  format: email
+                  type: string
+                username:
+                  minLength: 3
+                  maxLength: 50
+                  type: string
+                password:
+                  minLength: 8
+                  type: string
+      responses:
+        "200": {}
+  /auth/logout:
+    post:
+      operationId: postAuthLogout
+      responses:
+        "200": {}
+  /auth/ws-token:
+    get:
+      operationId: getAuthWs-token
+      responses:
+        "200": {}
+  /reference/departments:
+    get:
+      operationId: getReferenceDepartments
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postReferenceDepartments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              description: Departments within the company
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+              required:
+                - name
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              description: Departments within the company
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+              required:
+                - name
+          text/plain:
+            schema:
+              additionalProperties: false
+              description: Departments within the company
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+              required:
+                - name
+      responses:
+        "200": {}
+  /reference/departments/{id}:
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putReferenceDepartmentsById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              description: Departments within the company
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              description: Departments within the company
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+          text/plain:
+            schema:
+              additionalProperties: false
+              description: Departments within the company
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteReferenceDepartmentsById
+      responses:
+        "200": {}
+  /reference/affected-systems:
+    get:
+      operationId: getReferenceAffected-systems
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postReferenceAffected-systems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              description: |-
+                Systems or modules that tickets can be filed against
+                e.g. Payroll, Voucher System, Inventory, HR Portal
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+              required:
+                - name
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              description: |-
+                Systems or modules that tickets can be filed against
+                e.g. Payroll, Voucher System, Inventory, HR Portal
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+              required:
+                - name
+          text/plain:
+            schema:
+              additionalProperties: false
+              description: |-
+                Systems or modules that tickets can be filed against
+                e.g. Payroll, Voucher System, Inventory, HR Portal
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+              required:
+                - name
+      responses:
+        "200": {}
+  /reference/affected-systems/{id}:
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putReferenceAffected-systemsById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              description: |-
+                Systems or modules that tickets can be filed against
+                e.g. Payroll, Voucher System, Inventory, HR Portal
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              description: |-
+                Systems or modules that tickets can be filed against
+                e.g. Payroll, Voucher System, Inventory, HR Portal
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+          text/plain:
+            schema:
+              additionalProperties: false
+              description: |-
+                Systems or modules that tickets can be filed against
+                e.g. Payroll, Voucher System, Inventory, HR Portal
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteReferenceAffected-systemsById
+      responses:
+        "200": {}
+  /reference/request-types:
+    get:
+      operationId: getReferenceRequest-types
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postReferenceRequest-types
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              description: >-
+                Catalog of request types
+
+                Does not hard-wire an approver - approval routing is decided per
+                ticket
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                requires_approval_by_default:
+                  type: boolean
+                is_active:
+                  type: boolean
+              required:
+                - name
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              description: >-
+                Catalog of request types
+
+                Does not hard-wire an approver - approval routing is decided per
+                ticket
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                requires_approval_by_default:
+                  type: boolean
+                is_active:
+                  type: boolean
+              required:
+                - name
+          text/plain:
+            schema:
+              additionalProperties: false
+              description: >-
+                Catalog of request types
+
+                Does not hard-wire an approver - approval routing is decided per
+                ticket
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                requires_approval_by_default:
+                  type: boolean
+                is_active:
+                  type: boolean
+              required:
+                - name
+      responses:
+        "200": {}
+  /reference/request-types/{id}:
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putReferenceRequest-typesById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              additionalProperties: false
+              description: >-
+                Catalog of request types
+
+                Does not hard-wire an approver - approval routing is decided per
+                ticket
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                requires_approval_by_default:
+                  type: boolean
+                is_active:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              additionalProperties: false
+              description: >-
+                Catalog of request types
+
+                Does not hard-wire an approver - approval routing is decided per
+                ticket
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                requires_approval_by_default:
+                  type: boolean
+                is_active:
+                  type: boolean
+          text/plain:
+            schema:
+              additionalProperties: false
+              description: >-
+                Catalog of request types
+
+                Does not hard-wire an approver - approval routing is decided per
+                ticket
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                requires_approval_by_default:
+                  type: boolean
+                is_active:
+                  type: boolean
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteReferenceRequest-typesById
+      responses:
+        "200": {}
+  /users/:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: search
+          required: false
+        - schema:
+            additionalProperties: false
+            anyOf:
+              - const: user
+                type: string
+              - const: mis
+                type: string
+              - const: approver
+                type: string
+              - const: admin
+                type: string
+          in: query
+          name: role
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: department_id
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: is_active
+          required: false
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getUsers
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postUsers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                position:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+                last_active:
+                  anyOf:
+                    - type: "null"
+                    - anyOf:
+                        - type: Date
+                        - format: date-time
+                          type: string
+                        - format: date
+                          type: string
+                        - type: number
+                created_at:
+                  anyOf:
+                    - type: Date
+                    - format: date-time
+                      type: string
+                    - format: date
+                      type: string
+                    - type: number
+                department_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: integer
+                          default: 0
+                          type: string
+                        - type: integer
+                    - type: "null"
+              required:
+                - first_name
+                - last_name
+                - email
+                - username
+                - password
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                position:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+                last_active:
+                  anyOf:
+                    - type: "null"
+                    - anyOf:
+                        - type: Date
+                        - format: date-time
+                          type: string
+                        - format: date
+                          type: string
+                        - type: number
+                created_at:
+                  anyOf:
+                    - type: Date
+                    - format: date-time
+                      type: string
+                    - format: date
+                      type: string
+                    - type: number
+                department_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: integer
+                          default: 0
+                          type: string
+                        - type: integer
+                    - type: "null"
+              required:
+                - first_name
+                - last_name
+                - email
+                - username
+                - password
+          text/plain:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                position:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+                last_active:
+                  anyOf:
+                    - type: "null"
+                    - anyOf:
+                        - type: Date
+                        - format: date-time
+                          type: string
+                        - format: date
+                          type: string
+                        - type: number
+                created_at:
+                  anyOf:
+                    - type: Date
+                    - format: date-time
+                      type: string
+                    - format: date
+                      type: string
+                    - type: number
+                department_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: integer
+                          default: 0
+                          type: string
+                        - type: integer
+                    - type: "null"
+              required:
+                - first_name
+                - last_name
+                - email
+                - username
+                - password
+      responses:
+        "200": {}
+  /users/directory:
+    get:
+      operationId: getUsersDirectory
+      responses:
+        "200": {}
+  /users/approvers:
+    get:
+      operationId: getUsersApprovers
+      responses:
+        "200": {}
+  /users/assignees:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: department_id
+          required: false
+      operationId: getUsersAssignees
+      responses:
+        "200": {}
+  /users/{id}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: getUsersById
+      responses:
+        "200": {}
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putUsersById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                position:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+                last_active:
+                  anyOf:
+                    - type: "null"
+                    - anyOf:
+                        - type: Date
+                        - format: date-time
+                          type: string
+                        - format: date
+                          type: string
+                        - type: number
+                created_at:
+                  anyOf:
+                    - type: Date
+                    - format: date-time
+                      type: string
+                    - format: date
+                      type: string
+                    - type: number
+                department_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: integer
+                          default: 0
+                          type: string
+                        - type: integer
+                    - type: "null"
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                position:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+                last_active:
+                  anyOf:
+                    - type: "null"
+                    - anyOf:
+                        - type: Date
+                        - format: date-time
+                          type: string
+                        - format: date
+                          type: string
+                        - type: number
+                created_at:
+                  anyOf:
+                    - type: Date
+                    - format: date-time
+                      type: string
+                    - format: date
+                      type: string
+                    - type: number
+                department_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: integer
+                          default: 0
+                          type: string
+                        - type: integer
+                    - type: "null"
+          text/plain:
+            schema:
+              type: object
+              properties:
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                email:
+                  type: string
+                username:
+                  type: string
+                password:
+                  type: string
+                position:
+                  anyOf:
+                    - type: "null"
+                    - type: string
+                is_active:
+                  type: boolean
+                last_active:
+                  anyOf:
+                    - type: "null"
+                    - anyOf:
+                        - type: Date
+                        - format: date-time
+                          type: string
+                        - format: date
+                          type: string
+                        - type: number
+                created_at:
+                  anyOf:
+                    - type: Date
+                    - format: date-time
+                      type: string
+                    - format: date
+                      type: string
+                    - type: number
+                department_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: integer
+                          default: 0
+                          type: string
+                        - type: integer
+                    - type: "null"
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteUsersById
+      responses:
+        "200": {}
+  /users/{id}/roles:
+    post:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: postUsersByIdRoles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  additionalProperties: false
+                  anyOf:
+                    - const: user
+                      type: string
+                    - const: mis
+                      type: string
+                    - const: approver
+                      type: string
+                    - const: admin
+                      type: string
+              required:
+                - role
+              additionalProperties: false
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                role:
+                  additionalProperties: false
+                  anyOf:
+                    - const: user
+                      type: string
+                    - const: mis
+                      type: string
+                    - const: approver
+                      type: string
+                    - const: admin
+                      type: string
+              required:
+                - role
+              additionalProperties: false
+          text/plain:
+            schema:
+              type: object
+              properties:
+                role:
+                  additionalProperties: false
+                  anyOf:
+                    - const: user
+                      type: string
+                    - const: mis
+                      type: string
+                    - const: approver
+                      type: string
+                    - const: admin
+                      type: string
+              required:
+                - role
+              additionalProperties: false
+      responses:
+        "200": {}
+  /users/{id}/roles/{role}:
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+        - schema:
+            additionalProperties: false
+            anyOf:
+              - const: user
+                type: string
+              - const: mis
+                type: string
+              - const: approver
+                type: string
+              - const: admin
+                type: string
+          in: path
+          name: role
+          required: true
+      operationId: deleteUsersByIdRolesByRole
+      responses:
+        "200": {}
+  /tickets/:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: status
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: priority
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: assignee_id
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: requester_id
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: affected_system_id
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: request_type_id
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: department_id
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: search
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: overdue
+          required: false
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+        - schema:
+            anyOf:
+              - const: created_at
+                type: string
+              - const: updated_at
+                type: string
+              - const: priority
+                type: string
+              - const: status
+                type: string
+          in: query
+          name: sort
+          required: false
+        - schema:
+            anyOf:
+              - const: asc
+                type: string
+              - const: desc
+                type: string
+          in: query
+          name: order
+          required: false
+      operationId: getTickets
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postTickets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  minLength: 5
+                  type: string
+                description:
+                  minLength: 20
+                  type: string
+                priority:
+                  type: string
+                request_type_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                affected_system_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                department_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                requires_approval:
+                  type: boolean
+                due_date:
+                  format: date-time
+                  type: string
+              required:
+                - title
+                - description
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  minLength: 5
+                  type: string
+                description:
+                  minLength: 20
+                  type: string
+                priority:
+                  type: string
+                request_type_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                affected_system_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                department_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                requires_approval:
+                  type: boolean
+                due_date:
+                  format: date-time
+                  type: string
+              required:
+                - title
+                - description
+          text/plain:
+            schema:
+              type: object
+              properties:
+                title:
+                  minLength: 5
+                  type: string
+                description:
+                  minLength: 20
+                  type: string
+                priority:
+                  type: string
+                request_type_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                affected_system_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                department_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                requires_approval:
+                  type: boolean
+                due_date:
+                  format: date-time
+                  type: string
+              required:
+                - title
+                - description
+      responses:
+        "200": {}
+  /tickets/{id}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: getTicketsById
+      responses:
+        "200": {}
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putTicketsById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                priority:
+                  type: string
+                assignee_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: numeric
+                          default: 0
+                          type: string
+                        - type: number
+                    - type: "null"
+                reopen_reason:
+                  type: string
+                resolution_notes:
+                  type: string
+                due_date:
+                  nullable: true
+                  anyOf:
+                    - format: date-time
+                      type: string
+                    - type: "null"
+              additionalProperties: false
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                priority:
+                  type: string
+                assignee_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: numeric
+                          default: 0
+                          type: string
+                        - type: number
+                    - type: "null"
+                reopen_reason:
+                  type: string
+                resolution_notes:
+                  type: string
+                due_date:
+                  nullable: true
+                  anyOf:
+                    - format: date-time
+                      type: string
+                    - type: "null"
+              additionalProperties: false
+          text/plain:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                status:
+                  type: string
+                priority:
+                  type: string
+                assignee_id:
+                  nullable: true
+                  anyOf:
+                    - anyOf:
+                        - format: numeric
+                          default: 0
+                          type: string
+                        - type: number
+                    - type: "null"
+                reopen_reason:
+                  type: string
+                resolution_notes:
+                  type: string
+                due_date:
+                  nullable: true
+                  anyOf:
+                    - format: date-time
+                      type: string
+                    - type: "null"
+              additionalProperties: false
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteTicketsById
+      responses:
+        "200": {}
+  /tickets/{id}/preview:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: getTicketsByIdPreview
+      responses:
+        "200": {}
+  /tickets/{id}/escalate:
+    post:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: postTicketsByIdEscalate
+      responses:
+        "200": {}
+  /tickets/my/requested:
+    get:
+      parameters:
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getTicketsMyRequested
+      responses:
+        "200": {}
+  /tickets/my/assigned:
+    get:
+      parameters:
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getTicketsMyAssigned
+      responses:
+        "200": {}
+  /tickets/{id}/approver/toggle:
+    post:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: postTicketsByIdApproverToggle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approver_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+              required:
+                - approver_id
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                approver_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+              required:
+                - approver_id
+          text/plain:
+            schema:
+              type: object
+              properties:
+                approver_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+              required:
+                - approver_id
+      responses:
+        "200": {}
+  /attachments/:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: ticket_id
+          required: true
+      operationId: getAttachments
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postAttachments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                files:
+                  elysiaMeta: Files
+                  default: Files
+                  type: array
+                  items:
+                    default: Files
+                    type: string
+                    format: binary
+                type:
+                  type: string
+              required:
+                - ticket_id
+                - files
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                files:
+                  elysiaMeta: Files
+                  default: Files
+                  type: array
+                  items:
+                    default: Files
+                    type: string
+                    format: binary
+                type:
+                  type: string
+              required:
+                - ticket_id
+                - files
+          text/plain:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                files:
+                  elysiaMeta: Files
+                  default: Files
+                  type: array
+                  items:
+                    default: Files
+                    type: string
+                    format: binary
+                type:
+                  type: string
+              required:
+                - ticket_id
+                - files
+      responses:
+        "200": {}
+  /attachments/{id}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: getAttachmentsById
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteAttachmentsById
+      responses:
+        "200": {}
+  /approvals/:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: ticket_id
+          required: true
+      operationId: getApprovals
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postApprovals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                approver_ids:
+                  minItems: 1
+                  type: array
+                  items:
+                    anyOf:
+                      - format: numeric
+                        default: 0
+                        type: string
+                      - type: number
+              required:
+                - ticket_id
+                - approver_ids
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                approver_ids:
+                  minItems: 1
+                  type: array
+                  items:
+                    anyOf:
+                      - format: numeric
+                        default: 0
+                        type: string
+                      - type: number
+              required:
+                - ticket_id
+                - approver_ids
+          text/plain:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                approver_ids:
+                  minItems: 1
+                  type: array
+                  items:
+                    anyOf:
+                      - format: numeric
+                        default: 0
+                        type: string
+                      - type: number
+              required:
+                - ticket_id
+                - approver_ids
+      responses:
+        "200": {}
+  /approvals/{id}:
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: ticket_id
+          required: true
+      operationId: deleteApprovalsById
+      responses:
+        "200": {}
+  /approvals/{id}/decide:
+    post:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: postApprovalsByIdDecide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                decision:
+                  type: string
+                remarks:
+                  type: string
+              required:
+                - ticket_id
+                - decision
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                decision:
+                  type: string
+                remarks:
+                  type: string
+              required:
+                - ticket_id
+                - decision
+          text/plain:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                decision:
+                  type: string
+                remarks:
+                  type: string
+              required:
+                - ticket_id
+                - decision
+      responses:
+        "200": {}
+  /approvals/my/pending:
+    get:
+      operationId: getApprovalsMyPending
+      responses:
+        "200": {}
+  /notifications/:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: unread_only
+          required: false
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getNotifications
+      responses:
+        "200": {}
+  /notifications/unread-count:
+    get:
+      operationId: getNotificationsUnread-count
+      responses:
+        "200": {}
+  /notifications/{id}/read:
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putNotificationsByIdRead
+      responses:
+        "200": {}
+  /notifications/read-all:
+    put:
+      operationId: putNotificationsRead-all
+      responses:
+        "200": {}
+  /notifications/{id}:
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteNotificationsById
+      responses:
+        "200": {}
+  /audit/auth:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: action
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: exclude_action
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: performed_by_id
+          required: false
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getAuditAuth
+      responses:
+        "200": {}
+  /audit/tickets/{ticketId}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: ticketId
+          required: true
+      operationId: getAuditTicketsByTicketId
+      responses:
+        "200": {}
+  /audit/:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: ticket_id
+          required: false
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: performed_by_id
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: action
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: exclude_action
+          required: false
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getAudit
+      responses:
+        "200": {}
+  /csat/:
+    post:
+      parameters: []
+      operationId: postCsat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                rating:
+                  minimum: 1
+                  maximum: 5
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - minimum: 1
+                      maximum: 5
+                      type: integer
+                comment:
+                  type: string
+              required:
+                - ticket_id
+                - rating
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                rating:
+                  minimum: 1
+                  maximum: 5
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - minimum: 1
+                      maximum: 5
+                      type: integer
+                comment:
+                  type: string
+              required:
+                - ticket_id
+                - rating
+          text/plain:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                rating:
+                  minimum: 1
+                  maximum: 5
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - minimum: 1
+                      maximum: 5
+                      type: integer
+                comment:
+                  type: string
+              required:
+                - ticket_id
+                - rating
+      responses:
+        "200": {}
+  /csat/tickets/{ticketId}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: ticketId
+          required: true
+      operationId: getCsatTicketsByTicketId
+      responses:
+        "200": {}
+  /csat/stats:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: agent_id
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: start_date
+          required: false
+        - schema:
+            type: string
+          in: query
+          name: end_date
+          required: false
+      operationId: getCsatStats
+      responses:
+        "200": {}
+  /csat/my/agent:
+    get:
+      parameters:
+        - schema:
+            minimum: 1
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                type: number
+          in: query
+          name: page
+          required: false
+        - schema:
+            minimum: 1
+            maximum: 100
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - minimum: 1
+                maximum: 100
+                type: number
+          in: query
+          name: limit
+          required: false
+      operationId: getCsatMyAgent
+      responses:
+        "200": {}
+  /comments/:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: query
+          name: ticket_id
+          required: true
+      operationId: getComments
+      responses:
+        "200": {}
+    post:
+      parameters: []
+      operationId: postComments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                content:
+                  minLength: 1
+                  type: string
+                is_internal:
+                  type: boolean
+              required:
+                - ticket_id
+                - content
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                content:
+                  minLength: 1
+                  type: string
+                is_internal:
+                  type: boolean
+              required:
+                - ticket_id
+                - content
+          text/plain:
+            schema:
+              type: object
+              properties:
+                ticket_id:
+                  anyOf:
+                    - format: numeric
+                      default: 0
+                      type: string
+                    - type: number
+                content:
+                  minLength: 1
+                  type: string
+                is_internal:
+                  type: boolean
+              required:
+                - ticket_id
+                - content
+      responses:
+        "200": {}
+  /comments/{id}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: getCommentsById
+      responses:
+        "200": {}
+    put:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: putCommentsById
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  minLength: 1
+                  type: string
+                is_internal:
+                  type: boolean
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                content:
+                  minLength: 1
+                  type: string
+                is_internal:
+                  type: boolean
+          text/plain:
+            schema:
+              type: object
+              properties:
+                content:
+                  minLength: 1
+                  type: string
+                is_internal:
+                  type: boolean
+      responses:
+        "200": {}
+    delete:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: deleteCommentsById
+      responses:
+        "200": {}
+  /messages/active:
+    get:
+      operationId: getMessagesActive
+      responses:
+        "200": {}
+  /messages/search-contacts:
+    get:
+      parameters:
+        - schema:
+            type: string
+          in: query
+          name: q
+          required: true
+      operationId: getMessagesSearch-contacts
+      responses:
+        "200": {}
+  /messages/unread-count:
+    get:
+      operationId: getMessagesUnread-count
+      responses:
+        "200": {}
+  /messages/contact/{id}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: id
+          required: true
+      operationId: getMessagesContactById
+      responses:
+        "200": {}
+  /messages/conversations:
+    get:
+      operationId: getMessagesConversations
+      responses:
+        "200": {}
+  /messages/{contactId}:
+    get:
+      parameters:
+        - schema:
+            anyOf:
+              - format: numeric
+                default: 0
+                type: string
+              - type: number
+          in: path
+          name: contactId
+          required: true
+      operationId: getMessagesByContactId
+      responses:
+        "200": {}
+  /messages/:
+    post:
+      parameters: []
+      operationId: postMessages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                receiver_id:
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - type: integer
+                ticket_id:
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - type: integer
+              required:
+                - content
+                - receiver_id
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                receiver_id:
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - type: integer
+                ticket_id:
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - type: integer
+              required:
+                - content
+                - receiver_id
+          text/plain:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                receiver_id:
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - type: integer
+                ticket_id:
+                  anyOf:
+                    - format: integer
+                      default: 0
+                      type: string
+                    - type: integer
+              required:
+                - content
+                - receiver_id
+      responses:
+        "200": {}
+  /uploads/{filename}:
+    get:
+      operationId: getUploadsByFilename
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: filename
+          required: true
+      responses:
+        "200": {}
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        "200": {}
+  /:
+    get:
+      operationId: getIndex
+      responses:
+        "200": {}
+components:
+  schemas: {}

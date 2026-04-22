@@ -172,7 +172,8 @@
                   Ticket Description
                 </h4>
                 <p class="text-sm leading-relaxed whitespace-pre-wrap">
-                  {approval.ticket?.description ?? "No description provided."}
+                  {@html approval.ticket?.description ??
+                    "No description provided."}
                 </p>
                 <div
                   class="mt-4 pt-4 border-t border-base-300 flex justify-end"

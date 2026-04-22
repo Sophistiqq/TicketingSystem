@@ -9,7 +9,17 @@
   import { navigate } from "../../router.svelte";
   import RichTextEditor from "../../components/RichTextEditor.svelte";
   import SearchableSelect from "../../components/SearchableSelect.svelte";
-  import { Send, Type, FileText, LayoutGrid, Building2, AlertTriangle, FileCheck2, Info } from "lucide-svelte";
+  import {
+    Send,
+    Type,
+    FileText,
+    LayoutGrid,
+    Building2,
+    TriangleAlert,
+    FileCheckCorner,
+    Calendar,
+    ShieldCheck,
+  } from "lucide-svelte";
 
   let title = $state("");
   let description = $state("");
@@ -38,20 +48,41 @@
         request_type_id = parsed.request_type_id;
         affected_system_id = parsed.affected_system_id;
         department_id = parsed.department_id;
-      } catch { }
+      } catch {}
     }
   });
 
   $effect(() => {
-    localStorage.setItem("ticket_draft", JSON.stringify({ title, description, priority, request_type_id, affected_system_id, department_id }));
+    localStorage.setItem(
+      "ticket_draft",
+      JSON.stringify({
+        title,
+        description,
+        priority,
+        request_type_id,
+        affected_system_id,
+        department_id,
+      }),
+    );
   });
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
     loading = true;
+    error = "";
+
     try {
-      const body: Record<string, unknown> = { title, description, priority, request_type_id, affected_system_id, department_id, requires_approval };
+      const body: Record<string, unknown> = {
+        title,
+        description,
+        priority,
+        request_type_id,
+        affected_system_id,
+        department_id,
+        requires_approval,
+      };
       if (due_date) body.due_date = new Date(due_date).toISOString();
+
       const res = await api.post<{ id: number }>("/tickets/", body);
       if (res?.id) {
         localStorage.removeItem("ticket_draft");
@@ -73,81 +104,220 @@
   });
 </script>
 
-<div class="w-full max-w-[1400px] mx-auto p-6">
-  <div class="mb-8">
-    <h1 class="text-3xl font-extrabold tracking-tight text-base-content">New Support Ticket</h1>
-    <p class="text-sm opacity-60 mt-1">Submit a new request to your department for rapid assistance.</p>
-  </div>
-  
-  <form onsubmit={handleSubmit} class="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-    
-    <!-- Main Content: Subject + Editor (3/4 width) -->
-    <div class="lg:col-span-3 space-y-6">
-      <div class="card bg-base-100 shadow-xl border border-base-200 p-10">
-        <div class="form-control mb-8">
-          <label class="label font-bold text-sm uppercase gap-2 mb-2" for="title">
-            <Type size={16} class="text-primary" /> Ticket Subject
-            <div class="tooltip tooltip-right" data-tip="Give your ticket a clear and concise title.">
-                <Info size={16} class="opacity-40 cursor-help" />
-            </div>
-          </label>
-          <input id="title" type="text" class="input input-bordered input-lg w-full font-medium" placeholder="Briefly describe your issue..." bind:value={title} required />
-        </div>
-        
-        <div class="form-control">
-          <label class="label font-bold text-sm uppercase gap-2 mb-2" for="description">
-            <FileText size={16} class="text-primary" /> Detailed Description
-            <div class="tooltip tooltip-right" data-tip="You can paste tables from Excel directly here!">
-                <Info size={16} class="opacity-40 cursor-help" />
-            </div>
-          </label>
-          <div class="mt-2">
-            <RichTextEditor bind:value={description} />
+<div class="h-full flex flex-col max-w-7xl mx-auto w-full px-4 py-2 md:py-4">
+  <header class="mb-4 shrink-0">
+    <div class="flex items-center gap-3 mb-1">
+      <div
+        class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"
+      >
+        <Send size={16} />
+      </div>
+      <h1 class="text-2xl font-bold tracking-tight">Create Support Ticket</h1>
+    </div>
+    <p class="text-xs text-base-content/60 max-w-2xl">
+      Describe your issue in detail. Our team will route your request to the
+      appropriate specialist.
+    </p>
+  </header>
+
+  {#if error}
+    <div
+      class="alert alert-error mb-4 shadow-sm border-none rounded-xl py-2 shrink-0"
+    >
+      <TriangleAlert size={16} />
+      <span class="text-sm">{error}</span>
+    </div>
+  {/if}
+
+  <form
+    onsubmit={handleSubmit}
+    class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"
+  >
+    <!-- Main Content (Left Column) -->
+    <div class="lg:col-span-8 flex flex-col min-h-0">
+      <div
+        class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl overflow-hidden flex-1 flex flex-col"
+      >
+        <div class="p-5 flex-1 flex flex-col gap-5 min-h-0">
+          <!-- Title Input -->
+          <div class="form-control w-full shrink-0">
+            <label class="label py-1" for="title">
+              <span
+                class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+              >
+                <Type size={12} class="text-primary" /> Ticket Subject
+              </span>
+            </label>
+            <input
+              id="title"
+              type="text"
+              class="input input-bordered w-full h-10 focus:input-primary transition-all duration-200"
+              placeholder="e.g. Printer in Accounting not responding"
+              bind:value={title}
+              required
+            />
           </div>
-          <p class="text-sm opacity-60 mt-4 italic flex items-center gap-2">
-            <Info size={14} /> Pro-tip: You can paste content, images, and Excel cells directly into the editor above.
-          </p>
+
+          <!-- Description / Editor -->
+          <div class="form-control w-full flex-1 flex flex-col min-h-0">
+            <label class="label py-1" for="description">
+              <span
+                class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+              >
+                <FileText size={12} class="text-primary" /> Issue Description
+              </span>
+            </label>
+            <div
+              class="flex-1 min-h-0 rounded-xl border border-base-300 overflow-hidden focus-within:border-primary transition-all duration-200 flex flex-col"
+            >
+              <RichTextEditor
+                bind:value={description}
+                class="flex-1 h-full overflow-y-auto"
+              />
+            </div>
+            <div class="flex items-center gap-2 mt-2 shrink-0">
+              <span
+                class="text-[9px] font-bold opacity-40 uppercase tracking-widest"
+                >Supports:</span
+              >
+              <div class="flex gap-1">
+                <span
+                  class="badge badge-ghost text-[9px] h-4 py-0 px-1.5 opacity-60"
+                  >Images</span
+                >
+                <span
+                  class="badge badge-ghost text-[9px] h-4 py-0 px-1.5 opacity-60"
+                  >Tables</span
+                >
+                <span
+                  class="badge badge-ghost text-[9px] h-4 py-0 px-1.5 opacity-60"
+                  >Excel</span
+                >
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Sidebar: Config & Metadata (1/4 width) -->
-    <div class="lg:col-span-1 space-y-6">
-      <div class="card bg-base-100 shadow-xl border border-primary/20 p-6 gap-6 text-sm">
-        <h3 class="font-bold text-sm uppercase text-primary">Configuration</h3>
-        <SearchableSelect label="Request Type" icon={LayoutGrid} items={requestTypes} bind:value={request_type_id} />
-        <SearchableSelect label="Affected System" icon={FileCheck2} items={systems} bind:value={affected_system_id} />
-        <SearchableSelect label="Target Department" icon={Building2} items={departments} bind:value={department_id} />
-        
-        <div class="divider my-0"></div>
-        
+    <!-- Sidebar / Config (Right Column) -->
+    <div class="lg:col-span-4 flex flex-col min-h-0">
+      <div
+        class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5 flex flex-col gap-4 overflow-y-auto max-h-full"
+      >
+        <h3
+          class="text-xs font-black uppercase tracking-widest opacity-40 flex items-center gap-2"
+        >
+          Configuration
+        </h3>
+
         <div class="space-y-4">
-            <label class="label font-bold text-xs uppercase gap-2">
-              <AlertTriangle size={14} class="text-warning" /> Priority
-            </label>
-            <select 
-              class="select select-bordered w-full select-sm font-bold" 
-              bind:value={priority}
-              class:text-success={priority === 'low'}
-              class:text-info={priority === 'medium'}
-              class:text-warning={priority === 'high'}
-              class:text-error={priority === 'critical'}
-            >
-              <option value="low" class="text-success">Low</option>
-              <option value="medium" class="text-info">Medium</option>
-              <option value="high" class="text-warning">High</option>
-              <option value="critical" class="text-error">Critical</option>
-            </select>
-            <p class="text-xs opacity-70">SLA Commitment: <span class="text-primary font-bold">{slaHint}</span></p>
+          <SearchableSelect
+            label="Request Type"
+            icon={LayoutGrid}
+            items={requestTypes}
+            bind:value={request_type_id}
+          />
+
+          <SearchableSelect
+            label="Affected System"
+            icon={FileCheckCorner}
+            items={systems}
+            bind:value={affected_system_id}
+          />
+
+          <SearchableSelect
+            label="Target Department"
+            icon={Building2}
+            items={departments}
+            bind:value={department_id}
+          />
         </div>
 
-        <label class="cursor-pointer flex items-center gap-3 p-2 bg-base-200/50 rounded-lg border border-base-300 hover:border-primary/30 transition-colors">
-          <input type="checkbox" class="checkbox checkbox-primary" bind:checked={requires_approval} />
-          <span class="font-bold text-sm">Requires formal approval</span>
-        </label>
+        <div class="divider opacity-10 my-0"></div>
 
-        <button class="btn btn-primary w-full mt-4 shadow-lg shadow-primary/20 py-4 h-auto text-lg" type="submit" disabled={loading}>
-          {loading ? "Submitting..." : "Submit Ticket"}
+        <div class="space-y-4 flex-1">
+          <!-- Priority -->
+          <div class="form-control w-full">
+            <label class="label py-1" for="priority">
+              <span
+                class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+              >
+                <TriangleAlert size={12} class="text-primary" /> Priority Level
+              </span>
+            </label>
+            <select
+              id="priority"
+              class="select select-bordered w-full select-sm font-bold h-9 min-h-0"
+              bind:value={priority}
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="critical">Critical</option>
+            </select>
+            <div
+              class="bg-base-200/50 rounded-lg p-2 mt-2 border border-base-300/50"
+            >
+              <div class="flex justify-between items-center text-[10px]">
+                <span class="opacity-60 font-bold uppercase">SLA:</span>
+                <span class="font-black text-primary uppercase">{slaHint}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Due Date -->
+          <div class="form-control w-full">
+            <label class="label py-1" for="due_date">
+              <span
+                class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+              >
+                <Calendar size={12} class="text-primary" /> Desired Due Date
+              </span>
+            </label>
+            <input
+              id="due_date"
+              type="date"
+              class="input input-bordered w-full input-sm h-9 min-h-0 font-medium"
+              bind:value={due_date}
+            />
+          </div>
+
+          <!-- Approval -->
+          <label
+            class="flex items-center gap-3 p-2 bg-base-200/30 rounded-xl border border-base-300 hover:border-primary/40 transition-all cursor-pointer group"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-primary checkbox-xs"
+              bind:checked={requires_approval}
+            />
+            <div class="flex flex-col">
+              <span
+                class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+              >
+                <ShieldCheck size={12} class="text-primary" /> Requires Approval
+              </span>
+              <span
+                class="text-[9px] opacity-50 font-medium leading-tight mt-0.5"
+                >Must be reviewed by a manager.</span
+              >
+            </div>
+          </label>
+        </div>
+
+        <button
+          class="btn btn-primary w-full h-12 text-sm font-bold shadow-lg shadow-primary/20 rounded-xl gap-2 mt-auto"
+          type="submit"
+          disabled={loading}
+        >
+          {#if loading}
+            <span class="loading loading-spinner loading-sm"></span>
+            SUBMITTING...
+          {:else}
+            <Send size={16} />
+            SUBMIT TICKET
+          {/if}
         </button>
       </div>
     </div>

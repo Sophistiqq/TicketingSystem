@@ -3,7 +3,7 @@
   import { api } from "../lib/api";
   import type { User } from "../lib/types";
   import { Search, MessageSquare, User as UserIcon } from "lucide-svelte";
-  import { navigate, p } from "../router.svelte";
+  import { navigate } from "../router.svelte";
 
   let activeUsers = $state<User[]>([]);
   let allUsers = $state<User[]>([]);
@@ -79,10 +79,6 @@
           Online
         </h3>
         {#each activeUsers as contact (contact.id)}
-          <!-- Contact Item -->
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_missing_attribute -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
           <a
             onclick={() => navigate(`/messages?userId=${contact.id}`)}
             class="w-full px-4 py-2 flex items-center gap-3 hover:bg-base-300 transition-colors group"

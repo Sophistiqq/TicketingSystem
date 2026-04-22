@@ -11,9 +11,10 @@
   } from "./stores/user.svelte";
   import { getUnreadCount } from "./stores/notifications.svelte";
   import { getMessageUnreadCount } from "./stores/messages.svelte";
-  import { navigate, isActive } from "./router.svelte";
+  import { navigate, isActive, route } from "./router.svelte";
   import auth from "./auth.svelte";
   import ModalProvider from "./components/ModalProvider.svelte";
+  import AlertProvider from "./components/AlertProvider.svelte";
   import {
     LayoutDashboard,
     Ticket,
@@ -92,9 +93,9 @@
     <Router />
   </div>
 {:else}
-  <div class="drawer lg:drawer-open min-h-screen">
+  <div class="drawer lg:drawer-open h-screen overflow-hidden">
     <input id="app-drawer" type="checkbox" class="drawer-toggle" />
-    <div class="drawer-content flex flex-col min-h-screen">
+    <div class="drawer-content flex flex-col h-full overflow-hidden">
       <!-- Navbar -->
       <nav class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2">
         <label for="app-drawer" class="btn btn-ghost btn-sm btn-square lg:hidden"><Menu size={20} /></label>
@@ -144,8 +145,8 @@
       </nav>
 
       <!-- Main Layout -->
-      <div class="flex flex-1 overflow-hidden">
-        <main class="flex-1 overflow-y-auto p-4 md:p-6">
+      <div class="flex flex-1 min-h-0 overflow-hidden">
+        <main class="flex-1 flex flex-col min-h-0 p-4 md:p-6 {route.path?.startsWith('/messages') || route.path === '/tickets/new' ? 'overflow-hidden' : 'overflow-y-auto'}">
           <Router />
         </main>
       </div>
@@ -162,12 +163,31 @@
           {#each navItems as item}
             {#if canSee(item)}
               <li>
-                <a href={item.href} onclick={closeDrawer} class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(item.href as any) ? 'bg-primary/10 text-primary font-bold' : ''}">
-                  <item.icon size={20} /> {item.label}
+                <a href={item.href} onclick={closeDrawer} class="flex items-center justify-between px-6 py-4 rounded-none {isActive(item.href as any) ? 'bg-primary/10 text-primary font-bold' : ''}">
+                  <div class="flex items-center gap-3">
+                    <item.icon size={20} /> {item.label}
+                  </div>
+                  {#if item.badge && item.badge() > 0}
+                    <span class="badge badge-primary badge-sm font-bold">{item.badge()}</span>
+                  {/if}
                 </a>
               </li>
             {/if}
           {/each}
+
+          {#if adminItems.some(canSee)}
+            <div class="divider px-6 opacity-20"></div>
+            <li class="menu-title px-6 text-[10px] uppercase tracking-widest opacity-40 font-bold mb-2">Administration</li>
+            {#each adminItems as item}
+              {#if canSee(item)}
+                <li>
+                  <a href={item.href} onclick={closeDrawer} class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(item.href as any) ? 'bg-primary/10 text-primary font-bold' : ''}">
+                    <item.icon size={20} /> {item.label}
+                  </a>
+                </li>
+              {/if}
+            {/each}
+          {/if}
         </ul>
       </aside>
     </div>
@@ -175,3 +195,4 @@
 {/if}
 
 <ModalProvider />
+<AlertProvider />

@@ -3,7 +3,7 @@
 @plugin "@tailwindcss/typography";
 
 @plugin "daisyui/theme" {
-  name: "dracula";
+  name: "ticketing";
   default: true;
   prefersdark: true;
   color-scheme: "dark";
@@ -27,20 +27,32 @@
   --color-warning-content: oklch(19.106% 0.026 112.757);
   --color-error: oklch(68.22% 0.206 24.43);
   --color-error-content: oklch(13.644% 0.041 24.43);
-  --radius-selector: 0.25rem;
-  --radius-field: 0.25rem;
-  --radius-box: 0.25rem;
-  --size-selector: 0.1875rem;
-  --size-field: 0.1875rem;
+  --radius-selector: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
   --border: 0.5px;
   --depth: 0;
   --noise: 0;
 }
 
+@plugin "daisyui/theme" {
+  name: "ticketing-light";
+  color-scheme: "light";
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(98% 0 0);
+  --color-base-300: oklch(95% 0 0);
+  --color-base-content: oklch(20% 0 0);
+  --color-primary: oklch(60% 0.15 250);
+  --color-primary-content: oklch(100% 0 0);
+}
+
 
 /* ── Font overrides ────────────────────────────────────────── */
 @theme {
-  --font-sans: 'DM Sans', sans-serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', sans-serif;
 }
 
 h1,
@@ -49,13 +61,29 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: 'Teko', sans-serif;
-  letter-spacing: 0.025em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 /* ── Prosetable — better table rendering for user content ── */
 .prose table {
   @apply table table-sm border border-base-300;
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar for wide tables to keep it subtle */
+.prose table::-webkit-scrollbar {
+  height: 4px;
+}
+.prose table::-webkit-scrollbar-track {
+  @apply bg-base-200;
+}
+.prose table::-webkit-scrollbar-thumb {
+  @apply bg-base-300 rounded-full;
 }
 
 .prose thead {

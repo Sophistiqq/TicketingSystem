@@ -82,13 +82,16 @@
             `/tickets/?assignee_id=${user?.id}&limit=1`,
           ),
         );
-        
+
         // Also check unassigned in my department
         if (user?.department_id) {
+          const url = new URL(`${API_BASE}/tickets/`);
+          url.searchParams.append("department_id", user.department_id.toString());
+          url.searchParams.append("status", "open");
+          url.searchParams.append("limit", "1");
+          // Omitted assignee_id entirely to represent "unassigned" as the backend logic expects
           queries.push(
-            api.get<PaginatedResponse<Ticket>>(
-              `/tickets/?department_id=${user.department_id}&assignee_id=null&status=open&limit=1`,
-            ),
+            api.get<PaginatedResponse<Ticket>>(url.pathname + "?" + url.searchParams.toString()),
           );
         }
       }
@@ -224,7 +227,9 @@
     <!-- Recent Tickets (2/3) -->
     <div class="xl:col-span-2 flex flex-col gap-4">
       <div class="card bg-base-200 shadow-sm overflow-hidden">
-        <div class="flex flex-wrap items-center justify-between px-5 pt-4 pb-2 gap-4">
+        <div
+          class="flex flex-wrap items-center justify-between px-5 pt-4 pb-2 gap-4"
+        >
           <h2 class="card-title text-lg font-bold shrink-0">Recent Tickets</h2>
           <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
             <div class="w-48">
@@ -234,7 +239,9 @@
                 placeholder="All Departments"
               />
             </div>
-            <a href="/my-tickets" class="btn btn-ghost btn-sm shrink-0">View All</a>
+            <a href="/my-tickets" class="btn btn-ghost btn-sm shrink-0"
+              >View All</a
+            >
           </div>
         </div>
         {#if loading}

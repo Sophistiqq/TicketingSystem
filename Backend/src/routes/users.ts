@@ -113,19 +113,41 @@ export const users = new Elysia({ prefix: "/users" })
   // Get available assignees (MIS users)
   .get(
     "/assignees",
-    async ({ status }) => {
-      const assignees = await prisma.user.findMany({
-        where: {
-          is_active: true,
-          roles: { some: { role: "mis" } },
-        },
+    async ({ query, status }) => {
+      const { department_id } = query;
+      const where: any = {
+        is_active: true,
+        roles: { some: { role: "mis" } },
+      };
+
+      if (department_id) {
+        where.department_id = department_id;
+      }
+
+      let assignees = await prisma.user.findMany({
+        where,
         omit: USER_OMIT,
         include: { roles: true },
         orderBy: [{ last_name: "asc" }, { first_name: "asc" }],
       });
+
+      // Fallback: if department filtered returns nothing, get all MIS users
+      if (department_id && assignees.length === 0) {
+        delete where.department_id;
+        assignees = await prisma.user.findMany({
+          where,
+          omit: USER_OMIT,
+          include: { roles: true },
+          orderBy: [{ last_name: "asc" }, { first_name: "asc" }],
+        });
+      }
+
       return status(200, assignees);
     },
-    { isAuth: true },
+    { 
+      query: t.Object({ department_id: t.Optional(t.Numeric()) }),
+      isAuth: true 
+    },
   )
 
   // Get single user

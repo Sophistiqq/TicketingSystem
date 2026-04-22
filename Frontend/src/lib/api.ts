@@ -1,9 +1,9 @@
 import { treaty } from '@elysiajs/eden';
 import type { App } from '../../../Backend/src/index';
+import { triggerAlert } from '../stores/ui.svelte';
 
 export const API_BASE = 'http://localhost:3000';
 
-// Treaty client for type-safe requests
 const client = treaty<App>(API_BASE.replace('http://', ''));
 
 class ApiError extends Error {
@@ -15,60 +15,55 @@ class ApiError extends Error {
   }
 }
 
-// Helper to handle Treaty responses
-async function handle<T>(response: any): Promise<T> {
-  const { data, error, status } = response;
-  
-  if (error) {
-    if (status === 401 && typeof window !== 'undefined') {
-      // Logic for redirect if needed, or let stores handle it
-    }
-    throw new ApiError(error.value?.message || `Error ${status}`, status);
-  }
-  
-  return data as T;
-}
-
-// ── Convience methods (Legacy support & simplification) ──────
-
-async function safeJson(r: Response) {
+async function safeJson(r: Response, suppressAlert = false) {
   if (r.status === 401) throw new ApiError('Unauthorized', 401);
-  if (r.status === 204 || r.headers.get('content-length') === '0') return null;
+  
   const text = await r.text();
-  try { return JSON.parse(text); } catch { return text; }
+  let json;
+  try { json = JSON.parse(text); } catch { json = text; }
+
+  if (!r.ok) {
+    const message = (typeof json === 'object' && json !== null && 'message' in json) ? json.message : text;
+    if (!suppressAlert) {
+      triggerAlert(message || `Error ${r.status}`);
+    }
+    throw new ApiError(message || `Error ${r.status}`, r.status);
+  }
+
+  return json;
 }
 
 export const api = {
-  get: <T>(path: string) => fetch(`${API_BASE}${path}`, { credentials: 'include' }).then(safeJson),
+  get: <T>(path: string, options?: { suppressAlert?: boolean }) => 
+    fetch(`${API_BASE}${path}`, { credentials: 'include' }).then(r => safeJson(r, options?.suppressAlert)),
 
-  post: <T>(path: string, body?: unknown) => 
+  post: <T>(path: string, body?: unknown, options?: { suppressAlert?: boolean }) => 
     fetch(`${API_BASE}${path}`, {
       method: 'POST',
       credentials: 'include',
       headers: body instanceof FormData ? {} : { 'Content-Type': 'application/json' },
       body: body instanceof FormData ? body : JSON.stringify(body)
-    }).then(safeJson),
+    }).then(r => safeJson(r, options?.suppressAlert)),
 
-  put: <T>(path: string, body?: unknown) =>
+  put: <T>(path: string, body?: unknown, options?: { suppressAlert?: boolean }) =>
     fetch(`${API_BASE}${path}`, {
       method: 'PUT',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
-    }).then(safeJson),
+    }).then(r => safeJson(r, options?.suppressAlert)),
 
-  patch: <T>(path: string, body?: unknown) =>
+  patch: <T>(path: string, body?: unknown, options?: { suppressAlert?: boolean }) =>
     fetch(`${API_BASE}${path}`, {
       method: 'PATCH',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
-    }).then(safeJson),
+    }).then(r => safeJson(r, options?.suppressAlert)),
 
-  delete: <T>(path: string) =>
-    fetch(`${API_BASE}${path}`, { method: 'DELETE', credentials: 'include' }).then(safeJson),
+  delete: <T>(path: string, options?: { suppressAlert?: boolean }) =>
+    fetch(`${API_BASE}${path}`, { method: 'DELETE', credentials: 'include' }).then(r => safeJson(r, options?.suppressAlert)),
 
-  /** Multipart file upload for ticket attachments */
   upload: (ticketId: number, files: FileList | File[], type?: string) => {
     const formData = new FormData();
     formData.append('ticket_id', ticketId.toString());
@@ -78,7 +73,6 @@ export const api = {
     return api.post('/attachments', formData);
   },
   
-  // Expose the treaty client for new code
   client
 };
 

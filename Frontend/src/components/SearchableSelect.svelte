@@ -39,16 +39,12 @@
     searchQuery = "";
   }
 
-  // Handle "Others" logic if user types something that doesn't match
-  // This is a bit tricky, maybe we just want to expose a way to set "Others"
-  // If user types and doesn't select anything, we can hint to use "Others"
   let showOthersHint = $derived(
     searchQuery.length > 2 &&
       filteredItems.length === 0 &&
       !items.find((i) => i.name === "Others"),
   );
 
-  // If there's an item named "Others", we find it
   let othersItem = $derived(
     items.find((i) => i.name.toLowerCase() === "others"),
   );
@@ -56,16 +52,19 @@
 
 <div class="form-control w-full relative">
   {#if label}
-    <label class="label font-bold text-xs uppercase gap-2 px-1" for="searchable-select">
-      {#if Icon}<Icon size={14} class="opacity-60" />{/if}
-      {label}
-    </label
-    >
+    <label class="label py-1" for="searchable-select">
+      <span
+        class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+      >
+        {#if Icon}<Icon size={12} class="text-primary" />{/if}
+        {label}
+      </span>
+    </label>
   {/if}
 
   <div class="relative group">
     <div
-      class="input input-bordered w-full flex items-center gap-2 cursor-text bg-base-100 {disabled
+      class="input input-bordered input-sm h-9 min-h-0 w-full flex items-center gap-2 cursor-text bg-base-100 {disabled
         ? 'input-disabled'
         : ''} {isOpen ? 'border-primary ring-1 ring-primary' : ''}"
       onclick={() => !disabled && (isOpen = !isOpen)}
@@ -125,7 +124,7 @@
           <li>
             <button
               type="button"
-              class="w-full text-left px-3 py-2 rounded-md hover:bg-base-200 transition-colors flex items-center justify-between {value ===
+              class="w-full text-left px-3 py-1.5 rounded-md hover:bg-base-200 transition-colors flex items-center justify-between text-xs {value ===
               item.id
                 ? 'bg-primary/10 text-primary font-bold'
                 : ''}"

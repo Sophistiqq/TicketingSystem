@@ -30,6 +30,31 @@ export function getModalState() {
   return modalState;
 }
 
+
+type Alert = {
+  id: number;
+  message: string;
+  type: "success" | "error" | "warning";
+};
+
+let alerts = $state<Alert[]>([]);
+
+export function getAlerts() {
+  return alerts;
+}
+
+export function triggerAlert(message: string, type: Alert["type"] = "error") {
+  const id = Date.now();
+  alerts = [...alerts, { id, message, type }];
+  setTimeout(() => {
+    alerts = alerts.filter((a) => a.id !== id);
+  }, 5000);
+}
+
+export function removeAlert(id: number) {
+  alerts = alerts.filter((a) => a.id !== id);
+}
+
 export function isChromeHidden() {
   return hideChromeState;
 }

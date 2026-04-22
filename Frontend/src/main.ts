@@ -1,10 +1,8 @@
 import { mount } from 'svelte'
 import './app.css'
 import App from './App.svelte'
-import '@fontsource/teko'
-import '@fontsource/ubuntu'
-import '@fontsource/aleo'
-import '@fontsource-variable/dm-sans'
+import '@fontsource-variable/inter'
+import '@fontsource-variable/plus-jakarta-sans'
 
 const app = mount(App, {
   target: document.getElementById('app')!,

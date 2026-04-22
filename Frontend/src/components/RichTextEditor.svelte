@@ -9,8 +9,8 @@
 
   let {
     value = $bindable(""),
-    placeholder = "Write something...",
     disabled = $bindable(false),
+    class: className = "min-h-[500px]",
   } = $props();
 
   let element: HTMLDivElement;
@@ -35,7 +35,7 @@
       },
       editorProps: {
         attributes: {
-          class: "prose prose-sm max-w-none focus:outline-none min-h-[500px] p-4",
+          class: `prose prose-sm max-w-none focus:outline-none p-4 ${className}`,
         },
       },
     });
@@ -60,10 +60,8 @@
   });
 </script>
 
-<div
-  class="border border-base-300 rounded-lg overflow-x-auto bg-base-100 focus-within:border-primary transition-colors"
->
-  <div bind:this={element}></div>
+<div class="flex flex-col flex-1 overflow-x-auto bg-base-100">
+  <div bind:this={element} class="flex flex-col flex-1"></div>
 </div>
 
 <style>
@@ -71,7 +69,7 @@
   :global(.prose) {
     max-width: none !important;
   }
-  
+
   :global(.tiptap table) {
     border-collapse: collapse;
     margin: 0;
@@ -97,5 +95,18 @@
 
   :global(.tiptap p) {
     margin: 0.5em 0;
+  }
+
+  /* REPLACE the last two :global blocks with these */
+  :global(.tiptap) {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 260px;
+  }
+
+  :global(.ProseMirror) {
+    flex: 1;
+    min-height: 260px;
   }
 </style>

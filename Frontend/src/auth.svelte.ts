@@ -4,6 +4,7 @@
 import { api } from './lib/api';
 import { setCurrentUser } from './stores/user.svelte';
 import { startPolling, stopPolling } from './stores/notifications.svelte';
+import { startMessagePolling, stopMessagePolling } from './stores/messages.svelte';
 import { fetchReferenceData } from './stores/reference.svelte';
 import { navigate } from './router.svelte';
 import { ws } from './lib/ws';
@@ -28,6 +29,7 @@ const auth = {
         setCurrentUser(res.user);
         startPolling();
         fetchReferenceData();
+        startMessagePolling();
         ws.connect();
         await navigate('/');
       }
@@ -45,6 +47,7 @@ const auth = {
     }
     setCurrentUser(null);
     stopPolling();
+    stopMessagePolling();
     ws.disconnect();
     await navigate('/login');
   },
