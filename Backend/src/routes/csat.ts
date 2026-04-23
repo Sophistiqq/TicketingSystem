@@ -134,33 +134,72 @@ export const csat = new Elysia({ prefix: "/csat" })
 
       const csats = await prisma.cSAT.findMany({
         where,
-        select: {
-          rating: true,
-          agent_id: true,
-          submitted_at: true,
+        include: {
+          ticket: { select: { priority: true, sla_breached: true } },
+          agent: { select: { first_name: true, last_name: true } },
         },
       });
 
       if (csats.length === 0) {
         return status(200, {
-          count: 0,
-          average: 0,
+          average_rating: 0,
+          total_responses: 0,
           distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+          trend: [],
+          agent_leaderboard: [],
+          dimension_breakdown: { departments: {}, priorities: {} },
+          sla_impact: { breached: 0, met: 0 },
         });
       }
 
-      const total = csats.reduce((sum, c) => sum + c.rating, 0);
-      const average = total / csats.length;
+      // Calculations
+      const totalRating = csats.reduce((sum, c) => sum + c.rating, 0);
+      const average_rating = Math.round((totalRating / csats.length) * 100) / 100;
 
       const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      const agentRatings: Record<number, { sum: number; count: number; name: string }> = {};
+      const sla_impact = { breached: 0, met: 0 };
+      const trendMap: Record<string, { sum: number; count: number }> = {};
+
       for (const c of csats) {
         distribution[c.rating]++;
+        
+        // SLA
+        if (c.ticket.sla_breached) sla_impact.breached += c.rating;
+        else sla_impact.met += c.rating;
+
+        // Trend
+        const dateKey = c.submitted_at.toISOString().split('T')[0];
+        if (!trendMap[dateKey]) trendMap[dateKey] = { sum: 0, count: 0 };
+        trendMap[dateKey].sum += c.rating;
+        trendMap[dateKey].count++;
+
+        // Leaderboard
+        if (c.agent_id) {
+          if (!agentRatings[c.agent_id]) agentRatings[c.agent_id] = { sum: 0, count: 0, name: `${c.agent?.first_name} ${c.agent?.last_name}` };
+          agentRatings[c.agent_id].sum += c.rating;
+          agentRatings[c.agent_id].count++;
+        }
       }
 
+      const trend = Object.entries(trendMap).map(([date, data]) => ({ date, average: data.sum / data.count }));
+      const agent_leaderboard = Object.entries(agentRatings)
+        .filter(([_, data]) => data.count >= 3)
+        .map(([id, data]) => ({ agent_id: Number(id), name: data.name, average: data.sum / data.count }))
+        .sort((a, b) => b.average - a.average)
+        .slice(0, 5);
+
       return status(200, {
-        count: csats.length,
-        average: Math.round(average * 100) / 100,
+        average_rating,
+        total_responses: csats.length,
         distribution,
+        trend,
+        agent_leaderboard,
+        dimension_breakdown: { departments: {}, priorities: {} }, // Can be expanded later
+        sla_impact: { 
+            breached: sla_impact.breached / (csats.filter(c => c.ticket.sla_breached).length || 1), 
+            met: sla_impact.met / (csats.filter(c => !c.ticket.sla_breached).length || 1) 
+        },
       });
     },
     {

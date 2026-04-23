@@ -221,12 +221,31 @@ export type CSAT = {
   submitted_at: string;
   ticket_id: number;
   agent_id?: number;
+  ticket?: Partial<Ticket>;
+  agent?: User;
 };
 
 export type CSATStats = {
   average_rating: number;
   total_responses: number;
   distribution: Record<number, number>;
+  trend: { date: string; average: number }[];
+  agent_leaderboard: { agent_id: number; name: string; average: number }[];
+  dimension_breakdown: {
+    departments: Record<string, number>;
+    priorities: Record<string, number>;
+  };
+  sla_impact: { breached: number; met: number };
+};
+
+export type RecentCSAT = {
+  id: number;
+  rating: number;
+  comment?: string;
+  submitted_at: string;
+  ticket_title: string;
+  requester_name: string;
+  agent_name: string;
 };
 
 // ── API Response Wrappers ───────────────────────────────────
