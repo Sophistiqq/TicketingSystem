@@ -10,7 +10,7 @@ class TicketingWS {
   status = $state<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
 
   // 🔹 Internal 🔹
-  #client = treaty<App>('http://localhost:3000');
+  #client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
   #subscription: any = null;
   #reconnectAttempts = 0;
   #maxReconnectAttempts = 5;

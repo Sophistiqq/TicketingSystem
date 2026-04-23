@@ -5,6 +5,7 @@ import { triggerAlert } from '../stores/ui.svelte';
 let base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 if (base && !base.startsWith('http')) base = `https://${base}`;
 export const API_BASE = base;
+console.log('[API] Initialized with BASE:', API_BASE);
 
 const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
 

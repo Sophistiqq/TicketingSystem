@@ -23,11 +23,23 @@ const PORT = process.env.PORT || 3000;
 let frontendUrl = process.env.FRONTEND_URL;
 if (frontendUrl && !frontendUrl.startsWith('http')) frontendUrl = `https://${frontendUrl}`;
 
+// Determine allowed origins
+const allowedOrigins = [frontendUrl].filter(Boolean) as string[];
+if (frontendUrl) {
+  // Also allow with/without trailing slash just in case
+  const alternative = frontendUrl.endsWith('/') ? frontendUrl.slice(0, -1) : `${frontendUrl}/`;
+  allowedOrigins.push(alternative);
+}
+
 const app = new Elysia()
+  .onRequest(({ request }) => {
+    console.log(`[${request.method}] ${request.url} - Origin: ${request.headers.get('origin')}`);
+  })
   .use(cors({
-    origin: frontendUrl ? [frontendUrl] : true,
+    origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
   }))
   .use(swagger())
   .use(auth)
