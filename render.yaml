@@ -1,5 +1,5 @@
 services:
-  # Frontend Static Site (Free)
+  # Frontend Static Site
   - type: web
     name: ticketing-frontend
     runtime: static
@@ -11,7 +11,7 @@ services:
         fromService:
           name: ticketing-backend
           type: web
-          property: host
+          property: url
       - key: NODE_ENV
         value: production
     routes:
@@ -20,14 +20,15 @@ services:
         destination: /index.html
     autoDeploy: true
 
-  # Backend Web Service (Free)
+  # Backend Web Service
   - type: web
     name: ticketing-backend
-    runtime: node
+    runtime: bun
     plan: free
     rootDir: Backend
     buildCommand: bun install && bun run build
-    startCommand: ./server
+    preDeployCommand: bun run migrate:deploy
+    startCommand: bun run start
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -37,7 +38,7 @@ services:
         fromService:
           name: ticketing-frontend
           type: web
-          property: host
+          property: url
       - key: JWT_SECRET
         generateValue: true
       - key: PORT
@@ -49,3 +50,5 @@ services:
 databases:
   - name: ticketing-db
     plan: free
+    databaseName: ticketing_db
+    user: ticketing_user
