@@ -4,6 +4,8 @@ import { validator } from "../plugins/authValidator";
 import { broadcaster } from "../ws/broadcaster";
 import webpush from "web-push";
 
+
+
 export async function createAndPushNotification(
   userId: number,
   ticketId: number | null,
@@ -13,16 +15,29 @@ export async function createAndPushNotification(
   tx?: any
 ) {
   const db = tx || prisma;
-  
+
   // Fetch fresh env vars every time to avoid module-load timing issues
   const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "";
   const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "";
   const contactEmail = process.env.VAPID_CONTACT || "";
 
+
+  // Guard against stale/invalid ticket references
+  let resolvedTicketId: number | null = ticketId;
+  if (ticketId !== null) {
+    const ticketExists = await db.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true },
+    });
+    if (!ticketExists) {
+      console.warn(`[NOTIFY] Ticket #${ticketId} not found - creating notification without ticket reference.`);
+      resolvedTicketId = null;
+    }
+  }
   const notification = await db.notification.create({
     data: {
       user_id: userId,
-      ticket_id: ticketId,
+      ticket_id: resolvedTicketId,
       type: type as any,
       message,
     },
@@ -181,9 +196,9 @@ export const notifications = new Elysia({ prefix: "/notifications" })
       if (roles?.includes("approver")) {
         typeExclusions.push("comment_added");
       }
-      
-      const where: any = { 
-        user_id: user, 
+
+      const where: any = {
+        user_id: user,
         is_read: false,
         type: { notIn: typeExclusions }
       };
