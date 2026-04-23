@@ -176,13 +176,14 @@ export const auth = new Elysia({ prefix: "/auth" })
     isAuth: true
   })
 
-  
+
   .patch('/me', async ({ body, user, status }) => {
     try {
       if (!user) return status(401, { message: "Unauthorized" });
-      
-      const { first_name, last_name, email, password, username } = body;
-      
+
+      const { first_name, last_name, email, password, username, message_notifications } = body;
+      console.log(body);
+
       const existingUser = await prisma.user.findUnique({
         where: { id: user }
       });
@@ -207,6 +208,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       if (last_name) updateData.last_name = last_name;
       if (email) updateData.email = email;
       if (username) updateData.username = username;
+      if (message_notifications !== undefined) updateData.message_notifications = message_notifications;
       if (password) {
         updateData.password = await Bun.password.hash(password);
       }
@@ -237,7 +239,8 @@ export const auth = new Elysia({ prefix: "/auth" })
       last_name: t.Optional(t.String({ minLength: 1, maxLength: 50 })),
       email: t.Optional(t.String({ format: "email" })),
       username: t.Optional(t.String({ minLength: 3, maxLength: 50 })),
-      password: t.Optional(t.String({ minLength: 8 }))
+      password: t.Optional(t.String({ minLength: 8 })),
+      message_notifications: t.Optional(t.Boolean())
     })
   })
 

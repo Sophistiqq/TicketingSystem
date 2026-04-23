@@ -301,11 +301,15 @@ approvals
           ticket_status: "rejected",
         });
       } else if (allDecided && allApproved) {
+        // Correct workflow: If approved, it should be 'open' (waiting for assignment) 
+        // unless it already has an assignee (then 'in_progress' is appropriate).
+        const finalStatus = ticket.assignee_id ? "in_progress" : "open";
+        
         await prisma.ticket.update({
           where: { id: body.ticket_id },
           data: { 
-            status: "in_progress",
-            started_at: new Date()
+            status: finalStatus,
+            started_at: finalStatus === "in_progress" ? new Date() : null
           },
         });
 
@@ -332,15 +336,15 @@ approvals
           broadcaster.ticketUpdated(body.ticket_id, {
             field: 'status',
             old_value: ticket.status,
-            new_value: 'in_progress',
-            status: 'in_progress',
+            new_value: finalStatus,
+            status: finalStatus,
             updated_by: `Approver #${user}`
           })
         ]);
 
         return status(200, {
           message: `Ticket ${body.decision}`,
-          ticket_status: "in_progress",
+          ticket_status: finalStatus,
         });
       }
 

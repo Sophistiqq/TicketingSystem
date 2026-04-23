@@ -33,6 +33,33 @@ if (frontendUrl) {
 }
 
 const app = new Elysia()
+  .onError(({ code, error, set }) => {
+    if (code === "VALIDATION") {
+      const field = error.all?.[0]?.path?.replace("/", "") || "field";
+      const message = error.all?.[0]?.summary || error.message;
+
+      set.status = 422;
+      return {
+        message: `Invalid ${field}: ${message}`,
+      };
+    }
+
+    if (code === "NOT_FOUND") {
+      set.status = 404;
+      return { message: "The requested resource was not found" };
+    }
+
+    // Handle Prisma unique constraint error (P2002)
+    if ((error as any)?.code === "P2002") {
+      set.status = 409;
+      return { message: "A record with this unique value already exists" };
+    }
+
+    console.error(`[Error ${code}]:`, error);
+    return {
+      message: error.message || "An unexpected error occurred",
+    };
+  })
   .onRequest(({ request }) => {
     console.log(`[${request.method}] ${request.url} - Origin: ${request.headers.get('origin')}`);
   })

@@ -416,6 +416,18 @@ tickets
           });
         }
 
+        // ENFORCEMENT: Only admin can close a ticket
+        if (body.status === "closed" && !roles?.includes("admin")) {
+          return status(403, { message: "Only an administrator can close this ticket." });
+        }
+
+        // ENFORCEMENT: Only requester can reopen a ticket
+        if (body.status === "open" && (ticket.status === "closed" || ticket.status === "resolved")) {
+          if (ticket.requester_id !== user) {
+            return status(403, { message: "Only the requester can reopen this ticket." });
+          }
+        }
+
         // ENFORCEMENT: require assignee for in_progress
         if (body.status === "in_progress") {
           const finalAssigneeId = body.assignee_id !== undefined ? body.assignee_id : ticket.assignee_id;

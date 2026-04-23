@@ -2,6 +2,7 @@ import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
 import { broadcaster } from "../ws/broadcaster";
+import { createAndPushNotification } from "./notifications";
 
 export const messages = new Elysia({ prefix: "/messages" })
   .use(validator)
@@ -246,6 +247,22 @@ export const messages = new Elysia({ prefix: "/messages" })
         ticket_id: message.ticket_id ?? null,
         created_at: message.created_at
       });
+
+      // Trigger push notification if enabled by receiver
+      const receiver = await prisma.user.findUnique({
+        where: { id: body.receiver_id },
+        select: { message_notifications: true, first_name: true, last_name: true }
+      });
+
+      if (receiver?.message_notifications) {
+        await createAndPushNotification(
+          body.receiver_id,
+          null,
+          "message_received",
+          `Message from ${message.sender.first_name}: ${message.content.substring(0, 50)}${message.content.length > 50 ? '...' : ''}`,
+          { sender_id: user }
+        );
+      }
 
       return status(201, message);
     },

@@ -9,6 +9,7 @@ export async function createAndPushNotification(
   ticketId: number | null,
   type: string,
   message: string,
+  extraData?: any,
   tx?: any
 ) {
   const db = tx || prisma;
@@ -53,10 +54,17 @@ export async function createAndPushNotification(
     return notification;
   }
 
+  let url = "/notifications";
+  if (type === "message_received" && extraData?.sender_id) {
+    url = `/messages?userId=${extraData.sender_id}`;
+  } else if (ticketId) {
+    url = `/tickets/${ticketId}`;
+  }
+
   const payload = JSON.stringify({
-    title: "New Notification",
+    title: type === "message_received" ? "New Message" : "New Notification",
     body: message,
-    url: ticketId ? `/tickets/${ticketId}` : "/notifications",
+    url,
     type,
   });
 
