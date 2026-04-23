@@ -5,7 +5,7 @@ services:
     env: static
     rootDir: Frontend
     buildCommand: bun install && bun run build
-    publishPath: dist
+    publishDir: dist
     envVars:
       - key: VITE_API_URL
         fromService:
