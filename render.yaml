@@ -11,7 +11,7 @@ services:
         fromService:
           name: ticketing-backend
           type: web
-          property: url
+          property: host
       - key: NODE_ENV
         value: production
     routes:
@@ -23,12 +23,12 @@ services:
   # Backend Web Service
   - type: web
     name: ticketing-backend
-    runtime: bun
+    runtime: node
     plan: free
     rootDir: Backend
     buildCommand: bun install && bun run build
-    preDeployCommand: bun run migrate:deploy
-    startCommand: bun run start
+    # Free tier does not support preDeployCommand, so we migrate in startCommand
+    startCommand: bun run migrate:deploy && ./server
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -38,7 +38,7 @@ services:
         fromService:
           name: ticketing-frontend
           type: web
-          property: url
+          property: host
       - key: JWT_SECRET
         generateValue: true
       - key: PORT
@@ -50,5 +50,3 @@ services:
 databases:
   - name: ticketing-db
     plan: free
-    databaseName: ticketing_db
-    user: ticketing_user
