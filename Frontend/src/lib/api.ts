@@ -2,9 +2,11 @@ import { treaty } from '@elysiajs/eden';
 import type { App } from '../../../Backend/src/index';
 import { triggerAlert } from '../stores/ui.svelte';
 
-export const API_BASE = 'http://localhost:3000';
+let base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+if (base && !base.startsWith('http')) base = `https://${base}`;
+export const API_BASE = base;
 
-const client = treaty<App>(API_BASE.replace('http://', ''));
+const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
 
 class ApiError extends Error {
   status: number;

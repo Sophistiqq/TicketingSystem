@@ -6,7 +6,8 @@
     displayName,
     userInitials,
   } from "../../stores/user.svelte";
-  import { Save, Lock, User as UserIcon } from "lucide-svelte";
+  import { Save, Lock, User as UserIcon, Bell, BellOff } from "lucide-svelte";
+  import { requestNotificationPermission } from "../../lib/pwa";
 
   let user = $derived(getCurrentUser());
 
@@ -20,6 +21,20 @@
   let loading = $state(false);
   let error = $state("");
   let success = $state("");
+
+  let notificationPermission = $state(
+    typeof Notification !== "undefined" ? Notification.permission : "default"
+  );
+
+  async function toggleNotifications() {
+    const granted = await requestNotificationPermission();
+    notificationPermission = granted ? "granted" : "denied";
+    if (granted) {
+      success = "Notifications enabled!";
+    } else {
+      error = "Notification permission denied.";
+    }
+  }
 
   // Initialize form with user data
   $effect(() => {
@@ -230,6 +245,42 @@
           </div>
         </div>
       </form>
+
+      <div class="card bg-base-200 shadow-sm border border-base-300 mt-6">
+        <div class="card-body p-6">
+          <div class="flex items-center gap-2 mb-2">
+            <Bell size={16} class="text-secondary" />
+            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">
+              Notification Settings
+            </h3>
+          </div>
+          <p class="text-xs opacity-60 mb-4">
+            Enable desktop and mobile push notifications to stay updated on your
+            tickets even when the app is closed.
+          </p>
+
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="text-sm font-bold">Browser Notifications</span>
+              <span class="text-[10px] opacity-50"
+                >Status: {notificationPermission}</span
+              >
+            </div>
+            {#if notificationPermission === "granted"}
+              <div class="badge badge-success badge-soft gap-1">
+                <Bell size={10} /> Active
+              </div>
+            {:else}
+              <button
+                class="btn btn-secondary btn-sm gap-2"
+                onclick={toggleNotifications}
+              >
+                <Bell size={14} /> Enable Notifications
+              </button>
+            {/if}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>

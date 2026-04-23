@@ -4,6 +4,11 @@ import App from './App.svelte'
 import '@fontsource-variable/inter'
 import '@fontsource-variable/plus-jakarta-sans'
 
+// @ts-ignore
+if (import.meta.env.PROD) {
+  console.log('PWA registration handled by vite-plugin-pwa auto-injection');
+}
+
 const app = mount(App, {
   target: document.getElementById('app')!,
 })

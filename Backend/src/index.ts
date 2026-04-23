@@ -20,8 +20,15 @@ import {
 
 const PORT = process.env.PORT || 3000;
 
+let frontendUrl = process.env.FRONTEND_URL;
+if (frontendUrl && !frontendUrl.startsWith('http')) frontendUrl = `https://${frontendUrl}`;
+
 const app = new Elysia()
-  .use(cors())
+  .use(cors({
+    origin: frontendUrl ? [frontendUrl] : true,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization']
+  }))
   .use(swagger())
   .use(auth)
   .use(validator)
