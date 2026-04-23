@@ -616,10 +616,13 @@
                   : 'chat-bubble-neutral'}"
               >
                 {#if msg.ticket}
-                  <button
-                    class="block mb-2 p-2 bg-black/10 rounded-lg text-left hover:bg-black/20 transition-colors w-full border border-white/10"
+                  <div
+                    role="button"
+                    tabindex="0"
+                    class="block mb-2 p-2 bg-black/10 rounded-lg text-left hover:bg-black/20 transition-colors w-full border border-white/10 cursor-pointer"
                     onclick={() =>
                       (navigate as any)(`/tickets/${msg.ticket_id}`)}
+                    onkeydown={(e) => { if (e.key === 'Enter') (navigate as any)(`/tickets/${msg.ticket_id}`) }}
                   >
                     <div
                       class="flex items-center gap-2 text-[10px] font-bold uppercase opacity-70 mb-1"
@@ -627,12 +630,12 @@
                       <Ticket size={12} />
                       Ticket Reference
                     </div>
-                    <p class="text-xs font-medium truncate">
+                    <p class="text-xs font-medium truncate text-left">
                       {msg.ticket.title}
                     </p>
-                  </button>
+                  </div>
                 {/if}
-                <div class="text-sm whitespace-pre-wrap">
+                <div class="text-sm whitespace-pre-wrap break-words">
                   {#each renderMessage(msg.content) as segment}
                     {#if segment.type === "text"}
                       {segment.content}
@@ -641,16 +644,16 @@
                         <span class="loading loading-spinner loading-xs"></span>
                       {:then ticket}
                         {#if ticket}
-                          <button
-                            class="font-bold hover:underline {isMe
+                          <span
+                            role="button"
+                            tabindex="0"
+                            class="font-bold hover:underline cursor-pointer inline-block {isMe
                               ? 'text-primary-content'
                               : 'text-primary'}"
                             onclick={() =>
                               (navigate as any)(`/tickets/${segment.id}`)}
-                          >
-                            #{segment.id}
-                            {ticket.title}
-                          </button>
+                            onkeydown={(e) => { if (e.key === 'Enter') (navigate as any)(`/tickets/${segment.id}`) }}
+                          >#{segment.id} {ticket.title}</span>
                         {:else}
                           {segment.original}
                         {/if}
