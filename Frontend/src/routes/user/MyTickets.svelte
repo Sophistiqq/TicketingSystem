@@ -36,6 +36,7 @@
   });
 
   async function loadRequested(page = 1) {
+    if (!getCurrentUser()) return;
     requestedLoading = true;
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
@@ -52,6 +53,7 @@
   }
 
   async function loadAssigned(page = 1) {
+    if (!getCurrentUser()) return;
     assignedLoading = true;
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
@@ -68,6 +70,7 @@
   }
 
   async function loadAll(page = 1) {
+    if (!getCurrentUser()) return;
     allLoading = true;
     const params = new URLSearchParams();
     params.set("page", String(page));

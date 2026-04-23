@@ -47,6 +47,9 @@
   );
 
   async function loadDashboardData() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
     loading = true;
     try {
       const deptParam = departmentId ? `&department_id=${departmentId}` : "";
