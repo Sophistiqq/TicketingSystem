@@ -105,15 +105,30 @@ export async function initPushNotifications(user: any) {
     return;
   }
 
-  // Public key generated earlier
-  const publicKey = "BF3n0f70gp_oanDDWJYHIxUV-XkaDFfKHj9PeZ9Xl_w-6MzSvnjYfeW94zBT6ywhgQvKtf4aTvY6QU3s72rWRGs";
-  
-  console.log('[PWA] Initializing push for user:', user.username);
-  
-  const hasPermission = await requestNotificationPermission();
-  if (hasPermission) {
-    await subscribeToPush(publicKey);
-  } else {
-    console.warn('[PWA] Notification permission denied');
+  try {
+    console.log('[PWA] Fetching VAPID key...');
+    const res = await (client.notifications as any)['vapid-public-key'].get();
+    
+    if (res.error) {
+      console.error('[PWA] Failed to get VAPID key:', res.error);
+      return;
+    }
+
+    const publicKey = res.data.publicKey;
+    if (!publicKey) {
+      console.warn('[PWA] Backend returned empty VAPID key - check backend environment variables');
+      return;
+    }
+    
+    console.log('[PWA] Initializing push with dynamic key for user:', user.username);
+    
+    const hasPermission = await requestNotificationPermission();
+    if (hasPermission) {
+      await subscribeToPush(publicKey);
+    } else {
+      console.warn('[PWA] Notification permission denied');
+    }
+  } catch (error) {
+    console.error('[PWA] Error initializing push:', error);
   }
 }

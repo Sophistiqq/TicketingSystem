@@ -4,15 +4,6 @@ import { validator } from "../plugins/authValidator";
 import { broadcaster } from "../ws/broadcaster";
 import webpush from "web-push";
 
-// Initialize web-push
-const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "";
-const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "";
-const contactEmail = process.env.VAPID_CONTACT || "";
-
-if (publicVapidKey && privateVapidKey && contactEmail) {
-  webpush.setVapidDetails(contactEmail, publicVapidKey, privateVapidKey);
-}
-
 export async function createAndPushNotification(
   userId: number,
   ticketId: number | null,
@@ -21,6 +12,12 @@ export async function createAndPushNotification(
   tx?: any
 ) {
   const db = tx || prisma;
+  
+  // Fetch fresh env vars every time to avoid module-load timing issues
+  const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "";
+  const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "";
+  const contactEmail = process.env.VAPID_CONTACT || "";
+
   const notification = await db.notification.create({
     data: {
       user_id: userId,
@@ -43,6 +40,19 @@ export async function createAndPushNotification(
     where: { user_id: userId },
   });
 
+  if (subscriptions.length === 0) {
+    console.log(`[PUSH] No push subscriptions found for user ${userId}`);
+    return notification;
+  }
+
+  console.log(`[PUSH] Found ${subscriptions.length} subscriptions for user ${userId}`);
+
+  if (!publicVapidKey || !privateVapidKey || !contactEmail) {
+    console.error("[PUSH] CRITICAL: VAPID configuration is incomplete in environment!");
+    console.error(`[PUSH] Status: Public=${!!publicVapidKey}, Private=${!!privateVapidKey}, Contact=${!!contactEmail}`);
+    return notification;
+  }
+
   const payload = JSON.stringify({
     title: "New Notification",
     body: message,
@@ -60,16 +70,24 @@ export async function createAndPushNotification(
             auth: sub.auth,
           },
         },
-        payload
+        payload,
+        {
+          vapidDetails: {
+            subject: contactEmail,
+            publicKey: publicVapidKey,
+            privateKey: privateVapidKey,
+          },
+        }
       );
+      console.log(`[PUSH] Successfully sent to endpoint: ${sub.endpoint.substring(0, 40)}...`);
     } catch (error: any) {
-      // If subscription is expired or invalid, remove it
       if (error.statusCode === 404 || error.statusCode === 410) {
+        console.log(`[PUSH] Subscription expired/invalid for user ${userId}, removing...`);
         await prisma.pushSubscription.delete({
           where: { id: sub.id },
         });
       } else {
-        console.error("Error sending push notification:", error);
+        console.error(`[PUSH] WebPush Error (Status ${error.statusCode}):`, error.body || error.message);
       }
     }
   }
@@ -142,14 +160,20 @@ export const notifications = new Elysia({ prefix: "/notifications" })
     { isAuth: true }
   )
 
+  // Get public VAPID key for push subscription
+  .get("/vapid-public-key", () => {
+    return { publicKey: process.env.VAPID_PUBLIC_KEY };
+  })
+
   // Send a test push notification
   .post(
     "/test-push",
     async ({ user, status }) => {
+      console.log(`[PUSH] Triggering test push for user ${user}`);
       await createAndPushNotification(
         user,
         null,
-        "escalated", // Just use one of the types
+        "escalated",
         "This is a test push notification! 🚀"
       );
       return status(200, { message: "Test push sent" });
