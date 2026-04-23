@@ -135,7 +135,9 @@
         if (!messages.some((m) => m.id === msg.id)) {
           messages = [...messages, msg as Message];
           scrollToBottom();
-          api.get(`/messages/${msg.sender_id}`).catch(() => {});
+          if (msg.sender_id) {
+            api.get(`/messages/${msg.sender_id}`).catch(() => {});
+          }
         }
       }
       loadAll();

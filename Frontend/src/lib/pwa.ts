@@ -34,7 +34,7 @@ export async function requestNotificationPermission() {
 
   if (Notification.permission !== 'denied') {
     const permission = await Notification.requestPermission();
-    console.log('[PWA] Permission status:', permission);
+
     return permission === 'granted';
   }
 
@@ -49,7 +49,6 @@ export async function getPushSubscription() {
 export async function subscribeToPush(publicVapidKey: string) {
   try {
     const registration = await navigator.serviceWorker.ready;
-    console.log('[PWA] Service worker ready, checking subscription...');
     
     // Check if we're already subscribed
     let subscription = await registration.pushManager.getSubscription();
@@ -57,18 +56,15 @@ export async function subscribeToPush(publicVapidKey: string) {
     const convertedKey = urlBase64ToUint8Array(publicVapidKey);
 
     if (subscription) {
-      console.log('[PWA] Existing subscription found');
       // Verify if it's using the same key, if not, resubscribe
       // This is a bit complex, so we'll just resubscribe for safety if we're not getting notifications
     }
 
-    console.log('[PWA] Subscribing with key...');
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: convertedKey
     });
 
-    console.log('[PWA] Subscription successful, sending to backend...');
 
     // Send subscription to backend
     const subJson = subscription.toJSON();
@@ -80,7 +76,6 @@ export async function subscribeToPush(publicVapidKey: string) {
           auth: subJson.keys.auth
         }
       });
-      console.log('[PWA] Backend subscription updated');
     }
 
     return subscription;
@@ -101,12 +96,10 @@ export function isPWA() {
  */
 export async function initPushNotifications(user: any) {
   if (!user) {
-    console.log('[PWA] No user, skipping push init');
     return;
   }
 
   try {
-    console.log('[PWA] Fetching VAPID key...');
     const res = await (client.notifications as any)['vapid-public-key'].get();
     
     if (res.error) {
@@ -119,8 +112,6 @@ export async function initPushNotifications(user: any) {
       console.warn('[PWA] Backend returned empty VAPID key - check backend environment variables');
       return;
     }
-    
-    console.log('[PWA] Initializing push with dynamic key for user:', user.username);
     
     const hasPermission = await requestNotificationPermission();
     if (hasPermission) {

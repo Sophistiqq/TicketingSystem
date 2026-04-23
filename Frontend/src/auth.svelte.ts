@@ -15,7 +15,7 @@ const auth = {
   /** Check current session via cookie (GET /auth/me) */
   check: async (): Promise<User | null> => {
     try {
-      const user = await api.get<User>('/auth/me');
+      const user = await api.get<User>('/auth/me', { suppressAlert: true });
       return user;
     } catch {
       return null;

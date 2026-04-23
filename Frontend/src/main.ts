@@ -6,7 +6,7 @@ import '@fontsource-variable/plus-jakarta-sans'
 
 // @ts-ignore
 if (import.meta.env.PROD) {
-  console.log('PWA registration handled by vite-plugin-pwa auto-injection');
+  // PWA registration handled by vite-plugin-pwa auto-injection
 }
 
 const app = mount(App, {

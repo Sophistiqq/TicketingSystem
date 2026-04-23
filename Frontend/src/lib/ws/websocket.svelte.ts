@@ -38,7 +38,6 @@ class TicketingWS {
       });
 
       this.#subscription.on('open', () => {
-        console.log('[WS] Connected via Eden');
         this.status = 'connected';
         this.#reconnectAttempts = 0;
       });

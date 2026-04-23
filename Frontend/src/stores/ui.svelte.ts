@@ -44,8 +44,19 @@ export function getAlerts() {
 }
 
 export function triggerAlert(message: string, type: Alert["type"] = "error") {
+  // Deduplicate: If an alert with the exact same message and type is already showing,
+  // just refresh its timer instead of adding a new one.
+  const existingIndex = alerts.findIndex(a => a.message === message && a.type === type);
+  if (existingIndex !== -1) {
+    // Remove the old one so the new one with fresh timer takes its place
+    alerts = alerts.filter((_, i) => i !== existingIndex);
+  }
+
   const id = Date.now();
-  alerts = [...alerts, { id, message, type }];
+  // Limit to 3 alerts
+  const current = alerts.length >= 3 ? alerts.slice(1) : alerts;
+  alerts = [...current, { id, message, type }];
+  
   setTimeout(() => {
     alerts = alerts.filter((a) => a.id !== id);
   }, 5000);

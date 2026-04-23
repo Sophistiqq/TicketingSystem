@@ -6,6 +6,7 @@
   import Pagination from "../../components/Pagination.svelte";
   import { hasRole } from "../../stores/user.svelte";
   import { Plus, Search } from "lucide-svelte";
+  import { getCurrentUser } from "../../stores/user.svelte";
 
   let activeTab = $state<"requested" | "assigned">("requested");
 
@@ -147,7 +148,9 @@
 
   <!-- Filters (only for All Tickets) -->
   {#if activeTab === ("all" as any)}
-    <div class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden">
+    <div
+      class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden"
+    >
       <div class="p-3">
         <form
           onsubmit={(e) => {
@@ -157,7 +160,9 @@
           class="flex flex-col md:flex-row gap-3 items-center w-full"
         >
           <div class="join w-full flex-1 flex-nowrap">
-            <div class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0">
+            <div
+              class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0"
+            >
               <Search size={14} class="opacity-50" />
             </div>
             <input
@@ -191,11 +196,16 @@
               <option value="high">High</option>
               <option value="critical">Critical</option>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm join-item px-6 text-xs">Find</button>
+            <button
+              type="submit"
+              class="btn btn-primary btn-sm join-item px-6 text-xs">Find</button
+            >
           </div>
 
           <div class="flex items-center gap-4 w-full md:w-auto px-1">
-            <label class="label cursor-pointer gap-2 text-xs font-bold uppercase tracking-wider opacity-70">
+            <label
+              class="label cursor-pointer gap-2 text-xs font-bold uppercase tracking-wider opacity-70"
+            >
               <input
                 type="checkbox"
                 class="checkbox checkbox-sm checkbox-error"
@@ -204,14 +214,32 @@
               />
               SLA Breached
             </label>
-            
+
             <!-- Mobile-only filters dropdown (optional but clean) -->
             <div class="dropdown dropdown-end md:hidden ml-auto">
-              <div tabindex="0" role="button" class="btn btn-ghost btn-sm">Filters</div>
-              <ul tabindex="-1" class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-lg border border-base-300 mt-2">
-                <li><span class="menu-title text-[10px] font-black uppercase">Status</span></li>
-                {#each ['open', 'in_progress', 'pending_approval', 'resolved', 'closed', 'rejected'] as s}
-                  <li><button class="whitespace-nowrap" class:active={statusFilter === s} onclick={() => { statusFilter = s; loadAll(1); }}>{s.replace('_', ' ')}</button></li>
+              <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+                Filters
+              </div>
+              <ul
+                tabindex="-1"
+                class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-lg border border-base-300 mt-2"
+              >
+                <li>
+                  <span class="menu-title text-[10px] font-black uppercase"
+                    >Status</span
+                  >
+                </li>
+                {#each ["open", "in_progress", "pending_approval", "resolved", "closed", "rejected"] as s}
+                  <li>
+                    <button
+                      class="whitespace-nowrap"
+                      class:active={statusFilter === s}
+                      onclick={() => {
+                        statusFilter = s;
+                        loadAll(1);
+                      }}>{s.replace("_", " ")}</button
+                    >
+                  </li>
                 {/each}
               </ul>
             </div>

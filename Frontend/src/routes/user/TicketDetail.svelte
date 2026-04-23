@@ -138,13 +138,16 @@
       ticket?.status !== "rejected",
   );
   let canClose = $derived(
-    (isAssigned || hasRole("admin", "mis")) && ticket?.status === "resolved",
+    hasRole("admin") && ticket?.status === "resolved",
   );
   let canReject = $derived(
     canManage &&
       ticket?.status !== "closed" &&
       ticket?.status !== "resolved" &&
       ticket?.status !== "rejected",
+  );
+  let canReopen = $derived(
+    isOwner && (ticket?.status === "closed" || ticket?.status === "resolved")
   );
 
   function startEditing() {
@@ -299,10 +302,13 @@
 
   onMount(async () => {
     await loadTicket();
+    // Guard: If ticket load failed or user logged out during load, stop.
+    if (!ticket || !getCurrentUser()) return;
+
     try {
       const [assigneesRes, approversRes, conversationsRes] = await Promise.all([
         api.get<User[]>(
-          `/users/assignees?department_id=${ticket?.department_id || ""}`,
+          `/users/assignees${ticket.department_id ? `?department_id=${ticket.department_id}` : ""}`,
         ),
         api.get<User[]>("/users/approvers"),
         api.get<any[]>("/messages/conversations"),
@@ -1474,23 +1480,27 @@
                         {/if}
 
                         {#if ticket.status === "resolved"}
-                          <button
-                            class="btn btn-neutral btn-sm justify-start gap-2 shadow-sm"
-                            onclick={quickClose}
-                            disabled={statusLoading}
-                          >
-                            <Lock size={14} /> Close Ticket
-                          </button>
-                          <button
-                            class="btn btn-ghost btn-sm justify-start gap-2 border border-base-300"
-                            onclick={quickReopen}
-                            disabled={statusLoading}
-                          >
-                            <ArrowUpCircle size={14} /> Reopen Ticket
-                          </button>
+                          {#if canClose}
+                            <button
+                              class="btn btn-neutral btn-sm justify-start gap-2 shadow-sm"
+                              onclick={quickClose}
+                              disabled={statusLoading}
+                            >
+                              <Lock size={14} /> Close Ticket
+                            </button>
+                          {/if}
+                          {#if canReopen}
+                            <button
+                              class="btn btn-ghost btn-sm justify-start gap-2 border border-base-300"
+                              onclick={quickReopen}
+                              disabled={statusLoading}
+                            >
+                              <ArrowUpCircle size={14} /> Reopen Ticket
+                            </button>
+                          {/if}
                         {/if}
 
-                        {#if ticket.status === "closed" || ticket.status === "rejected"}
+                        {#if (ticket.status === "closed" || ticket.status === "rejected") && canReopen}
                           <button
                             class="btn btn-ghost btn-sm justify-start gap-2 border border-base-300"
                             onclick={quickReopen}
