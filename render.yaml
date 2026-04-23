@@ -1,8 +1,7 @@
 services:
   # Frontend Static Site
-  - type: web
+  - type: static
     name: ticketing-frontend
-    env: static
     rootDir: Frontend
     buildCommand: bun install && bun run build
     publishDir: dist
@@ -35,7 +34,7 @@ services:
       - key: FRONTEND_URL
         fromService:
           name: ticketing-frontend
-          type: web
+          type: static
           property: host
       - key: JWT_SECRET
         generateValue: true
