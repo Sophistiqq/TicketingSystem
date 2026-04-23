@@ -32,7 +32,7 @@ const auth = {
         fetchReferenceData();
         startMessagePolling();
         ws.connect();
-        initPushNotifications().catch(console.error);
+        initPushNotifications(res.user).catch(console.error);
         await navigate('/');
       }
     } catch (e: any) {

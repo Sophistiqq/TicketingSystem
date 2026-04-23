@@ -54,8 +54,9 @@
     const theme = document.documentElement.getAttribute("data-theme");
     isDark = theme === "ticketing";
 
-    if (getCurrentUser()) {
-      initPushNotifications().catch(console.error);
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      initPushNotifications(currentUser).catch(console.error);
     }
   });
 

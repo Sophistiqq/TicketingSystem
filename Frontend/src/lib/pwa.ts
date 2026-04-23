@@ -65,7 +65,9 @@ export function isPWA() {
 /**
  * Initialize push notifications for the current user
  */
-export async function initPushNotifications() {
+export async function initPushNotifications(user: any) {
+  if (!user) return;
+
   const publicKey = "BF3n0f70gp_oanDDWJYHIxUV-XkaDFfKHj9PeZ9Xl_w-6MzSvnjYfeW94zBT6ywhgQvKtf4aTvY6QU3s72rWRGs";
   
   const hasPermission = await requestNotificationPermission();

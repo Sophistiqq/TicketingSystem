@@ -8,7 +8,11 @@ if (base && !base.startsWith('http')) base = `https://${base}`;
 export const API_BASE = base;
 console.log('[API] Initialized with BASE:', API_BASE);
 
-export const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
+export const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''), {
+  fetch: {
+    credentials: 'include'
+  }
+});
 
 class ApiError extends Error {
   status: number;

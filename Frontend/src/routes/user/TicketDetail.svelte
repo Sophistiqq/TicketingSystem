@@ -1605,7 +1605,7 @@
       <CircleX size={28} />
     </button>
     <img
-      src={selectedZoomImage}
+      src={`${base}${selectedZoomImage}`}
       alt="Zoomed preview"
       class="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-200"
     />
