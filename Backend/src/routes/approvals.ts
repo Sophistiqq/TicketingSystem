@@ -213,7 +213,7 @@ approvals
   // Approve or reject a ticket (by approver)
   .post(
     "/:id/decide",
-    async ({ params, body, user, status }) => {
+    async ({ body, user, status }) => {
       const ticket = await prisma.ticket.findUnique({
         where: { id: body.ticket_id },
         include: { approvers: true },
@@ -304,10 +304,10 @@ approvals
         // Correct workflow: If approved, it should be 'open' (waiting for assignment) 
         // unless it already has an assignee (then 'in_progress' is appropriate).
         const finalStatus = ticket.assignee_id ? "in_progress" : "open";
-        
+
         await prisma.ticket.update({
           where: { id: body.ticket_id },
-          data: { 
+          data: {
             status: finalStatus,
             started_at: finalStatus === "in_progress" ? new Date() : null
           },
@@ -317,7 +317,7 @@ approvals
         const misUsers = await prisma.user.findMany({
           where: { roles: { some: { role: "mis" } }, is_active: true },
         });
-        
+
         await Promise.all([
           createAndPushNotification(
             ticket.requester_id,
@@ -325,7 +325,7 @@ approvals
             "approval_decided",
             `Your ticket "${ticket.title}" has been approved.`,
           ),
-          ...misUsers.map(misUser => 
+          ...misUsers.map(misUser =>
             createAndPushNotification(
               misUser.id,
               body.ticket_id,

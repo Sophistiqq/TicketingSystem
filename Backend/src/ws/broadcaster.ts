@@ -1,9 +1,7 @@
-import type { Elysia } from 'elysia'
-
 let _app: any = null
 export const registerApp = (app: any) => { _app = app }
 
-const publish = (topic: string, type: string, payload: any) => 
+const publish = (topic: string, type: string, payload: any) =>
   _app?.server?.publish(topic, JSON.stringify({ type, payload }))
 
 export const broadcaster = {

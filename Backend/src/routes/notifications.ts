@@ -61,8 +61,27 @@ export async function createAndPushNotification(
     url = `/tickets/${ticketId}`;
   }
 
+  const getNotificationTitle = (type: string, ticketId: number | null): string => {
+    switch (type) {
+      case "message_received":
+        return "New Message";
+      case "approval_requested":
+        return `Approval Required #${ticketId}`;
+      case "ticket_created":
+        return `New Ticket #${ticketId}`;
+      case "comment_added":
+        return `New Comment #${ticketId}`;
+      case "escalated":
+        return `Ticket Escalated #${ticketId}`;
+      case "status_updated":
+        return `Ticket Status Changed #${ticketId}`;
+      default:
+        return "New Notification";
+    }
+  };
+
   const payload = JSON.stringify({
-    title: type === "message_received" ? "New Message" : "New Notification",
+    title: getNotificationTitle(type, ticketId),
     body: message,
     url,
     type,
@@ -114,10 +133,12 @@ export const notifications = new Elysia({ prefix: "/notifications" })
 
       const where: any = { user_id: user };
 
-      // Approvers should not see comment notifications (only important/relevant items)
+      // Exclude messages and (for approvers) comments
+      const typeExclusions: string[] = ["message_received"];
       if (roles?.includes("approver")) {
-        where.type = { not: "comment_added" };
+        typeExclusions.push("comment_added");
       }
+      where.type = { notIn: typeExclusions };
       if (unread_only === "true") {
         where.is_read = false;
       }
@@ -156,11 +177,16 @@ export const notifications = new Elysia({ prefix: "/notifications" })
   .get(
     "/unread-count",
     async ({ user, roles, status }) => {
-      const where: any = { user_id: user, is_read: false };
-
+      const typeExclusions: string[] = ["message_received"];
       if (roles?.includes("approver")) {
-        where.type = { not: "comment_added" };
+        typeExclusions.push("comment_added");
       }
+      
+      const where: any = { 
+        user_id: user, 
+        is_read: false,
+        type: { notIn: typeExclusions }
+      };
 
       const count = await prisma.notification.count({ where });
       return status(200, { count });
