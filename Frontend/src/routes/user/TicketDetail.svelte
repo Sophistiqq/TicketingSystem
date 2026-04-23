@@ -3,7 +3,11 @@
   import { api } from "../../lib/api";
   import { route, navigate } from "../../router.svelte";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
-  import { simpleConfirm, simplePrompt, triggerAlert } from "../../stores/ui.svelte";
+  import {
+    simpleConfirm,
+    simplePrompt,
+    triggerAlert,
+  } from "../../stores/ui.svelte";
   import { ws } from "../../lib/ws";
   import type { Ticket, TicketComment, User } from "../../lib/types";
   import StatusBadge from "../../components/StatusBadge.svelte";
@@ -46,6 +50,8 @@
     X,
     Save,
   } from "lucide-svelte";
+
+  let base = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   let ticket = $state<Ticket | null>(null);
   let loading = $state(true);
@@ -117,8 +123,11 @@
 
   // Editable by requester only if in open/rejected/pending state
   let canEditContent = $derived(
-    hasRole("admin", "mis") || 
-    (isOwner && (ticket?.status === "open" || ticket?.status === "rejected" || ticket?.status === "pending_approval"))
+    hasRole("admin", "mis") ||
+      (isOwner &&
+        (ticket?.status === "open" ||
+          ticket?.status === "rejected" ||
+          ticket?.status === "pending_approval")),
   );
 
   // Quick actions: visible when assignee is viewing an active ticket
@@ -709,16 +718,18 @@
 
             {#if isEditingContent}
               <div class="mt-1">
-                <RichTextEditor
-                  bind:value={editDescription}
-                />
+                <RichTextEditor bind:value={editDescription} />
               </div>
             {:else}
-              <div class="prose prose-sm prose-invert max-w-none overflow-x-auto w-full">
+              <div
+                class="prose prose-sm prose-invert max-w-none overflow-x-auto w-full"
+              >
                 {#if ticket.description}
                   {@html ticket.description}
                 {:else}
-                  <p class="italic opacity-30 text-sm">No description provided.</p>
+                  <p class="italic opacity-30 text-sm">
+                    No description provided.
+                  </p>
                 {/if}
               </div>
             {/if}
@@ -745,7 +756,7 @@
                         (selectedZoomImage = `http://localhost:3000${att.file_url}`)}
                     >
                       <img
-                        src="http://localhost:3000{att.file_url}"
+                        src={`${base}${att.file_url}`}
                         alt={att.file_name}
                         class="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
@@ -891,7 +902,8 @@
                       {#if comment.is_internal}
                         <span
                           class="text-[9px] text-warning font-bold uppercase tracking-tighter"
-                          > INTERNAL</span
+                        >
+                          INTERNAL</span
                         >
                       {/if}
                     </div>
@@ -971,7 +983,8 @@
                         {att.file_name}
                       </p>
                       <p class="text-[10px] opacity-40">
-                        {att.type}  {(att.file_size ?? 0) > 0
+                        {att.type}
+                        {(att.file_size ?? 0) > 0
                           ? `${(att.file_size! / 1024).toFixed(0)} KB`
                           : "unknown size"}
                       </p>
@@ -1047,7 +1060,8 @@
                       <div class="flex flex-wrap gap-2">
                         {#each allApprovers as approver (approver.id)}
                           {@const isSelected = ticket.approvers?.some(
-                            (a) => Number(a.approver_id) === Number(approver.id),
+                            (a) =>
+                              Number(a.approver_id) === Number(approver.id),
                           )}
                           {@const hasDecided = ticket.approvers?.some(
                             (a) =>
@@ -1071,7 +1085,8 @@
                                 class="bg-neutral text-neutral-content w-5 h-5 rounded-full"
                               >
                                 <span class="text-[8px]"
-                                  >{approver.first_name[0]}{approver.last_name[0]}</span
+                                  >{approver.first_name[0]}{approver
+                                    .last_name[0]}</span
                                 >
                               </div>
                             </div>
@@ -1491,11 +1506,13 @@
 
                     <div class="space-y-2">
                       <div class="flex items-center justify-between">
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-base-content/40">
+                        <span
+                          class="text-[10px] font-bold uppercase tracking-wider text-base-content/40"
+                        >
                           Assign Technical Staff
                         </span>
                         {#if ticket.assignee_id}
-                          <button 
+                          <button
                             class="btn btn-ghost btn-xs text-error p-0 h-auto min-h-0"
                             onclick={() => assignTicket(null)}
                             disabled={statusLoading}
@@ -1506,31 +1523,50 @@
                       </div>
 
                       <div class="relative">
-                        <Search size={12} class="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-30" />
-                        <input 
-                          type="text" 
-                          class="input input-bordered input-xs w-full pl-8" 
+                        <Search
+                          size={12}
+                          class="absolute left-2.5 top-1/2 -translate-y-1/2 opacity-30"
+                        />
+                        <input
+                          type="text"
+                          class="input input-bordered input-xs w-full pl-8"
                           placeholder="Search staff..."
                           bind:value={assigneeSearch}
                         />
                       </div>
 
-                      <div class="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1 bg-base-200/30 rounded-lg p-1">
+                      <div
+                        class="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1 bg-base-200/30 rounded-lg p-1"
+                      >
                         {#each filteredAssignees as staff (staff.id)}
-                          {@const isSelected = Number(ticket.assignee_id) === Number(staff.id)}
+                          {@const isSelected =
+                            Number(ticket.assignee_id) === Number(staff.id)}
                           <button
-                            class="btn btn-xs justify-start gap-2 h-8 {isSelected ? 'btn-primary' : 'btn-ghost'}"
+                            class="btn btn-xs justify-start gap-2 h-8 {isSelected
+                              ? 'btn-primary'
+                              : 'btn-ghost'}"
                             onclick={() => assignTicket(staff.id)}
                             disabled={statusLoading || isSelected}
                           >
                             <div class="avatar avatar-placeholder">
-                              <div class="bg-neutral text-neutral-content w-5 h-5 rounded-full">
-                                <span class="text-[8px]">{staff.first_name[0]}{staff.last_name[0]}</span>
+                              <div
+                                class="bg-neutral text-neutral-content w-5 h-5 rounded-full"
+                              >
+                                <span class="text-[8px]"
+                                  >{staff.first_name[0]}{staff
+                                    .last_name[0]}</span
+                                >
                               </div>
                             </div>
                             <div class="flex flex-col items-start min-w-0">
-                              <span class="text-[10px] font-bold truncate w-full">{staff.first_name} {staff.last_name}</span>
-                              <span class="text-[8px] opacity-50 truncate w-full">@{staff.username}</span>
+                              <span
+                                class="text-[10px] font-bold truncate w-full"
+                                >{staff.first_name} {staff.last_name}</span
+                              >
+                              <span
+                                class="text-[8px] opacity-50 truncate w-full"
+                                >@{staff.username}</span
+                              >
                             </div>
                             {#if isSelected}
                               <UserCheck size={12} class="ml-auto" />
