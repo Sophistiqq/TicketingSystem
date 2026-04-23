@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { themeChange } from "theme-change";
+  import { initPushNotifications } from "./lib/pwa";
   import { Router } from "sv-router";
   import "./router.svelte";
   import {
@@ -52,6 +53,10 @@
     themeChange(false);
     const theme = document.documentElement.getAttribute("data-theme");
     isDark = theme === "ticketing";
+
+    if (getCurrentUser()) {
+      initPushNotifications().catch(console.error);
+    }
   });
 
   const navItems: NavItem[] = [

@@ -9,6 +9,7 @@ import { fetchReferenceData } from './stores/reference.svelte';
 import { navigate } from './router.svelte';
 import { ws } from './lib/ws';
 import type { LoginResponse, User } from './lib/types';
+import { initPushNotifications } from './lib/pwa';
 
 const auth = {
   /** Check current session via cookie (GET /auth/me) */
@@ -31,6 +32,7 @@ const auth = {
         fetchReferenceData();
         startMessagePolling();
         ws.connect();
+        initPushNotifications().catch(console.error);
         await navigate('/');
       }
     } catch (e: any) {

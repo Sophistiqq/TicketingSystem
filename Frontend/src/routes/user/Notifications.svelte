@@ -78,11 +78,16 @@
       <h1 class="text-3xl font-bold">Notifications</h1>
       <p class="text-sm opacity-60 mt-1">{unread} unread</p>
     </div>
-    {#if unread > 0}
-      <button class="btn btn-ghost btn-sm gap-2" onclick={handleMarkAllRead}>
-        <CheckCheck size={16} /> Mark all read
+    <div class="flex gap-2">
+      <button class="btn btn-outline btn-sm gap-2" onclick={() => api.post('/notifications/test-push')}>
+        <Bell size={16} /> Test Push
       </button>
-    {/if}
+      {#if unread > 0}
+        <button class="btn btn-ghost btn-sm gap-2" onclick={handleMarkAllRead}>
+          <CheckCheck size={16} /> Mark all read
+        </button>
+      {/if}
+    </div>
   </div>
 
   {#if loading}

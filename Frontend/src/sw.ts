@@ -15,11 +15,16 @@ self.addEventListener('push', (event) => {
     const data = event.data.json()
     const options = {
       body: data.body,
-      icon: '/pwa-192x192.png',
+      icon: '/icon.png',
       badge: '/favicon.svg',
+      vibrate: [100, 50, 100],
       data: {
         url: data.url || '/'
-      }
+      },
+      actions: [
+        { action: 'open', title: 'View' },
+        { action: 'close', title: 'Close' }
+      ]
     }
 
     event.waitUntil(

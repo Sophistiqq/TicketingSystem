@@ -148,6 +148,18 @@ model User {
   audit_logs          AuditLog[]
   notifications       Notification[]
   csat_received       CSAT[]              @relation("CSATAgent")
+  push_subscriptions PushSubscription[]
+}
+
+model PushSubscription {
+  id         Int      @id @default(autoincrement())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  created_at DateTime @default(now())
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Message {
