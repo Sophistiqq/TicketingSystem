@@ -151,7 +151,7 @@
 
       <!-- Main Layout -->
       <div class="flex flex-1 min-h-0 overflow-hidden">
-        <main class="flex-1 flex flex-col min-h-0 p-4 md:p-6 {route.path?.startsWith('/messages') || route.path === '/tickets/new' ? 'overflow-hidden' : 'overflow-y-auto'}">
+        <main class="flex-1 flex flex-col min-h-0 p-4 md:p-6 {route.pathname?.startsWith('/messages') || route.pathname === '/tickets/new' ? 'overflow-hidden' : 'overflow-y-auto'}">
           <Router />
         </main>
       </div>

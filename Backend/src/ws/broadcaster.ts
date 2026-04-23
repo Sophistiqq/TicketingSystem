@@ -1,7 +1,7 @@
 import type { Elysia } from 'elysia'
 
-let _app: Elysia | null = null
-export const registerApp = (app: Elysia) => { _app = app }
+let _app: any = null
+export const registerApp = (app: any) => { _app = app }
 
 const publish = (topic: string, type: string, payload: any) => 
   _app?.server?.publish(topic, JSON.stringify({ type, payload }))

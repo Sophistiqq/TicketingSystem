@@ -80,7 +80,7 @@
         </h3>
         {#each activeUsers as contact (contact.id)}
           <a
-            onclick={() => navigate(`/messages?userId=${contact.id}`)}
+            onclick={() => (navigate as any)(`/messages?userId=${contact.id}`)}
             class="w-full px-4 py-2 flex items-center gap-3 hover:bg-base-300 transition-colors group"
           >
             <div class="avatar online">

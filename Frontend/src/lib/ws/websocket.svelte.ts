@@ -1,6 +1,7 @@
 import { treaty } from '@elysiajs/eden';
-import type { App } from '../../../../Backend/src/index';
 import { API_BASE } from '../api';
+
+type App = any;
 import { pushNotification } from '../../stores/notifications.svelte';
 import { fetchMessageUnreadCount } from '../../stores/messages.svelte';
 import type { WSNotification, WSTicketUpdate, WSComment, WSMessage } from './types';
@@ -32,7 +33,7 @@ class TicketingWS {
       if (!res.ok) throw new Error('Failed to get WS token');
       const { token } = await res.json();
 
-      this.#subscription = this.#client.ws.subscribe({
+      this.#subscription = (this.#client as any).ws.subscribe({
         query: { token }
       });
 

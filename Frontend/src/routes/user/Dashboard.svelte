@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
+  import { api, API_BASE } from "../../lib/api";
   import type {
     Ticket,
     PaginatedResponse,

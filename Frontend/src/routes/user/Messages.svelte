@@ -551,20 +551,24 @@
                     {#if segment.type === 'text'}
                       {segment.content}
                     {:else}
-                      {#await getTicketPreview(segment.id)}
-                         <span class="loading loading-spinner loading-xs"></span>
-                      {:then ticket}
-                        {#if ticket}
-                          <button
-                            class="font-bold hover:underline {isMe ? 'text-primary-content' : 'text-primary'}"
-                            onclick={() => (navigate as any)(`/tickets/${segment.id}`)}
-                          >
-                            #{segment.id} {ticket.title}
-                          </button>
-                        {:else}
-                          {segment.original}
-                        {/if}
-                      {/await}
+                      {#if segment.id !== undefined}
+                        {#await getTicketPreview(segment.id)}
+                          <span class="loading loading-spinner loading-xs"></span>
+                        {:then ticket}
+                          {#if ticket}
+                            <button
+                              class="font-bold hover:underline {isMe ? 'text-primary-content' : 'text-primary'}"
+                              onclick={() => (navigate as any)(`/tickets/${segment.id}`)}
+                            >
+                              #{segment.id} {ticket.title}
+                            </button>
+                          {:else}
+                            {segment.original}
+                          {/if}
+                        {/await}
+                      {:else}
+                        {segment.original}
+                      {/if}
                     {/if}
                   {/each}
                 </div>

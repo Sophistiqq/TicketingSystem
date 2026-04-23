@@ -711,7 +711,6 @@
               <div class="mt-1">
                 <RichTextEditor
                   bind:value={editDescription}
-                  placeholder="Describe the issue in detail..."
                 />
               </div>
             {:else}
@@ -1113,7 +1112,7 @@
                   {/if}
                 {/if}
 
-                {#if ticket.approvers?.length > 0}
+                {#if (ticket.approvers ?? []).length > 0}
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                     {#each ticket.approvers as approval (approval.id)}
                       <div

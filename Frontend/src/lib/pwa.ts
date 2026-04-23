@@ -40,7 +40,7 @@ export async function subscribeToPush(publicVapidKey: string) {
     // Send subscription to backend
     const subJson = subscription.toJSON();
     if (subJson.endpoint && subJson.keys?.p256dh && subJson.keys?.auth) {
-      await client.notifications.subscribe.post({
+      await (client as any).notifications['push-subscribe'].post({
         endpoint: subJson.endpoint,
         keys: {
           p256dh: subJson.keys.p256dh,

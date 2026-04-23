@@ -159,7 +159,7 @@ export const notifications = new Elysia({ prefix: "/notifications" })
 
   // Subscribe to push notifications
   .post(
-    "/subscribe",
+    "/push-subscribe",
     async ({ body, user, status }) => {
       const { endpoint, keys } = body;
 

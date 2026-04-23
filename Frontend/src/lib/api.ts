@@ -1,13 +1,14 @@
 import { treaty } from '@elysiajs/eden';
-import type { App } from '../../../Backend/src/index';
 import { triggerAlert } from '../stores/ui.svelte';
+
+type App = any;
 
 let base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 if (base && !base.startsWith('http')) base = `https://${base}`;
 export const API_BASE = base;
 console.log('[API] Initialized with BASE:', API_BASE);
 
-const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
+export const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
 
 class ApiError extends Error {
   status: number;
