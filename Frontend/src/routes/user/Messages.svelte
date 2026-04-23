@@ -67,6 +67,7 @@
       updatingNotifications = false;
     }
   }
+
   // Input & Suggestions
   let newMessage = $state("");
   let ticketSuggestions = $state<any[]>([]);
@@ -82,7 +83,6 @@
     if (lastHash !== -1) {
       const query = textBeforeCursor.slice(lastHash + 1);
 
-      // Only search if there's no space after the #
       if (query.includes(" ")) {
         showTicketSuggestions = false;
         return;
@@ -91,7 +91,6 @@
       clearTimeout(suggestionDebounce);
       suggestionDebounce = setTimeout(async () => {
         if (query.length >= 1) {
-          // Lowered limit to 1 for better responsiveness
           const res = await api.get<{ data: any[] }>(
             `/tickets?search=${query}&limit=5`,
           );
@@ -111,6 +110,7 @@
     newMessage = newMessage.slice(0, lastHash + 1) + ticket.id + " ";
     showTicketSuggestions = false;
   }
+
   let searchQuery = $state("");
   let loadingContacts = $state(true);
   let loadingMessages = $state(false);
@@ -127,6 +127,35 @@
   let selectedContact = $derived(
     selectedContactId ? contactMap.get(selectedContactId) : undefined,
   );
+
+  // Derived groups
+  let groupedMessages = $derived(() => {
+    const groups: {
+      date: string;
+      senderGroups: { sender_id: number; messages: Message[] }[];
+    }[] = [];
+
+    for (const msg of messages) {
+      const date = new Date(msg.created_at).toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+      });
+      let dateGroup = groups.find((g) => g.date === date);
+      if (!dateGroup) {
+        dateGroup = { date, senderGroups: [] };
+        groups.push(dateGroup);
+      }
+
+      let senderGroup =
+        dateGroup.senderGroups[dateGroup.senderGroups.length - 1];
+      if (!senderGroup || senderGroup.sender_id !== msg.sender_id) {
+        senderGroup = { sender_id: msg.sender_id, messages: [] };
+        dateGroup.senderGroups.push(senderGroup);
+      }
+      senderGroup.messages.push(msg);
+    }
+    return groups;
+  });
 
   let filteredContacts = $derived(() => {
     const q = searchQuery.toLowerCase();
@@ -203,14 +232,12 @@
     };
   });
 
-  //  Mobile chrome
-
+  // Mobile chrome
   $effect(() => {
     setHideChrome(showChatOnMobile && window.innerWidth < 768);
   });
 
   // Lifecycle
-
   onMount(async () => {
     await Promise.all([loadAll(), loadActiveUsers()]);
     interval = setInterval(
@@ -225,7 +252,6 @@
   });
 
   // Data loading
-
   async function loadAll() {
     try {
       const [conversations, directory] = await Promise.all([
@@ -235,10 +261,7 @@
 
       const map = new Map<number, Contact>();
 
-      // Directory is the base (has position field, includes everyone)
       for (const u of directory ?? []) map.set(u.id, u);
-
-      // Conversations enrich matching entries with last_message
       for (const c of conversations ?? []) {
         map.set(c.id, { ...map.get(c.id), ...c });
       }
@@ -279,8 +302,6 @@
   }
 
   // Actions
-
-  // Directory always has everyone - no need to fetch unknown contacts
   async function selectContact(contactId: number) {
     await loadMessages(contactId);
   }
@@ -324,15 +345,13 @@
     }
   }
 
-  //  Helpers
-
+  // Helpers
   async function scrollToBottom() {
     await tick();
     if (messageContainer)
       messageContainer.scrollTop = messageContainer.scrollHeight;
   }
 
-  // Ticket Reference Helper
   const ticketCache = new Map<number, { id: number; title: string }>();
   async function getTicketPreview(id: number) {
     if (ticketCache.has(id)) return ticketCache.get(id);
@@ -351,7 +370,6 @@
     }
   }
 
-  // Render message with references
   function renderMessage(content: string) {
     const parts = content.split(/(#\d+)/g);
     return parts.map((part) => {
@@ -597,95 +615,100 @@
       <!-- Messages -->
       <div
         bind:this={messageContainer}
-        class="flex-1 overflow-y-auto p-6 space-y-4 bg-base-200/20"
+        class="flex-1 overflow-y-auto p-6 bg-base-200/20"
       >
         {#if loadingMessages && messages.length === 0}
           <div class="flex justify-center py-10">
             <span class="loading loading-spinner text-primary"></span>
           </div>
         {:else}
-          {#each messages as msg (msg.id)}
-            {@const isMe = Number(msg.sender_id) === Number(user?.id)}
-            <div class="chat {isMe ? 'chat-end' : 'chat-start'}">
-              <div class="chat-header opacity-40 text-[10px] mb-1">
-                {formatTime(msg.created_at)}
-              </div>
-              <div
-                class="chat-bubble shadow-sm {isMe
-                  ? 'chat-bubble-primary'
-                  : 'chat-bubble-neutral'}"
-              >
-                {#if msg.ticket}
+          {#each groupedMessages() as group}
+            <!-- Date divider: large gap above/below to separate days -->
+            <div
+              class="divider text-[10px] opacity-40 uppercase tracking-widest my-6"
+            >
+              {group.date}
+            </div>
+            {#each group.senderGroups as senderGroup, sgIndex}
+              {@const isMe = Number(senderGroup.sender_id) === Number(user?.id)}
+              <!--
+                Sender groups get a larger top margin to visually separate
+                them from the previous sender's group (mt-3).
+                The first sender group after a date divider gets no extra margin.
+              -->
+              <div class={sgIndex > 0 ? "mt-3" : ""}>
+                {#each senderGroup.messages as msg, i}
+                  <!--
+                    Messages within the same sender group are tightly packed (mb-0.5).
+                    Only the last message in the group shows the timestamp.
+                  -->
                   <div
-                    role="button"
-                    tabindex="0"
-                    class="block mb-2 p-2 bg-black/10 rounded-lg text-left hover:bg-black/20 transition-colors w-full border border-white/10 cursor-pointer"
-                    onclick={() =>
-                      (navigate as any)(`/tickets/${msg.ticket_id}`)}
-                    onkeydown={(e) => { if (e.key === 'Enter') (navigate as any)(`/tickets/${msg.ticket_id}`) }}
+                    class="chat {isMe ? 'chat-end' : 'chat-start'} {i <
+                    senderGroup.messages.length - 1
+                      ? 'pb-0.5'
+                      : ''}"
                   >
                     <div
-                      class="flex items-center gap-2 text-[10px] font-bold uppercase opacity-70 mb-1"
+                      class="chat-bubble shadow-sm text-sm {isMe
+                        ? 'chat-bubble-primary'
+                        : 'chat-bubble-neutral'}"
                     >
-                      <Ticket size={12} />
-                      Ticket Reference
+                      {#if msg.ticket}
+                        <div
+                          role="button"
+                          tabindex="0"
+                          class="block mb-2 p-2 bg-black/10 rounded-lg text-left hover:bg-black/20 transition-colors w-full border border-white/10 cursor-pointer"
+                          onclick={() =>
+                            (navigate as any)(`/tickets/${msg.ticket_id}`)}
+                          onkeydown={(e) => {
+                            if (e.key === "Enter")
+                              (navigate as any)(`/tickets/${msg.ticket_id}`);
+                          }}
+                        >
+                          <div
+                            class="flex items-center gap-2 text-[10px] font-bold uppercase opacity-70 mb-1"
+                          >
+                            <Ticket size={12} />
+                            Ticket Reference
+                          </div>
+                          <p class="text-xs font-medium truncate text-left">
+                            {msg.ticket.title}
+                          </p>
+                        </div>
+                      {/if}
+                      <!-- FIX: no whitespace between the opening tag and {#each} -->
+                      <div class="text-sm break-words">
+                        {#each renderMessage(msg.content) as segment}{#if segment.type === "text"}{segment.content}{:else if segment.id !== undefined}{#await getTicketPreview(segment.id)}<span
+                                class="loading loading-spinner loading-xs"
+                              ></span>{:then ticket}{#if ticket}<span
+                                  role="button"
+                                  tabindex="0"
+                                  class="font-bold hover:underline cursor-pointer inline-block {isMe
+                                    ? 'text-primary-content'
+                                    : 'text-primary'}"
+                                  onclick={() =>
+                                    (navigate as any)(`/tickets/${segment.id}`)}
+                                  onkeydown={(e) => {
+                                    if (e.key === "Enter")
+                                      (navigate as any)(
+                                        `/tickets/${segment.id}`,
+                                      );
+                                  }}>#{segment.id} {ticket.title}</span
+                                >{:else}{segment.original}{/if}{/await}{:else}{segment.original}{/if}{/each}
+                      </div>
                     </div>
-                    <p class="text-xs font-medium truncate text-left">
-                      {msg.ticket.title}
-                    </p>
-                  </div>
-                {/if}
-                <div class="text-sm whitespace-pre-wrap break-words">
-                  {#each renderMessage(msg.content) as segment}
-                    {#if segment.type === "text"}
-                      {segment.content}
-                    {:else if segment.id !== undefined}
-                      {#await getTicketPreview(segment.id)}
-                        <span class="loading loading-spinner loading-xs"></span>
-                      {:then ticket}
-                        {#if ticket}
-                          <span
-                            role="button"
-                            tabindex="0"
-                            class="font-bold hover:underline cursor-pointer inline-block {isMe
-                              ? 'text-primary-content'
-                              : 'text-primary'}"
-                            onclick={() =>
-                              (navigate as any)(`/tickets/${segment.id}`)}
-                            onkeydown={(e) => { if (e.key === 'Enter') (navigate as any)(`/tickets/${segment.id}`) }}
-                          >#{segment.id} {ticket.title}</span>
-                        {:else}
-                          {segment.original}
+                    {#if i === senderGroup.messages.length - 1}
+                      <div class="chat-footer opacity-40 mt-0.5 text-[10px]">
+                        {formatTime(msg.created_at)}
+                        {#if isMe}
+                          {msg.is_read ? "• Read" : "• Sent"}
                         {/if}
-                      {/await}
-                    {:else}
-                      {segment.original}
+                      </div>
                     {/if}
-                  {/each}
-                </div>
+                  </div>
+                {/each}
               </div>
-              <div class="chat-footer opacity-40 mt-1">
-                {#if isMe}
-                  <span class="text-[10px]"
-                    >{msg.is_read ? "Read" : "Sent"}</span
-                  >
-                {/if}
-              </div>
-            </div>
-          {:else}
-            <div
-              class="h-full flex flex-col items-center justify-center opacity-30 text-center p-10"
-            >
-              <div
-                class="w-16 h-16 bg-base-300 rounded-full flex items-center justify-center mb-4"
-              >
-                <MessageSquare size={32} />
-              </div>
-              <h4 class="font-bold">No messages here yet</h4>
-              <p class="text-xs max-w-xs">
-                Send a message to start the conversation with {selectedContact.first_name}.
-              </p>
-            </div>
+            {/each}
           {/each}
         {/if}
       </div>
