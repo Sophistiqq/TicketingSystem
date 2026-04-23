@@ -2,7 +2,7 @@
   import { onMount, onDestroy, tick } from "svelte";
   import { api } from "../../lib/api";
   import type { Message, User } from "../../lib/types";
-  import { getCurrentUser } from "../../stores/user.svelte";
+  import { getCurrentUser, setCurrentUser } from "../../stores/user.svelte";
   import { setHideChrome } from "../../stores/ui.svelte";
   import { fetchMessageUnreadCount } from "../../stores/messages.svelte";
   import { ws } from "../../lib/ws";
@@ -14,6 +14,8 @@
     MessageSquare,
     Users as UsersIcon,
     ArrowLeft,
+    Bell,
+    BellOff,
   } from "lucide-svelte";
   import { navigate } from "../../router.svelte";
   import { location } from "../../lib/location.svelte";
@@ -29,6 +31,42 @@
   let activeUserIds = $state(new Set<number>());
   let selectedContactId = $state<number | null>(null);
   let messages = $state<Message[]>([]);
+
+  // Notification Preference
+  let messageNotifications = $state(user?.message_notifications ?? true);
+  let updatingNotifications = $state(false);
+
+  $effect(() => {
+    if (user) {
+      messageNotifications = user.message_notifications ?? true;
+    }
+  });
+
+  async function toggleNotifications() {
+    if (!user || updatingNotifications) return;
+
+    updatingNotifications = true;
+    const newValue = !messageNotifications;
+
+    try {
+      const res = await api.patch<User>("/auth/me", {
+        message_notifications: newValue,
+      });
+
+      if (res) {
+        messageNotifications = res.message_notifications ?? true;
+        setCurrentUser(res);
+        triggerAlert(
+          `Message notifications ${newValue ? "enabled" : "disabled"}`,
+          "success",
+        );
+      }
+    } catch (err) {
+      triggerAlert("Failed to update notification preferences", "error");
+    } finally {
+      updatingNotifications = false;
+    }
+  }
   // Input & Suggestions
   let newMessage = $state("");
   let ticketSuggestions = $state<any[]>([]);
@@ -40,20 +78,23 @@
     const selectionStart = (e.target as HTMLInputElement).selectionStart || 0;
     const textBeforeCursor = value.slice(0, selectionStart);
     const lastHash = textBeforeCursor.lastIndexOf("#");
-    
+
     if (lastHash !== -1) {
       const query = textBeforeCursor.slice(lastHash + 1);
-      
+
       // Only search if there's no space after the #
-      if (query.includes(' ')) {
+      if (query.includes(" ")) {
         showTicketSuggestions = false;
         return;
       }
 
       clearTimeout(suggestionDebounce);
       suggestionDebounce = setTimeout(async () => {
-        if (query.length >= 1) { // Lowered limit to 1 for better responsiveness
-          const res = await api.get<{ data: any[] }>(`/tickets?search=${query}&limit=5`);
+        if (query.length >= 1) {
+          // Lowered limit to 1 for better responsiveness
+          const res = await api.get<{ data: any[] }>(
+            `/tickets?search=${query}&limit=5`,
+          );
           ticketSuggestions = res?.data || [];
           showTicketSuggestions = ticketSuggestions.length > 0;
         } else {
@@ -96,9 +137,13 @@
         : all;
 
     const sorted = filtered.sort((a, b) => {
-        const dateA = a.last_message?.created_at ? new Date(a.last_message.created_at).getTime() : 0;
-        const dateB = b.last_message?.created_at ? new Date(b.last_message.created_at).getTime() : 0;
-        return dateB - dateA;
+      const dateA = a.last_message?.created_at
+        ? new Date(a.last_message.created_at).getTime()
+        : 0;
+      const dateB = b.last_message?.created_at
+        ? new Date(b.last_message.created_at).getTime()
+        : 0;
+      return dateB - dateA;
     });
 
     return {
@@ -292,7 +337,10 @@
   async function getTicketPreview(id: number) {
     if (ticketCache.has(id)) return ticketCache.get(id);
     try {
-      const res = await api.get<{ id: number; title: string }>(`/tickets/${id}/preview`, { suppressAlert: true });
+      const res = await api.get<{ id: number; title: string }>(
+        `/tickets/${id}/preview`,
+        { suppressAlert: true },
+      );
       if (res) {
         ticketCache.set(id, res);
         return res;
@@ -306,12 +354,16 @@
   // Render message with references
   function renderMessage(content: string) {
     const parts = content.split(/(#\d+)/g);
-    return parts.map(part => {
+    return parts.map((part) => {
       const match = part.match(/#(\d+)/);
       if (match) {
-        return { type: 'potential_ticket', id: Number(match[1]), original: part };
+        return {
+          type: "potential_ticket",
+          id: Number(match[1]),
+          original: part,
+        };
       }
-      return { type: 'text', content: part };
+      return { type: "text", content: part };
     });
   }
 
@@ -341,7 +393,39 @@
       : 'flex'}"
   >
     <div class="p-4 border-b border-base-300 bg-base-100">
-      <h2 class="text-xl font-bold mb-4">Messages</h2>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Messages</h2>
+        <div
+          class="tooltip tooltip-left"
+          data-tip={messageNotifications
+            ? "Notifications On"
+            : "Notifications Off"}
+        >
+          <label class="label cursor-pointer p-0">
+            <input
+              type="checkbox"
+              class="toggle toggle-primary toggle-sm"
+              checked={messageNotifications}
+              onchange={toggleNotifications}
+              disabled={updatingNotifications}
+            />
+          </label>
+        </div>
+      </div>
+
+      {#if !messageNotifications}
+        <div
+          class="alert alert-warning py-2 px-3 mb-4 rounded-lg shadow-sm border-none bg-warning"
+        >
+          <div class="flex items-center gap-2">
+            <BellOff size={14} class="text-warning-content" />
+            <span
+              class="text-[10px] font-bold text-warning-content leading-tight"
+              >Notifications are disabled for new messages.</span
+            >
+          </div>
+        </div>
+      {/if}
 
       <!-- Search (client-side only) -->
       <div class="join w-full mb-4">
@@ -550,27 +634,29 @@
                 {/if}
                 <div class="text-sm whitespace-pre-wrap">
                   {#each renderMessage(msg.content) as segment}
-                    {#if segment.type === 'text'}
+                    {#if segment.type === "text"}
                       {segment.content}
+                    {:else if segment.id !== undefined}
+                      {#await getTicketPreview(segment.id)}
+                        <span class="loading loading-spinner loading-xs"></span>
+                      {:then ticket}
+                        {#if ticket}
+                          <button
+                            class="font-bold hover:underline {isMe
+                              ? 'text-primary-content'
+                              : 'text-primary'}"
+                            onclick={() =>
+                              (navigate as any)(`/tickets/${segment.id}`)}
+                          >
+                            #{segment.id}
+                            {ticket.title}
+                          </button>
+                        {:else}
+                          {segment.original}
+                        {/if}
+                      {/await}
                     {:else}
-                      {#if segment.id !== undefined}
-                        {#await getTicketPreview(segment.id)}
-                          <span class="loading loading-spinner loading-xs"></span>
-                        {:then ticket}
-                          {#if ticket}
-                            <button
-                              class="font-bold hover:underline {isMe ? 'text-primary-content' : 'text-primary'}"
-                              onclick={() => (navigate as any)(`/tickets/${segment.id}`)}
-                            >
-                              #{segment.id} {ticket.title}
-                            </button>
-                          {:else}
-                            {segment.original}
-                          {/if}
-                        {/await}
-                      {:else}
-                        {segment.original}
-                      {/if}
+                      {segment.original}
                     {/if}
                   {/each}
                 </div>
@@ -625,7 +711,9 @@
         <form onsubmit={sendMessage} class="join w-full relative">
           <!-- Suggestion Popup -->
           {#if showTicketSuggestions}
-            <div class="absolute bottom-full left-0 w-full mb-2 bg-base-100 border border-base-300 rounded-lg shadow-xl z-20 overflow-hidden">
+            <div
+              class="absolute bottom-full left-0 w-full mb-2 bg-base-100 border border-base-300 rounded-lg shadow-xl z-20 overflow-hidden"
+            >
               {#each ticketSuggestions as ticket}
                 <button
                   type="button"

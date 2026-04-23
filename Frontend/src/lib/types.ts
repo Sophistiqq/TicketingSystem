@@ -67,6 +67,7 @@ export type User = {
   email: string;
   username: string;
   position?: string;
+  message_notifications?: boolean;
   is_active?: boolean;
   last_active?: string;
   created_at?: string;
