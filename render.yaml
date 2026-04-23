@@ -1,8 +1,9 @@
 services:
-  # Frontend Static Site
+  # Frontend Static Site (Free)
   - type: web
     name: ticketing-frontend
     runtime: static
+    plan: free
     rootDir: Frontend
     buildCommand: bun install && bun run build
     staticPublishPath: dist
@@ -20,17 +21,14 @@ services:
         destination: /index.html
     autoDeploy: true
 
-  # Backend Web Service
+  # Backend Web Service (Free)
   - type: web
     name: ticketing-backend
     runtime: node
+    plan: free
     rootDir: Backend
     buildCommand: bun install && bun run build
     startCommand: ./server
-    disk:
-      name: ticketing-uploads-storage
-      mountPath: /opt/render/project/src/uploads
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         fromDatabase:
