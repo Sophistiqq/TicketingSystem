@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Elysia } from "elysia";
 import swagger from "@elysiajs/swagger";
 import { auth } from "./auth";

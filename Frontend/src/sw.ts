@@ -37,18 +37,18 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
+  const urlToOpen = new URL(event.notification.data.url, self.location.origin).href
+
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      if (clientList.length > 0) {
-        let client = clientList[0]
-        for (let i = 0; i < clientList.length; i++) {
-          if (clientList[i].focused) {
-            client = clientList[i]
-          }
+      for (const client of clientList) {
+        if (client.url === urlToOpen && 'focus' in client) {
+          return (client as WindowClient).focus()
         }
-        return client.focus()
       }
-      return self.clients.openWindow(event.notification.data.url)
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen)
+      }
     })
   )
 })

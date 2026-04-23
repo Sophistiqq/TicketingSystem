@@ -4,6 +4,24 @@ import { client } from "./api";
 // PWA & Notification Helpers
 // ============================================================
 
+/**
+ * Utility to convert base64 VAPID key to Uint8Array
+ */
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 export async function requestNotificationPermission() {
   if (!('Notification' in window)) {
     console.error('This browser does not support notifications.');
@@ -16,6 +34,7 @@ export async function requestNotificationPermission() {
 
   if (Notification.permission !== 'denied') {
     const permission = await Notification.requestPermission();
+    console.log('[PWA] Permission status:', permission);
     return permission === 'granted';
   }
 
@@ -30,12 +49,26 @@ export async function getPushSubscription() {
 export async function subscribeToPush(publicVapidKey: string) {
   try {
     const registration = await navigator.serviceWorker.ready;
+    console.log('[PWA] Service worker ready, checking subscription...');
     
-    // Subscribe to push notifications
-    const subscription = await registration.pushManager.subscribe({
+    // Check if we're already subscribed
+    let subscription = await registration.pushManager.getSubscription();
+    
+    const convertedKey = urlBase64ToUint8Array(publicVapidKey);
+
+    if (subscription) {
+      console.log('[PWA] Existing subscription found');
+      // Verify if it's using the same key, if not, resubscribe
+      // This is a bit complex, so we'll just resubscribe for safety if we're not getting notifications
+    }
+
+    console.log('[PWA] Subscribing with key...');
+    subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: publicVapidKey
+      applicationServerKey: convertedKey
     });
+
+    console.log('[PWA] Subscription successful, sending to backend...');
 
     // Send subscription to backend
     const subJson = subscription.toJSON();
@@ -47,6 +80,7 @@ export async function subscribeToPush(publicVapidKey: string) {
           auth: subJson.keys.auth
         }
       });
+      console.log('[PWA] Backend subscription updated');
     }
 
     return subscription;
@@ -66,12 +100,20 @@ export function isPWA() {
  * Initialize push notifications for the current user
  */
 export async function initPushNotifications(user: any) {
-  if (!user) return;
+  if (!user) {
+    console.log('[PWA] No user, skipping push init');
+    return;
+  }
 
+  // Public key generated earlier
   const publicKey = "BF3n0f70gp_oanDDWJYHIxUV-XkaDFfKHj9PeZ9Xl_w-6MzSvnjYfeW94zBT6ywhgQvKtf4aTvY6QU3s72rWRGs";
+  
+  console.log('[PWA] Initializing push for user:', user.username);
   
   const hasPermission = await requestNotificationPermission();
   if (hasPermission) {
     await subscribeToPush(publicKey);
+  } else {
+    console.warn('[PWA] Notification permission denied');
   }
 }
