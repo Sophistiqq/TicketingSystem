@@ -3,7 +3,6 @@ services:
   - type: web
     name: ticketing-frontend
     runtime: static
-    plan: free
     rootDir: Frontend
     buildCommand: bun install && bun run build
     staticPublishPath: dist
@@ -25,7 +24,6 @@ services:
   - type: web
     name: ticketing-backend
     runtime: node
-    plan: free
     rootDir: Backend
     buildCommand: bun install && bun run build
     startCommand: ./server
