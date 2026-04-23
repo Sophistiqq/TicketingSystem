@@ -7,6 +7,7 @@
     "migrate-dev": "bun run migrate dev",
     "migrate": "bun prisma migrate dev --name init && bun prisma generate",
     "migrate:deploy": "bun prisma migrate deploy",
+    "db:seed": "bun seed.ts",
     "build": "bun prisma generate && bun build --compile --minify-whitespace --minify-syntax --target bun --outfile server src/index.ts",
     "start": "./server"
   },

@@ -27,8 +27,8 @@ services:
     plan: free
     rootDir: Backend
     buildCommand: bun install && bun run build
-    # Free tier does not support preDeployCommand, so we migrate in startCommand
-    startCommand: bun run migrate:deploy && ./server
+    # Free tier does not support preDeployCommand, so we migrate and seed in startCommand
+    startCommand: bun run migrate:deploy && bun run db:seed && ./server
     envVars:
       - key: DATABASE_URL
         fromDatabase:
