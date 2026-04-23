@@ -24,6 +24,7 @@ services:
   - type: web
     name: ticketing-backend
     runtime: node
+    plan: free
     rootDir: Backend
     buildCommand: bun install && bun run build
     startCommand: ./server
