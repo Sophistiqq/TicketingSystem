@@ -1,7 +1,8 @@
 services:
   # Frontend Static Site
-  - type: static
+  - type: web
     name: ticketing-frontend
+    env: static
     rootDir: Frontend
     buildCommand: bun install && bun run build
     publishDir: dist
@@ -23,8 +24,8 @@ services:
     buildCommand: bun install && bun run build
     startCommand: ./server
     disk:
-      name: ticketing-uploads
-      mountPath: /opt/render/project/src/Backend/uploads
+      name: ticketing-uploads-storage
+      mountPath: /opt/render/project/src/uploads
       sizeGB: 1
     envVars:
       - key: DATABASE_URL
@@ -34,7 +35,7 @@ services:
       - key: FRONTEND_URL
         fromService:
           name: ticketing-frontend
-          type: static
+          type: web
           property: host
       - key: JWT_SECRET
         generateValue: true
