@@ -19,6 +19,7 @@
     ClipboardCheck,
     UserCheck,
     Briefcase,
+    LayoutDashboard,
   } from "lucide-svelte";
   import SearchableSelect from "../../components/SearchableSelect.svelte";
   import { getDepartments } from "../../stores/reference.svelte";
@@ -89,12 +90,17 @@
         // Also check unassigned in my department
         if (user?.department_id) {
           const url = new URL(`${API_BASE}/tickets/`);
-          url.searchParams.append("department_id", user.department_id.toString());
+          url.searchParams.append(
+            "department_id",
+            user.department_id.toString(),
+          );
           url.searchParams.append("status", "open");
           url.searchParams.append("limit", "1");
           // Omitted assignee_id entirely to represent "unassigned" as the backend logic expects
           queries.push(
-            api.get<PaginatedResponse<Ticket>>(url.pathname + "?" + url.searchParams.toString()),
+            api.get<PaginatedResponse<Ticket>>(
+              url.pathname + "?" + url.searchParams.toString(),
+            ),
           );
         }
       }

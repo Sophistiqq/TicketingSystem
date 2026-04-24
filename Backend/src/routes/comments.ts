@@ -112,14 +112,14 @@ comments
             `New ${comment.is_internal ? "internal note" : "comment"} on ticket: ${ticket.title}`,
           );
         }),
-        // Push to ticket channel (not internal notes)
-        !comment.is_internal ? broadcaster.commentAdded(body.ticket_id, {
+        // Push to ticket channel
+        broadcaster[comment.is_internal ? 'internalNoteAdded' : 'commentAdded'](body.ticket_id, {
           id: comment.id,
           content: comment.content,
           is_internal: comment.is_internal,
           user: comment.user,
           created_at: comment.created_at
-        }) : Promise.resolve()
+        })
       ]);
 
       // Audit log

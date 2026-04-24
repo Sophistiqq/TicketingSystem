@@ -81,6 +81,9 @@ export const messages = new Elysia({ prefix: "/messages" })
         where: {
           receiver_id: user,
           is_read: false,
+          NOT: {
+            sender_id: user
+          }
         },
       });
       return { count };

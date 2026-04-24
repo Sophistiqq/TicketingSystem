@@ -27,17 +27,16 @@ async function safeJson(r: Response, suppressAlert = false) {
   // If we are getting a 401 and the app hasn't cleared the user yet, 
   // it might be a session expiry. But if suppressAlert is true (transitions), we stay silent.
   if (r.status === 401) {
-    if (!suppressAlert) triggerAlert('Your session has expired. Please login again.');
     throw new ApiError('Unauthorized', 401);
   }
-  
+
   const text = await r.text();
   let json: any;
   try { json = JSON.parse(text); } catch { json = text; }
 
   if (!r.ok) {
     let message = 'An unexpected error occurred';
-    
+
     if (typeof json === 'object' && json !== null) {
       message = json.message || json.error || text;
     } else if (typeof json === 'string' && json.length > 0) {
@@ -54,10 +53,10 @@ async function safeJson(r: Response, suppressAlert = false) {
 }
 
 export const api = {
-  get: <T>(path: string, options?: { suppressAlert?: boolean }) => 
+  get: <T>(path: string, options?: { suppressAlert?: boolean }) =>
     fetch(`${API_BASE}${path}`, { credentials: 'include' }).then(r => safeJson(r, options?.suppressAlert)),
 
-  post: <T>(path: string, body?: unknown, options?: { suppressAlert?: boolean }) => 
+  post: <T>(path: string, body?: unknown, options?: { suppressAlert?: boolean }) =>
     fetch(`${API_BASE}${path}`, {
       method: 'POST',
       credentials: 'include',
@@ -92,7 +91,7 @@ export const api = {
 
     return api.post('/attachments', formData);
   },
-  
+
   client
 };
 

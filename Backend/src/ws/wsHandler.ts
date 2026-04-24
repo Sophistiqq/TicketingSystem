@@ -58,6 +58,11 @@ export const wsHandler = new Elysia()
 
           if (canAccess) {
             ws.subscribe(`ticket:${ticketId}`)
+            
+            // Subscribe staff to internal channel
+            if (userRoles.includes('admin') || userRoles.includes('mis') || userRoles.includes('approver')) {
+              ws.subscribe(`ticket:${ticketId}:internal`)
+            }
           }
           break
         }

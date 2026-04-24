@@ -204,13 +204,18 @@
   $effect(() => {
     if (!user) return;
 
-    const unsubMessage = ws.onMessage((msg) => {
+    const unsubMessage = ws.onMessage(async (msg) => {
       if (selectedContactId === msg.sender_id) {
         if (!messages.some((m) => m.id === msg.id)) {
           messages = [...messages, msg as Message];
           scrollToBottom();
           if (msg.sender_id) {
-            api.get(`/messages/${msg.sender_id}`).catch(() => {});
+            try {
+              await api.get(`/messages/${msg.sender_id}`);
+              fetchMessageUnreadCount();
+            } catch {
+              /* ignore */
+            }
           }
         }
       }

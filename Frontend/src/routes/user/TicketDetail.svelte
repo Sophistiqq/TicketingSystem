@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy, tick } from "svelte";
   import { api } from "../../lib/api";
   import { route, navigate } from "../../router.svelte";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
@@ -43,9 +43,8 @@
     Play,
     Pause,
     Undo2,
-    FileSignature,
-    ArrowUpCircle,
-    UserPlus,
+    FilePenLine,
+    CircleArrowUp,
     ShieldCheck,
     X,
     Save,
@@ -67,6 +66,7 @@
   let commentText = $state("");
   let isInternal = $state(false);
   let commentLoading = $state(false);
+  let commentContainer = $state<HTMLDivElement | null>(null);
 
   // Status update
   let assignees = $state<User[]>([]);
@@ -133,7 +133,8 @@
   // Quick actions: visible when assignee is viewing an active ticket
   let canResolve = $derived(
     isAssigned &&
-      (ticket?.status === "in_progress" || ticket?.status === "pending_hard_copy"),
+      (ticket?.status === "in_progress" ||
+        ticket?.status === "pending_hard_copy"),
   );
   let canClose = $derived(hasRole("admin") && ticket?.status === "resolved");
   let canReject = $derived(
@@ -336,6 +337,9 @@
 
     const unsubComment = ws.onComment(ticket.id, (comment) => {
       if (ticket) {
+        // Defensive check: skip if internal note and user is not staff
+        if (comment.is_internal && !hasRole("admin", "mis", "approver")) return;
+
         if (!ticket.comments) ticket.comments = [];
         if (!ticket.comments.some((c) => c.id === comment.id)) {
           ticket.comments = [...ticket.comments, comment as any];
@@ -937,7 +941,7 @@
 
           <div class="card-body p-4">
             {#if activeTab === "comments"}
-              <div class="flex flex-col gap-3 mb-4">
+              <div class="flex flex-col gap-3 mb-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                 {#each ticket.comments ?? [] as comment (comment.id)}
                   <div
                     class="chat {Number(comment.user_id) === Number(user?.id)
@@ -1211,7 +1215,7 @@
                         onclick={escalateTicket}
                         disabled={statusLoading}
                       >
-                        <ArrowUpCircle size={14} /> Escalate for Approval
+                        <CircleArrowUp size={14} /> Escalate for Approval
                       </button>
                     </div>
                   {/if}
@@ -1475,7 +1479,7 @@
                       onclick={quickReopen}
                       disabled={statusLoading}
                     >
-                      <ArrowUpCircle size={14} /> Reopen Ticket
+                      <CircleArrowUp size={14} /> Reopen Ticket
                     </button>
                   </div>
                   <div class="divider my-1 opacity-20"></div>
@@ -1508,7 +1512,7 @@
                               onclick={escalateTicket}
                               disabled={statusLoading}
                             >
-                              <ArrowUpCircle size={14} /> Escalate for Approval
+                              <CircleArrowUp size={14} /> Escalate for Approval
                             </button>
                           {/if}
                           <button
@@ -1541,7 +1545,7 @@
                               onclick={escalateTicket}
                               disabled={statusLoading}
                             >
-                              <ArrowUpCircle size={14} /> Escalate for Approval
+                              <CircleArrowUp size={14} /> Escalate for Approval
                             </button>
                           {/if}
                           <button
@@ -1574,7 +1578,7 @@
                             onclick={quickResolve}
                             disabled={statusLoading}
                           >
-                            <FileSignature size={14} /> Form Received & Resolve
+                            <FilePenLine size={14} /> Form Received & Resolve
                           </button>
                           <button
                             class="btn btn-ghost btn-sm justify-start gap-2 border border-base-300"
@@ -1601,7 +1605,7 @@
                               onclick={quickReopen}
                               disabled={statusLoading}
                             >
-                              <ArrowUpCircle size={14} /> Reopen Ticket
+                              <CircleArrowUp size={14} /> Reopen Ticket
                             </button>
                           {/if}
                         {/if}
@@ -1612,7 +1616,7 @@
                             onclick={quickReopen}
                             disabled={statusLoading}
                           >
-                            <ArrowUpCircle size={14} /> Reopen Ticket
+                            <CircleArrowUp size={14} /> Reopen Ticket
                           </button>
                         {/if}
                       </div>

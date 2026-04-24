@@ -558,23 +558,24 @@ tickets
             newAssigneeName,
           );
 
-          // Automated chat message
-          await prisma.message.create({
-            data: {
-              content: `You have been assigned to ticket #${params.id}: ${ticket.title}`,
-              receiver_id: body.assignee_id,
-              sender_id: user, // System or current user acting as system
-              ticket_id: params.id,
-            }
-          });
+          // Automated chat message (skip if assigning to self)
+          if (body.assignee_id !== user) {
+            await prisma.message.create({
+              data: {
+                content: `You have been assigned to ticket #${params.id}: ${ticket.title}`,
+                receiver_id: body.assignee_id,
+                sender_id: user, // System or current user acting as system
+                ticket_id: params.id,
+              }
+            });
 
-          broadcaster.messageSent(body.assignee_id, {
-            content: `You have been assigned to ticket #${params.id}: ${ticket.title}`,
-            sender_id: user,
-            receiver_id: body.assignee_id,
-            ticket_id: params.id,
-          } as any);
-        } else {
+            broadcaster.messageSent(body.assignee_id, {
+              content: `You have been assigned to ticket #${params.id}: ${ticket.title}`,
+              sender_id: user,
+              receiver_id: body.assignee_id,
+              ticket_id: params.id,
+            } as any);
+          }        } else {
           await createAuditLog(
             params.id,
             user,

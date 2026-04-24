@@ -6,7 +6,7 @@
     displayName,
     userInitials,
   } from "../../stores/user.svelte";
-  import { Save, Lock, User as UserIcon, Bell, BellOff } from "lucide-svelte";
+  import { Save, Lock, User as UserIcon, Bell } from "lucide-svelte";
   import { requestNotificationPermission } from "../../lib/pwa";
 
   let user = $derived(getCurrentUser());
@@ -23,7 +23,7 @@
   let success = $state("");
 
   let notificationPermission = $state(
-    typeof Notification !== "undefined" ? Notification.permission : "default"
+    typeof Notification !== "undefined" ? Notification.permission : "default",
   );
 
   async function toggleNotifications() {
@@ -284,4 +284,3 @@
     </div>
   </div>
 </div>
-
