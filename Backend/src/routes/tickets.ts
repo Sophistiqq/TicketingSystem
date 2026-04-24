@@ -648,6 +648,42 @@ tickets
         }
       }
 
+      // Audit department change
+      if (body.department_id !== undefined && body.department_id !== ticket.department_id) {
+        await createAuditLog(
+          params.id,
+          user,
+          "department_changed",
+          ticket.department_id?.toString() ?? "none",
+          body.department_id?.toString() ?? "none",
+        );
+        updateData.department_id = body.department_id;
+      }
+
+      // Audit request type change
+      if (body.request_type_id !== undefined && body.request_type_id !== ticket.request_type_id) {
+        await createAuditLog(
+          params.id,
+          user,
+          "request_type_changed",
+          ticket.request_type_id?.toString() ?? "none",
+          body.request_type_id?.toString() ?? "none",
+        );
+        updateData.request_type_id = body.request_type_id;
+      }
+
+      // Audit affected system change
+      if (body.affected_system_id !== undefined && body.affected_system_id !== ticket.affected_system_id) {
+        await createAuditLog(
+          params.id,
+          user,
+          "affected_system_changed",
+          ticket.affected_system_id?.toString() ?? "none",
+          body.affected_system_id?.toString() ?? "none",
+        );
+        updateData.affected_system_id = body.affected_system_id;
+      }
+
       const updated = await prisma.ticket.update({
         where: { id: params.id },
         data: updateData,
@@ -681,6 +717,9 @@ tickets
         status: t.Optional(t.String()),
         priority: t.Optional(t.String()),
         assignee_id: t.Optional(t.Nullable(t.Numeric())),
+        department_id: t.Optional(t.Nullable(t.Numeric())),
+        request_type_id: t.Optional(t.Nullable(t.Numeric())),
+        affected_system_id: t.Optional(t.Nullable(t.Numeric())),
         reopen_reason: t.Optional(t.String()),
         resolution_notes: t.Optional(t.String()),
         due_date: t.Optional(t.Nullable(t.String({ format: "date-time" }))),
@@ -828,13 +867,32 @@ tickets
         limit = 20,
         sort = "created_at",
         order = "desc",
+        search,
+        status: ticketStatus,
+        priority,
+        overdue,
       } = query;
+
+      const where: any = { requester_id: user };
+      if (ticketStatus) where.status = ticketStatus;
+      if (priority) where.priority = priority;
+      if (search) {
+        where.OR = [
+          { title: { contains: search } },
+          { description: { contains: search } },
+        ];
+      }
+      if (overdue === "true") {
+        where.due_date = { lte: new Date() };
+        where.status = { notIn: ["resolved", "closed"] };
+      }
+
       const skip = (page - 1) * limit;
       const orderBy: any = {};
       orderBy[sort] = order;
 
       const data = await prisma.ticket.findMany({
-        where: { requester_id: user },
+        where,
         include: {
           assignee: { omit: { password: true } },
           request_type: true,
@@ -844,7 +902,7 @@ tickets
         skip,
         take: limit,
       });
-      const total = await prisma.ticket.count({ where: { requester_id: user } });
+      const total = await prisma.ticket.count({ where });
 
       return status(200, {
         data,
@@ -855,6 +913,10 @@ tickets
       query: t.Object({
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+        status: t.Optional(t.String()),
+        priority: t.Optional(t.String()),
+        overdue: t.Optional(t.String()),
         sort: t.Optional(
           t.Union([
             t.Literal("id"),
@@ -879,13 +941,32 @@ tickets
         limit = 20,
         sort = "created_at",
         order = "desc",
+        search,
+        status: ticketStatus,
+        priority,
+        overdue,
       } = query;
+
+      const where: any = { assignee_id: user };
+      if (ticketStatus) where.status = ticketStatus;
+      if (priority) where.priority = priority;
+      if (search) {
+        where.OR = [
+          { title: { contains: search } },
+          { description: { contains: search } },
+        ];
+      }
+      if (overdue === "true") {
+        where.due_date = { lte: new Date() };
+        where.status = { notIn: ["resolved", "closed"] };
+      }
+
       const skip = (page - 1) * limit;
       const orderBy: any = {};
       orderBy[sort] = order;
 
       const data = await prisma.ticket.findMany({
-        where: { assignee_id: user },
+        where,
         include: {
           requester: { omit: { password: true } },
           request_type: true,
@@ -895,7 +976,7 @@ tickets
         skip,
         take: limit,
       });
-      const total = await prisma.ticket.count({ where: { assignee_id: user } });
+      const total = await prisma.ticket.count({ where });
 
       return status(200, {
         data,
@@ -906,6 +987,10 @@ tickets
       query: t.Object({
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+        search: t.Optional(t.String()),
+        status: t.Optional(t.String()),
+        priority: t.Optional(t.String()),
+        overdue: t.Optional(t.String()),
         sort: t.Optional(
           t.Union([
             t.Literal("id"),

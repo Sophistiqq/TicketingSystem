@@ -45,9 +45,19 @@
   async function loadRequested(page = 1) {
     if (!getCurrentUser()) return;
     requestedLoading = true;
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "20");
+    params.set("sort", requestedSort);
+    params.set("order", requestedOrder);
+    if (search) params.set("search", search);
+    if (statusFilter) params.set("status", statusFilter);
+    if (priorityFilter) params.set("priority", priorityFilter);
+    if (overdueOnly) params.set("overdue", "true");
+
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/my/requested?page=${page}&limit=20&sort=${requestedSort}&order=${requestedOrder}`,
+        `/tickets/my/requested?${params}`,
       );
       if (res) {
         requestedTickets = res.data;
@@ -62,9 +72,19 @@
   async function loadAssigned(page = 1) {
     if (!getCurrentUser()) return;
     assignedLoading = true;
+    const params = new URLSearchParams();
+    params.set("page", String(page));
+    params.set("limit", "20");
+    params.set("sort", assignedSort);
+    params.set("order", assignedOrder);
+    if (search) params.set("search", search);
+    if (statusFilter) params.set("status", statusFilter);
+    if (priorityFilter) params.set("priority", priorityFilter);
+    if (overdueOnly) params.set("overdue", "true");
+
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/my/assigned?page=${page}&limit=20&sort=${assignedSort}&order=${assignedOrder}`,
+        `/tickets/my/assigned?${params}`,
       );
       if (res) {
         assignedTickets = res.data;
@@ -133,8 +153,14 @@
     loadAll(1);
   }
 
+  function loadCurrentTab(page = 1) {
+    if (activeTab === "requested") loadRequested(page);
+    else if (activeTab === "assigned") loadAssigned(page);
+    else loadAll(page);
+  }
+
   function handleSearch() {
-    loadAll(1);
+    loadCurrentTab(1);
   }
 </script>
 
@@ -182,108 +208,106 @@
     {/if}
   </div>
 
-  <!-- Filters (only for All Tickets) -->
-  {#if activeTab === ("all" as any)}
-    <div
-      class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden"
-    >
-      <div class="p-3">
-        <form
-          onsubmit={(e) => {
-            e.preventDefault();
-            handleSearch();
-          }}
-          class="flex flex-col md:flex-row gap-3 items-center w-full"
-        >
-          <div class="join w-full flex-1 flex-nowrap">
-            <div
-              class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0"
-            >
-              <Search size={14} class="opacity-50" />
-            </div>
-            <input
-              id="search-input"
-              type="text"
-              class="input input-bordered input-sm join-item flex-1 focus:outline-none text-xs"
-              placeholder="Search tickets..."
-              bind:value={search}
-            />
-            <select
-              class="select select-bordered select-sm join-item w-auto hidden sm:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
-              bind:value={statusFilter}
-              onchange={() => loadAll(1)}
-            >
-              <option value="">All Statuses</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="pending_approval">Pending Approval</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <select
-              class="select select-bordered select-sm join-item w-auto hidden md:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
-              bind:value={priorityFilter}
-              onchange={() => loadAll(1)}
-            >
-              <option value="">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-            <button
-              type="submit"
-              class="btn btn-primary btn-sm join-item px-6 text-xs">Find</button
-            >
+  <!-- Filters -->
+  <div
+    class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden"
+  >
+    <div class="p-3">
+      <form
+        onsubmit={(e) => {
+          e.preventDefault();
+          handleSearch();
+        }}
+        class="flex flex-col md:flex-row gap-3 items-center w-full"
+      >
+        <div class="join w-full flex-1 flex-nowrap">
+          <div
+            class="join-item flex items-center px-3 bg-base-100 border border-base-300 border-r-0"
+          >
+            <Search size={14} class="opacity-50" />
           </div>
+          <input
+            id="search-input"
+            type="text"
+            class="input input-bordered input-sm join-item flex-1 focus:outline-none text-xs"
+            placeholder="Search tickets..."
+            bind:value={search}
+          />
+          <select
+            class="select select-bordered select-sm join-item w-auto hidden sm:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
+            bind:value={statusFilter}
+            onchange={() => loadCurrentTab(1)}
+          >
+            <option value="">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="pending_approval">Pending Approval</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <select
+            class="select select-bordered select-sm join-item w-auto hidden md:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"
+            bind:value={priorityFilter}
+            onchange={() => loadCurrentTab(1)}
+          >
+            <option value="">All Priorities</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </select>
+          <button
+            type="submit"
+            class="btn btn-primary btn-sm join-item px-6 text-xs">Find</button
+          >
+        </div>
 
-          <div class="flex items-center gap-4 w-full md:w-auto px-1">
-            <label
-              class="label cursor-pointer gap-2 text-xs font-bold uppercase tracking-wider opacity-70"
+        <div class="flex items-center gap-4 w-full md:w-auto px-1">
+          <label
+            class="label cursor-pointer gap-2 text-xs font-bold uppercase tracking-wider opacity-70"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-error"
+              bind:checked={overdueOnly}
+              onchange={() => loadCurrentTab(1)}
+            />
+            SLA Breached
+          </label>
+
+          <!-- Mobile-only filters dropdown (optional but clean) -->
+          <div class="dropdown dropdown-end md:hidden ml-auto">
+            <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
+              Filters
+            </div>
+            <ul
+              tabindex="-1"
+              class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-lg border border-base-300 mt-2"
             >
-              <input
-                type="checkbox"
-                class="checkbox checkbox-sm checkbox-error"
-                bind:checked={overdueOnly}
-                onchange={() => loadAll(1)}
-              />
-              SLA Breached
-            </label>
-
-            <!-- Mobile-only filters dropdown (optional but clean) -->
-            <div class="dropdown dropdown-end md:hidden ml-auto">
-              <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
-                Filters
-              </div>
-              <ul
-                tabindex="-1"
-                class="dropdown-content menu bg-base-200 rounded-box z-1 w-52 p-2 shadow-lg border border-base-300 mt-2"
-              >
+              <li>
+                <span class="menu-title text-[10px] font-black uppercase"
+                  >Status</span
+                >
+              </li>
+              {#each ["open", "in_progress", "pending_approval", "resolved", "closed", "rejected"] as s}
                 <li>
-                  <span class="menu-title text-[10px] font-black uppercase"
-                    >Status</span
+                  <button
+                    class="whitespace-nowrap"
+                    class:active={statusFilter === s}
+                    onclick={() => {
+                      statusFilter = s;
+                      loadCurrentTab(1);
+                    }}>{s.replace("_", " ")}</button
                   >
                 </li>
-                {#each ["open", "in_progress", "pending_approval", "resolved", "closed", "rejected"] as s}
-                  <li>
-                    <button
-                      class="whitespace-nowrap"
-                      class:active={statusFilter === s}
-                      onclick={() => {
-                        statusFilter = s;
-                        loadAll(1);
-                      }}>{s.replace("_", " ")}</button
-                    >
-                  </li>
-                {/each}
-              </ul>
-            </div>
+              {/each}
+            </ul>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
-  {/if}
+  </div>
 
   <!-- Table -->
   <div class="card bg-base-200 shadow-sm">

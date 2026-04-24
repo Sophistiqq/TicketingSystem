@@ -9,6 +9,12 @@
     triggerAlert,
   } from "../../stores/ui.svelte";
   import { ws } from "../../lib/ws";
+  import {
+    getDepartments,
+    getAffectedSystems,
+    getRequestTypes,
+    fetchReferenceData,
+  } from "../../stores/reference.svelte";
   import type { Ticket, TicketComment, User } from "../../lib/types";
   import StatusBadge from "../../components/StatusBadge.svelte";
   import PriorityBadge from "../../components/PriorityBadge.svelte";
@@ -59,6 +65,10 @@
   let isEditingContent = $state(false);
   let editTitle = $state("");
   let editDescription = $state("");
+  let editPriority = $state("");
+  let editDepartmentId = $state<number | null>(null);
+  let editRequestTypeId = $state<number | null>(null);
+  let editAffectedSystemId = $state<number | null>(null);
   let saveLoading = $state(false);
 
   // Comment form
@@ -93,6 +103,10 @@
   let csatComment = $state("");
   let csatSubmitted = $state(false);
   let csatLoading = $state(false);
+
+  let systems = $derived(getAffectedSystems());
+  let requestTypes = $derived(getRequestTypes());
+  let departments = $derived(getDepartments());
 
   let user = $derived(getCurrentUser());
   let isOwner = $derived(
@@ -153,6 +167,10 @@
     if (!ticket) return;
     editTitle = ticket.title;
     editDescription = ticket.description;
+    editPriority = ticket.priority;
+    editDepartmentId = ticket.department_id ?? null;
+    editRequestTypeId = ticket.request_type_id ?? null;
+    editAffectedSystemId = ticket.affected_system_id ?? null;
     isEditingContent = true;
   }
 
@@ -167,6 +185,10 @@
       await api.put(`/tickets/${ticket.id}`, {
         title: editTitle,
         description: editDescription,
+        priority: editPriority,
+        department_id: editDepartmentId,
+        request_type_id: editRequestTypeId,
+        affected_system_id: editAffectedSystemId,
       });
       triggerAlert("Ticket updated successfully.");
       isEditingContent = false;
@@ -300,7 +322,7 @@
   );
 
   onMount(async () => {
-    await loadTicket();
+    await Promise.all([loadTicket(), fetchReferenceData()]);
     // Guard: If ticket load failed or user logged out during load, stop.
     if (!ticket || !getCurrentUser()) return;
 
@@ -617,12 +639,55 @@
             {/if}
           </div>
           {#if isEditingContent}
-            <input
-              type="text"
-              class="input input-bordered input-sm w-full max-w-2xl font-bold text-lg h-9 mb-1"
-              bind:value={editTitle}
-              placeholder="Ticket Title"
-            />
+            <div class="flex flex-col gap-2 mb-2">
+              <input
+                type="text"
+                class="input input-bordered input-sm w-full max-w-2xl font-bold text-lg h-9"
+                bind:value={editTitle}
+                placeholder="Ticket Title"
+              />
+              <div class="flex flex-wrap gap-2">
+                <select
+                  class="select select-bordered select-xs h-7 min-h-0 text-[10px] font-bold uppercase"
+                  bind:value={editPriority}
+                >
+                  <option value="low">Low Priority</option>
+                  <option value="medium">Medium Priority</option>
+                  <option value="high">High Priority</option>
+                  <option value="critical">Critical Priority</option>
+                </select>
+
+                <select
+                  class="select select-bordered select-xs h-7 min-h-0 text-[10px] max-w-[150px]"
+                  bind:value={editDepartmentId}
+                >
+                  <option value={null}>No Department</option>
+                  {#each departments as dept}
+                    <option value={dept.id}>{dept.name}</option>
+                  {/each}
+                </select>
+
+                <select
+                  class="select select-bordered select-xs h-7 min-h-0 text-[10px] max-w-[150px]"
+                  bind:value={editRequestTypeId}
+                >
+                  <option value={null}>No Request Type</option>
+                  {#each requestTypes as type}
+                    <option value={type.id}>{type.name}</option>
+                  {/each}
+                </select>
+
+                <select
+                  class="select select-bordered select-xs h-7 min-h-0 text-[10px] max-w-[150px]"
+                  bind:value={editAffectedSystemId}
+                >
+                  <option value={null}>No Affected System</option>
+                  {#each systems as sys}
+                    <option value={sys.id}>{sys.name}</option>
+                  {/each}
+                </select>
+              </div>
+            </div>
           {:else}
             <h1 class="text-lg font-bold tracking-tight leading-snug">
               {ticket.title}
