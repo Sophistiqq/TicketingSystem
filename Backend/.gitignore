@@ -52,3 +52,5 @@ uploads/*
 !uploads/.keep
 
 *.Identifier
+GEMINI.md
+FRONTEND_GUIDE.md

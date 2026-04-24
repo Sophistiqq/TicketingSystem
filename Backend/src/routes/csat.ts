@@ -122,11 +122,18 @@ export const csat = new Elysia({ prefix: "/csat" })
   .get(
     "/stats",
     async ({ query, status }) => {
-      const { agent_id, start_date, end_date } = query;
+      const { agent_id, start_date, end_date, month } = query;
 
       const where: any = {};
       if (agent_id) where.agent_id = agent_id;
-      if (start_date || end_date) {
+      
+      if (month) {
+        const [year, m] = month.split('-').map(Number);
+        where.submitted_at = {
+          gte: new Date(year, m - 1, 1),
+          lt: new Date(year, m, 1)
+        };
+      } else if (start_date || end_date) {
         where.submitted_at = {};
         if (start_date) where.submitted_at.gte = new Date(start_date);
         if (end_date) where.submitted_at.lte = new Date(end_date);
@@ -184,7 +191,7 @@ export const csat = new Elysia({ prefix: "/csat" })
 
       const trend = Object.entries(trendMap).map(([date, data]) => ({ date, average: data.sum / data.count }));
       const agent_leaderboard = Object.entries(agentRatings)
-        .filter(([_, data]) => data.count >= 3)
+        .filter(([_, data]) => data.count >= 1)
         .map(([id, data]) => ({ agent_id: Number(id), name: data.name, average: data.sum / data.count }))
         .sort((a, b) => b.average - a.average)
         .slice(0, 5);
@@ -207,6 +214,148 @@ export const csat = new Elysia({ prefix: "/csat" })
         agent_id: t.Optional(t.Numeric()),
         start_date: t.Optional(t.String()),
         end_date: t.Optional(t.String()),
+        month: t.Optional(t.String()),
+      }),
+      hasRole: ["admin", "mis"],
+    },
+  )
+
+  // Get detailed agent report (admin/MIS only)
+  .get(
+    "/reports/:agentId",
+    async ({ params, query, status }) => {
+      const agentId = params.agentId;
+      const { month } = query;
+
+      const agent = await prisma.user.findUnique({
+        where: { id: agentId },
+        omit: { password: true },
+        include: { department: true, roles: true },
+      });
+
+      if (!agent) return status(404, { message: "Agent not found" });
+
+      const where: any = { agent_id: agentId };
+      if (month) {
+        const [year, m] = month.split('-').map(Number);
+        where.submitted_at = {
+          gte: new Date(year, m - 1, 1),
+          lt: new Date(year, m, 1)
+        };
+      }
+
+      // Fetch all CSATs for this agent
+      const csats = await prisma.cSAT.findMany({
+        where,
+        include: {
+          ticket: {
+            select: {
+              id: true,
+              title: true,
+              priority: true,
+              status: true,
+              created_at: true,
+              started_at: true,
+              completed_at: true,
+              due_date: true,
+              sla_breached: true,
+            },
+          },
+        },
+        orderBy: { submitted_at: "desc" },
+      });
+
+      // Fetch all tickets assigned to this agent (for overall volume stats)
+      const totalAssigned = await prisma.ticket.count({
+        where: { 
+          assignee_id: agentId,
+          ...(month ? {
+            created_at: {
+              gte: where.submitted_at.gte,
+              lt: where.submitted_at.lt
+            }
+          } : {})
+        },
+      });
+
+      const totalResolved = await prisma.ticket.count({
+        where: {
+          assignee_id: agentId,
+          status: { in: ["resolved", "closed"] },
+          ...(month ? {
+            completed_at: {
+              gte: where.submitted_at.gte,
+              lt: where.submitted_at.lt
+            }
+          } : {})
+        },
+      });
+
+      // Stats calculations
+      const totalResponses = csats.length;
+      const avgRating = totalResponses > 0
+        ? Math.round((csats.reduce((sum, c) => sum + c.rating, 0) / totalResponses) * 100) / 100
+        : 0;
+
+      const distribution: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+      const priorityBreakdown: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
+      let totalResolutionTimeMs = 0;
+      let resolvedWithTimeCount = 0;
+      let slaMetCount = 0;
+
+      for (const c of csats) {
+        distribution[c.rating]++;
+        const p = c.ticket.priority as string;
+        priorityBreakdown[p] = (priorityBreakdown[p] || 0) + 1;
+        
+        if (c.resolution_time_ms) {
+          totalResolutionTimeMs += Number(c.resolution_time_ms);
+          resolvedWithTimeCount++;
+        }
+
+        if (!c.ticket.sla_breached) {
+          slaMetCount++;
+        }
+      }
+
+      const avgResolutionTimeMs = resolvedWithTimeCount > 0 
+        ? Math.round(totalResolutionTimeMs / resolvedWithTimeCount) 
+        : 0;
+      
+      const slaComplianceRate = totalResponses > 0 
+        ? Math.round((slaMetCount / totalResponses) * 100) 
+        : 0;
+
+      return status(200, {
+        agent,
+        summary: {
+          average_rating: avgRating,
+          total_responses: totalResponses,
+          total_assigned_tickets: totalAssigned,
+          total_resolved_tickets: totalResolved,
+          sla_compliance_rate: slaComplianceRate,
+          avg_resolution_time_ms: avgResolutionTimeMs,
+        },
+        distribution,
+        priority_breakdown: priorityBreakdown,
+        recent_feedback: csats.slice(0, 15).map(c => ({
+          id: c.id,
+          rating: c.rating,
+          comment: c.comment,
+          submitted_at: c.submitted_at,
+          ticket: {
+            id: c.ticket.id,
+            title: c.ticket.title,
+            priority: c.ticket.priority,
+            sla_breached: c.ticket.sla_breached
+          }
+        })),
+      });
+    },
+    {
+      params: t.Object({ agentId: t.Numeric() }),
+      query: t.Object({
+        month: t.Optional(t.String())
       }),
       hasRole: ["admin", "mis"],
     },

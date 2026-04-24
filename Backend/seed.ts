@@ -36,24 +36,24 @@ async function main() {
       create: { name: "Payroll System", description: "Employee payroll processing", department_id: departments[3].id },
     }),
     prisma.affectedSystem.upsert({
-      where: { name: "HR Portal" },
+      where: { name: "AR-NonTrade" },
       update: { department_id: departments[1].id }, // HR
-      create: { name: "HR Portal", description: "Employee self-service portal", department_id: departments[1].id },
+      create: { name: "AR-NonTrade", description: "AR NonTrade System", department_id: departments[1].id },
     }),
     prisma.affectedSystem.upsert({
-      where: { name: "Inventory System" },
+      where: { name: "FAST" },
       update: { department_id: departments[0].id }, // MIS
-      create: { name: "Inventory System", description: "Stock & inventory management", department_id: departments[0].id },
+      create: { name: "FAST", description: "Finance and Accounting System", department_id: departments[0].id },
     }),
     prisma.affectedSystem.upsert({
-      where: { name: "Voucher System" },
+      where: { name: "OTC" },
       update: { department_id: departments[3].id }, // Accounting
-      create: { name: "Voucher System", description: "Expense voucher processing", department_id: departments[3].id },
+      create: { name: "OTC", description: "OTC System", department_id: departments[3].id },
     }),
     prisma.affectedSystem.upsert({
-      where: { name: "Email System" },
+      where: { name: "IBS" },
       update: { department_id: departments[0].id }, // MIS
-      create: { name: "Email System", description: "Corporate email infrastructure", department_id: departments[0].id },
+      create: { name: "IBS", description: "Integrated Business Systems", department_id: departments[0].id },
     }),
     prisma.affectedSystem.upsert({
       where: { name: "Others" },
@@ -101,7 +101,6 @@ async function main() {
   // ── Users ──
   const hashedPassword = await Bun.password.hash("password123");
 
-  // Admin user
   const admin = await prisma.user.upsert({
     where: { username: "admin" },
     update: {},
@@ -119,67 +118,173 @@ async function main() {
     update: {},
     create: { user_id: admin.id, role: "admin" },
   });
-  console.log("  ✓ Admin user (admin / password123)");
 
-  // MIS user
-  const mis = await prisma.user.upsert({
-    where: { username: "mis" },
-    update: {},
-    create: {
-      username: "mis",
-      password: hashedPassword,
-      email: "mis@company.com",
-      first_name: "MIS",
-      last_name: "Staff",
-      department_id: departments[0].id,
-    },
-  });
-  await prisma.userRole.upsert({
-    where: { user_id_role: { user_id: mis.id, role: "mis" } },
-    update: {},
-    create: { user_id: mis.id, role: "mis" },
-  });
-  console.log("  ✓ MIS user (mis / password123)");
+  const misStaffs = await Promise.all([
+    "mis", "mis1", "mis2", "mis3", "mis4"
+  ].map(async (u) => {
+    const user = await prisma.user.upsert({
+      where: { username: u },
+      update: {},
+      create: {
+        username: u,
+        password: hashedPassword,
+        email: `${u}@company.com`,
+        first_name: `MIS ${u.toUpperCase()}`,
+        last_name: "Staff",
+        department_id: departments[0].id,
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { user_id_role: { user_id: user.id, role: "mis" } },
+      update: {},
+      create: { user_id: user.id, role: "mis" },
+    });
+    return user;
+  }));
 
-  // Approver user
-  const approver = await prisma.user.upsert({
-    where: { username: "approver" },
-    update: {},
-    create: {
-      username: "approver",
-      password: hashedPassword,
-      email: "approver@company.com",
-      first_name: "Approver",
-      last_name: "Manager",
-      department_id: departments[1].id,
-    },
-  });
-  await prisma.userRole.upsert({
-    where: { user_id_role: { user_id: approver.id, role: "approver" } },
-    update: {},
-    create: { user_id: approver.id, role: "approver" },
-  });
-  console.log("  ✓ Approver user (approver / password123)");
+  const approvers = await Promise.all([
+    "approver", "manager1", "manager2"
+  ].map(async (u) => {
+    const user = await prisma.user.upsert({
+      where: { username: u },
+      update: {},
+      create: {
+        username: u,
+        password: hashedPassword,
+        email: `${u}@company.com`,
+        first_name: `Approver ${u.toUpperCase()}`,
+        last_name: "Manager",
+        department_id: departments[1].id,
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { user_id_role: { user_id: user.id, role: "approver" } },
+      update: {},
+      create: { user_id: user.id, role: "approver" },
+    });
+    return user;
+  }));
 
-  // Regular user
-  const regular = await prisma.user.upsert({
-    where: { username: "user" },
-    update: {},
-    create: {
-      username: "user",
-      password: hashedPassword,
-      email: "user@company.com",
-      first_name: "Regular",
-      last_name: "User",
-      department_id: departments[1].id,
-    },
-  });
-  await prisma.userRole.upsert({
-    where: { user_id_role: { user_id: regular.id, role: "user" } },
-    update: {},
-    create: { user_id: regular.id, role: "user" },
-  });
-  console.log("  ✓ Regular user (user / password123)");
+  const regularUsers = await Promise.all([
+    "user", "user1", "user2", "user3", "user4", "user5"
+  ].map(async (u) => {
+    const user = await prisma.user.upsert({
+      where: { username: u },
+      update: {},
+      create: {
+        username: u,
+        password: hashedPassword,
+        email: `${u}@company.com`,
+        first_name: `User ${u.toUpperCase()}`,
+        last_name: "Employee",
+        department_id: departments[1].id,
+      },
+    });
+    await prisma.userRole.upsert({
+      where: { user_id_role: { user_id: user.id, role: "user" } },
+      update: {},
+      create: { user_id: user.id, role: "user" },
+    });
+    return user;
+  }));
+
+  console.log(`  ✓ ${1 + misStaffs.length + approvers.length + regularUsers.length} users created/updated`);
+
+  // ── Diverse Tickets ──
+  console.log("  ⚙ Generating 100 diverse tickets...");
+  const priorities = ["low", "medium", "high", "critical"];
+  const statuses = ["open", "in_progress", "pending_approval", "pending_hard_copy", "resolved", "closed", "rejected"];
+  
+  for (let i = 1; i <= 100; i++) {
+    const requester = regularUsers[Math.floor(Math.random() * regularUsers.length)];
+    const priority = priorities[Math.floor(Math.random() * priorities.length)];
+    
+    // Favor resolved/closed for more CSAT data (60% chance for completed)
+    let status;
+    const statusRoll = Math.random();
+    if (statusRoll < 0.4) status = "closed";
+    else if (statusRoll < 0.6) status = "resolved";
+    else status = statuses[Math.floor(Math.random() * statuses.length)];
+
+    const system = systems[Math.floor(Math.random() * systems.length)];
+    const reqType = requestTypes[Math.floor(Math.random() * requestTypes.length)];
+    const misStaff = misStaffs[Math.floor(Math.random() * misStaffs.length)];
+    
+    // Dates for trend reports (last 30 days)
+    const createdAt = new Date();
+    createdAt.setDate(createdAt.getDate() - Math.floor(Math.random() * 30));
+    
+    let startedAt = null;
+    let completedAt = null;
+    
+    if (["in_progress", "resolved", "closed"].includes(status)) {
+      startedAt = new Date(createdAt);
+      startedAt.setHours(startedAt.getHours() + 2);
+    }
+    
+    if (["resolved", "closed"].includes(status)) {
+      completedAt = new Date(startedAt || createdAt);
+      completedAt.setHours(completedAt.getHours() + Math.floor(Math.random() * 48) + 1);
+    }
+
+    const ticket = await prisma.ticket.create({
+      data: {
+        title: `Seeded Ticket #${i}: ${reqType.name} in ${system.name}`,
+        description: `This is a generated description for seeded ticket #${i}. It needs to be at least 20 characters long to pass validation.`,
+        priority,
+        status,
+        requester_id: requester.id,
+        assignee_id: (status !== "open" && status !== "pending_approval") ? misStaff.id : null,
+        affected_system_id: system.id,
+        request_type_id: reqType.id,
+        department_id: system.department_id || departments[0].id,
+        created_at: createdAt,
+        updated_at: completedAt || startedAt || createdAt,
+        started_at: startedAt,
+        completed_at: completedAt,
+        due_date: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000), // 3 days SLA
+        sla_breached: completedAt ? (completedAt.getTime() > (createdAt.getTime() + 72 * 60 * 60 * 1000)) : false,
+      }
+    });
+
+    // Create CSAT for resolved/closed tickets (80% chance)
+    if (["resolved", "closed"].includes(status) && Math.random() > 0.2) {
+      const rating = Math.floor(Math.random() * 5) + 1;
+      await prisma.cSAT.create({
+        data: {
+          ticket_id: ticket.id,
+          rating,
+          comment: rating <= 3 ? "Could be better, took too long." : "Great job!",
+          agent_id: ticket.assignee_id,
+          submitted_at: completedAt || new Date(),
+        }
+      });
+    }
+
+    // Create Audit Logs
+    await prisma.auditLog.create({
+      data: {
+        ticket_id: ticket.id,
+        performed_by_id: requester.id,
+        action: "ticket_created",
+        new_value: "open",
+        created_at: createdAt,
+      }
+    });
+
+    if (status !== "open") {
+       await prisma.auditLog.create({
+        data: {
+          ticket_id: ticket.id,
+          performed_by_id: admin.id,
+          action: "status_change",
+          old_value: "open",
+          new_value: status,
+          created_at: startedAt || createdAt,
+        }
+      });
+    }
+  }
 
   console.log("✅ Seed complete!");
 }

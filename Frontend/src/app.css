@@ -79,9 +79,11 @@ h6 {
 .prose table::-webkit-scrollbar {
   height: 4px;
 }
+
 .prose table::-webkit-scrollbar-track {
   @apply bg-base-200;
 }
+
 .prose table::-webkit-scrollbar-thumb {
   @apply bg-base-300 rounded-full;
 }
@@ -112,4 +114,3 @@ h6 {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   @apply bg-primary/40;
 }
-

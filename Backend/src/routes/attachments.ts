@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
 import { saveFile } from "../plugins/fileUpload";
 import { broadcaster } from "../ws/broadcaster";
+import { AttachmentType } from "../../generated/prismabox/AttachmentType";
 
 export const attachments = new Elysia({ prefix: "/attachments" })
   .use(validator);
@@ -77,6 +78,27 @@ attachments
         // Save file to disk
         const { fileName, fileSize, mimeType } = await saveFile(file, UPLOAD_DIR);
 
+        // Infer type from mimeType if not provided
+        let inferredType = type;
+        if (!inferredType) {
+          if (mimeType.startsWith("image/")) {
+            inferredType = "image";
+          } else if (
+            mimeType.startsWith("video/")
+          ) {
+            inferredType = "video";
+          } else if (
+            mimeType === "application/pdf" ||
+            mimeType.includes("msword") ||
+            mimeType.includes("officedocument") ||
+            mimeType.startsWith("text/")
+          ) {
+            inferredType = "document";
+          } else {
+            inferredType = "other";
+          }
+        }
+
         // Create attachment record
         const attachment = await prisma.attachment.create({
           data: {
@@ -85,7 +107,7 @@ attachments
             file_url: `/uploads/${fileName}`,
             file_size: fileSize,
             mime_type: mimeType,
-            type: type || "other",
+            type: inferredType,
           },
         });
 
@@ -116,7 +138,7 @@ attachments
       body: t.Object({
         ticket_id: t.Numeric(),
         files: t.Files(),
-        type: t.Optional(t.String()),
+        type: t.Optional(AttachmentType),
       }),
       isAuth: true,
     },

@@ -69,6 +69,8 @@ enum AttachmentType {
   approval_form
   screenshot
   document
+  image
+  video
   other
 }
 

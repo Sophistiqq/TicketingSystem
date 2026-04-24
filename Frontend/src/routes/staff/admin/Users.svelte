@@ -3,7 +3,8 @@
   import { api } from "../../../lib/api";
   import type { User, PaginatedResponse, Role, Department } from "../../../lib/types";
   import Pagination from "../../../components/Pagination.svelte";
-  import { simpleConfirm } from "../../../stores/ui.svelte";
+  import { simpleConfirm, openCustomModal } from "../../../stores/ui.svelte";
+  import ReportModal from "../../../components/ReportModal.svelte";
   import {
     Search,
     Plus,
@@ -12,6 +13,7 @@
     Shield,
     X,
     UserPlus,
+    ClipboardList,
   } from "lucide-svelte";
 
   let users = $state<User[]>([]);
@@ -166,6 +168,15 @@
     await api.delete(`/users/${userId}/roles/${role}`);
     await loadUsers(pagination.page);
   }
+
+  async function showReport(agentId: number) {
+    try {
+      const data = await api.get(`/csat/reports/${agentId}`);
+      if (data) {
+        openCustomModal(ReportModal, { data });
+      }
+    } catch { /* handled */ }
+  }
 </script>
 
 <div class="flex flex-col gap-6">
@@ -279,6 +290,11 @@
                   </td>
                   <td>
                     <div class="flex gap-1">
+                      {#if user.roles.includes('mis')}
+                        <button class="btn btn-ghost btn-xs text-primary" onclick={() => showReport(user.id)} title="Performance Report">
+                            <ClipboardList size={14} />
+                        </button>
+                      {/if}
                       <button class="btn btn-ghost btn-xs" onclick={() => openEdit(user)}><Pencil size={14} /></button>
                       <button class="btn btn-ghost btn-xs text-error" onclick={() => deleteUser(user)}><Trash2 size={14} /></button>
                     </div>

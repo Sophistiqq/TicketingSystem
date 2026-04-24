@@ -21,6 +21,8 @@ type ConfirmResult = {
 let modalState = $state<{
   show: boolean;
   options: ConfirmOptions;
+  component?: any;
+  props?: any;
   resolve: (result: ConfirmResult) => void;
 } | null>(null);
 
@@ -28,6 +30,18 @@ let hideChromeState = $state(false);
 
 export function getModalState() {
   return modalState;
+}
+
+export function openCustomModal(component: any, props: any = {}): Promise<ConfirmResult> {
+  return new Promise((resolve) => {
+    modalState = {
+      show: true,
+      options: { message: "" }, // Dummy message for basic compatibility
+      component,
+      props,
+      resolve
+    };
+  });
 }
 
 

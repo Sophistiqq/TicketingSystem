@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from "svelte";
-  import { api } from "../../lib/api";
+  import { api, API_BASE } from "../../lib/api";
   import { route, navigate } from "../../router.svelte";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
   import {
@@ -50,7 +50,6 @@
     Save,
   } from "lucide-svelte";
 
-  let base = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
   let ticket = $state<Ticket | null>(null);
   let loading = $state(true);
@@ -343,6 +342,7 @@
         if (!ticket.comments) ticket.comments = [];
         if (!ticket.comments.some((c) => c.id === comment.id)) {
           ticket.comments = [...ticket.comments, comment as any];
+          scrollToBottom();
         }
       }
     });
@@ -365,7 +365,10 @@
           const comments = await api.get<TicketComment[]>(
             `/comments?ticket_id=${res.id}`,
           );
-          if (ticket) ticket.comments = comments;
+          if (ticket) {
+            ticket.comments = comments;
+            scrollToBottom();
+          }
         } catch {
           if (ticket) ticket.comments = [];
         }
@@ -399,6 +402,7 @@
       isInternal = false;
       editingCommentId = null;
       await loadTicket();
+      scrollToBottom();
     } catch {
       /* handled */
     }
@@ -473,6 +477,13 @@
     if (!d) return "-";
     return new Date(d).toLocaleDateString();
   }
+  // Helpers
+  async function scrollToBottom() {
+    await tick();
+    if (commentContainer) {
+      commentContainer.scrollTop = commentContainer.scrollHeight;
+    }
+  }
 
   function isImage(att: any) {
     if (!att || !att.file_name) return false;
@@ -541,7 +552,7 @@
           <div
             class="bg-primary-content/20 p-1.5 rounded-lg text-primary-content"
           >
-            <ClipboardCheck size={20} />
+            <ClipboardCheck size={20} class="text-warning" />
           </div>
           <div>
             <h3 class="font-bold text-sm">Approval Required</h3>
@@ -774,10 +785,10 @@
                       type="button"
                       class="aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 hover:border-primary/50 transition-all group relative p-0"
                       onclick={() =>
-                        (selectedZoomImage = `http://localhost:3000${att.file_url}`)}
+                        (selectedZoomImage = att.file_url)}
                     >
                       <img
-                        src={`${base}${att.file_url}`}
+                        src={`${API_BASE}${att.file_url}`}
                         alt={att.file_name}
                         class="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
@@ -941,7 +952,10 @@
 
           <div class="card-body p-4">
             {#if activeTab === "comments"}
-              <div class="flex flex-col gap-3 mb-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              <div
+                class="flex flex-col gap-3 mb-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"
+                bind:this={commentContainer}
+              >
                 {#each ticket.comments ?? [] as comment (comment.id)}
                   <div
                     class="chat {Number(comment.user_id) === Number(user?.id)
@@ -1079,14 +1093,14 @@
                       <button
                         class="btn btn-ghost btn-xs h-7 w-7"
                         onclick={() =>
-                          (selectedZoomImage = `http://localhost:3000${att.file_url}`)}
+                          (selectedZoomImage = att.file_url)}
                         title="View"
                       >
                         <Search size={12} />
                       </button>
                     {/if}
                     <a
-                      href="http://localhost:3000{att.file_url}"
+                      href="{API_BASE}{att.file_url}"
                       target="_blank"
                       class="btn btn-ghost btn-xs h-7 w-7"
                       title="Download"
@@ -1725,7 +1739,7 @@
       <CircleX size={28} />
     </button>
     <img
-      src={`${base}${selectedZoomImage}`}
+      src={`${API_BASE}${selectedZoomImage}`}
       alt="Zoomed preview"
       class="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-200"
     />
