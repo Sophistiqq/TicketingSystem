@@ -136,11 +136,11 @@
 
     <!-- Focus: Detailed Feedback Log -->
     <section class="flex-1 min-h-0">
-      <div class="flex items-center gap-2 mb-2">
+      <div class="section-title flex items-center gap-2 mb-2">
           <div class="h-3 w-1 bg-primary"></div>
           <h4 class="text-[10px] font-black uppercase text-slate-800 tracking-[0.1em]">Detailed Feedback Log</h4>
       </div>
-      <div class="overflow-hidden border border-slate-200 rounded-lg">
+      <div class="table-container overflow-hidden border border-slate-200 rounded-lg">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-slate-50 text-[8px] font-black uppercase text-slate-400 tracking-widest border-b border-slate-200">
@@ -293,8 +293,37 @@
       overflow: visible !important;
     }
 
-    section, tr {
-        break-inside: avoid;
+    section {
+        break-inside: auto !important;
+    }
+
+    .section-title {
+        break-after: avoid-page !important;
+    }
+
+    tr {
+        break-inside: avoid !important;
+    }
+
+    thead {
+        display: table-header-group !important;
+    }
+
+    /* Add margin to 2nd page onwards */
+    thead::before {
+        content: "";
+        display: block;
+        height: 0.5in; /* Margin for subsequent pages */
+    }
+
+    /* Hide the extra margin on the very first page */
+    @page :first {
+        margin-top: 0;
+    }
+    
+    .table-container {
+        overflow: visible !important;
+        border: none !important;
     }
 
     * {

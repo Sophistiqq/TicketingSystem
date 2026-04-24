@@ -3,17 +3,27 @@
   import type { Ticket } from "../lib/types";
   import StatusBadge from "./StatusBadge.svelte";
   import PriorityBadge from "./PriorityBadge.svelte";
-  import { Clock, TriangleAlert } from "lucide-svelte";
+  import { Clock, TriangleAlert, ChevronUp, ChevronDown } from "lucide-svelte";
 
   let {
     tickets,
     showRequester = false,
     showAssignee = true,
+    sort = "created_at",
+    order = "desc",
+    onSort = (field: string) => {},
   }: {
     tickets: Ticket[];
     showRequester?: boolean;
     showAssignee?: boolean;
+    sort?: string;
+    order?: "asc" | "desc";
+    onSort?: (field: string) => void;
   } = $props();
+
+  function toggleSort(field: string) {
+    onSort(field);
+  }
 
   function timeAgo(dateStr: string): string {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -32,13 +42,48 @@
   <table class="table table-sm">
     <thead>
       <tr>
-        <th>ID</th>
-        <th>Title</th>
-        <th>Status</th>
-        <th>Priority</th>
+        <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => toggleSort('id')}>
+          <div class="flex items-center gap-1">
+            ID
+            {#if sort === 'id'}
+              {#if order === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+            {/if}
+          </div>
+        </th>
+        <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => toggleSort('title')}>
+          <div class="flex items-center gap-1">
+            Title
+            {#if sort === 'title'}
+              {#if order === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+            {/if}
+          </div>
+        </th>
+        <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => toggleSort('status')}>
+          <div class="flex items-center gap-1">
+            Status
+            {#if sort === 'status'}
+              {#if order === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+            {/if}
+          </div>
+        </th>
+        <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => toggleSort('priority')}>
+          <div class="flex items-center gap-1">
+            Priority
+            {#if sort === 'priority'}
+              {#if order === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+            {/if}
+          </div>
+        </th>
         {#if showRequester}<th>Requester</th>{/if}
         {#if showAssignee}<th>Assignee</th>{/if}
-        <th>Created</th>
+        <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => toggleSort('created_at')}>
+          <div class="flex items-center gap-1">
+            Created
+            {#if sort === 'created_at'}
+              {#if order === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+            {/if}
+          </div>
+        </th>
         <th></th>
       </tr>
     </thead>

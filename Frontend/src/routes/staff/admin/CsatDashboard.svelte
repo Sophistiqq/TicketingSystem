@@ -9,7 +9,7 @@
 
   let stats = $state<CSATStats | null>(null);
   let loading = $state(true);
-  let selectedMonth = $state(new Date().toISOString().slice(0, 7)); // Default to current month
+  let selectedMonth = $state(""); // Default to All Time
 
   onMount(() => loadStats());
 
@@ -126,7 +126,10 @@
                 class="flex justify-between items-center p-3 bg-base-200 rounded-xl border border-base-300 shadow-sm"
               >
                 <div class="flex flex-col">
-                  <span class="font-bold text-sm">{agent.name}</span>
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-sm">{agent.name}</span>
+                    <span class="text-[10px] opacity-50 font-medium">({agent.count} {agent.count === 1 ? 'response' : 'responses'})</span>
+                  </div>
                   <button
                     class="text-[10px] text-primary font-black text-normal uppercase tracking-widest hover:underline w-fit mt-1"
                     onclick={() => showReport(agent.agent_id)}

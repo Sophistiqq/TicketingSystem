@@ -192,9 +192,9 @@ export const csat = new Elysia({ prefix: "/csat" })
       const trend = Object.entries(trendMap).map(([date, data]) => ({ date, average: data.sum / data.count }));
       const agent_leaderboard = Object.entries(agentRatings)
         .filter(([_, data]) => data.count >= 1)
-        .map(([id, data]) => ({ agent_id: Number(id), name: data.name, average: data.sum / data.count }))
+        .map(([id, data]) => ({ agent_id: Number(id), name: data.name, average: data.sum / data.count, count: data.count }))
         .sort((a, b) => b.average - a.average)
-        .slice(0, 5);
+        .slice(0, 50);
 
       return status(200, {
         average_rating,
@@ -236,12 +236,15 @@ export const csat = new Elysia({ prefix: "/csat" })
       if (!agent) return status(404, { message: "Agent not found" });
 
       const where: any = { agent_id: agentId };
+      let dateFilter: any = null;
+
       if (month) {
         const [year, m] = month.split('-').map(Number);
-        where.submitted_at = {
+        dateFilter = {
           gte: new Date(year, m - 1, 1),
           lt: new Date(year, m, 1)
         };
+        where.submitted_at = dateFilter;
       }
 
       // Fetch all CSATs for this agent
@@ -269,11 +272,8 @@ export const csat = new Elysia({ prefix: "/csat" })
       const totalAssigned = await prisma.ticket.count({
         where: { 
           assignee_id: agentId,
-          ...(month ? {
-            created_at: {
-              gte: where.submitted_at.gte,
-              lt: where.submitted_at.lt
-            }
+          ...(dateFilter ? {
+            created_at: dateFilter
           } : {})
         },
       });
@@ -282,13 +282,21 @@ export const csat = new Elysia({ prefix: "/csat" })
         where: {
           assignee_id: agentId,
           status: { in: ["resolved", "closed"] },
-          ...(month ? {
-            completed_at: {
-              gte: where.submitted_at.gte,
-              lt: where.submitted_at.lt
-            }
+          ...(dateFilter ? {
+            completed_at: dateFilter
           } : {})
         },
+      });
+
+      const totalSlaMet = await prisma.ticket.count({
+        where: {
+          assignee_id: agentId,
+          status: { in: ["resolved", "closed"] },
+          sla_breached: false,
+          ...(dateFilter ? {
+            completed_at: dateFilter
+          } : {})
+        }
       });
 
       // Stats calculations
@@ -301,7 +309,6 @@ export const csat = new Elysia({ prefix: "/csat" })
       const priorityBreakdown: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
       let totalResolutionTimeMs = 0;
       let resolvedWithTimeCount = 0;
-      let slaMetCount = 0;
 
       for (const c of csats) {
         distribution[c.rating]++;
@@ -312,18 +319,14 @@ export const csat = new Elysia({ prefix: "/csat" })
           totalResolutionTimeMs += Number(c.resolution_time_ms);
           resolvedWithTimeCount++;
         }
-
-        if (!c.ticket.sla_breached) {
-          slaMetCount++;
-        }
       }
 
       const avgResolutionTimeMs = resolvedWithTimeCount > 0 
         ? Math.round(totalResolutionTimeMs / resolvedWithTimeCount) 
         : 0;
       
-      const slaComplianceRate = totalResponses > 0 
-        ? Math.round((slaMetCount / totalResponses) * 100) 
+      const slaComplianceRate = totalResolved > 0 
+        ? Math.round((totalSlaMet / totalResolved) * 100) 
         : 0;
 
       return status(200, {
@@ -338,7 +341,7 @@ export const csat = new Elysia({ prefix: "/csat" })
         },
         distribution,
         priority_breakdown: priorityBreakdown,
-        recent_feedback: csats.slice(0, 15).map(c => ({
+        recent_feedback: csats.slice(0, 50).map(c => ({
           id: c.id,
           rating: c.rating,
           comment: c.comment,

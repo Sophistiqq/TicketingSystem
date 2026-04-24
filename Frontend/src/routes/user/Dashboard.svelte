@@ -30,6 +30,8 @@
   let activeUsers = $state<User[]>([]);
   let departments = $derived(getDepartments());
   let loading = $state(true);
+  let dashboardSort = $state("created_at");
+  let dashboardOrder = $state<"asc" | "desc">("desc");
 
   // Filters
   let departmentId = $state<number | undefined>(undefined);
@@ -57,7 +59,7 @@
 
       // Fetch recent tickets
       const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/?page=1&limit=10&sort=created_at&order=desc${deptParam}`,
+        `/tickets/?page=1&limit=10&sort=${dashboardSort}&order=${dashboardOrder}${deptParam}`,
       );
       if (res) {
         tickets = res.data;
@@ -117,6 +119,16 @@
     } finally {
       loading = false;
     }
+  }
+
+  function handleDashboardSort(field: string) {
+    if (dashboardSort === field) {
+      dashboardOrder = dashboardOrder === "asc" ? "desc" : "asc";
+    } else {
+      dashboardSort = field;
+      dashboardOrder = "asc";
+    }
+    loadDashboardData();
   }
 
   onMount(async () => {
@@ -260,7 +272,13 @@
           </div>
         {:else}
           <div class="p-0">
-            <TicketTable {tickets} showRequester={hasRole("admin", "mis")} />
+            <TicketTable
+              {tickets}
+              showRequester={hasRole("admin", "mis")}
+              sort={dashboardSort}
+              order={dashboardOrder}
+              onSort={handleDashboardSort}
+            />
           </div>
         {/if}
       </div>

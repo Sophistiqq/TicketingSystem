@@ -16,8 +16,16 @@ export const users = new Elysia({ prefix: "/users" })
   .get(
     "/",
     async ({ query, status }) => {
-      const { search, role, department_id, is_active, page = 1, limit = 20 } =
-        query;
+      const {
+        search,
+        role,
+        department_id,
+        is_active,
+        page = 1,
+        limit = 20,
+        sort = "created_at",
+        order = "desc",
+      } = query;
 
       const where: any = {};
       if (search) {
@@ -39,6 +47,8 @@ export const users = new Elysia({ prefix: "/users" })
       }
 
       const skip = (page - 1) * limit;
+      const orderBy: any = {};
+      orderBy[sort] = order;
 
       const data = await prisma.user.findMany({
         where,
@@ -47,7 +57,7 @@ export const users = new Elysia({ prefix: "/users" })
           department: true,
           roles: true,
         },
-        orderBy: { created_at: "desc" },
+        orderBy,
         skip,
         take: limit,
       });
@@ -66,6 +76,17 @@ export const users = new Elysia({ prefix: "/users" })
         is_active: t.Optional(t.String()),
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+        sort: t.Optional(
+          t.Union([
+            t.Literal("id"),
+            t.Literal("first_name"),
+            t.Literal("last_name"),
+            t.Literal("username"),
+            t.Literal("email"),
+            t.Literal("created_at"),
+          ]),
+        ),
+        order: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
       }),
       hasRole: ["admin"],
     },

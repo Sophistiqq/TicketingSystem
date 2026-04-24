@@ -145,10 +145,13 @@ tickets
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
         sort: t.Optional(
           t.Union([
+            t.Literal("id"),
+            t.Literal("title"),
+            t.Literal("status"),
+            t.Literal("priority"),
             t.Literal("created_at"),
             t.Literal("updated_at"),
-            t.Literal("priority"),
-            t.Literal("status"),
+            t.Literal("due_date"),
           ]),
         ),
         order: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
@@ -820,8 +823,15 @@ tickets
   .get(
     "/my/requested",
     async ({ user, query, status }) => {
-      const { page = 1, limit = 20 } = query;
+      const {
+        page = 1,
+        limit = 20,
+        sort = "created_at",
+        order = "desc",
+      } = query;
       const skip = (page - 1) * limit;
+      const orderBy: any = {};
+      orderBy[sort] = order;
 
       const data = await prisma.ticket.findMany({
         where: { requester_id: user },
@@ -830,7 +840,7 @@ tickets
           request_type: true,
           affected_system: true,
         },
-        orderBy: { created_at: "desc" },
+        orderBy,
         skip,
         take: limit,
       });
@@ -845,6 +855,16 @@ tickets
       query: t.Object({
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+        sort: t.Optional(
+          t.Union([
+            t.Literal("id"),
+            t.Literal("title"),
+            t.Literal("status"),
+            t.Literal("priority"),
+            t.Literal("created_at"),
+          ]),
+        ),
+        order: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
       }),
       isAuth: true,
     },
@@ -854,8 +874,15 @@ tickets
   .get(
     "/my/assigned",
     async ({ user, query, status }) => {
-      const { page = 1, limit = 20 } = query;
+      const {
+        page = 1,
+        limit = 20,
+        sort = "created_at",
+        order = "desc",
+      } = query;
       const skip = (page - 1) * limit;
+      const orderBy: any = {};
+      orderBy[sort] = order;
 
       const data = await prisma.ticket.findMany({
         where: { assignee_id: user },
@@ -864,7 +891,7 @@ tickets
           request_type: true,
           affected_system: true,
         },
-        orderBy: { created_at: "desc" },
+        orderBy,
         skip,
         take: limit,
       });
@@ -879,6 +906,16 @@ tickets
       query: t.Object({
         page: t.Optional(t.Numeric({ minimum: 1 })),
         limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
+        sort: t.Optional(
+          t.Union([
+            t.Literal("id"),
+            t.Literal("title"),
+            t.Literal("status"),
+            t.Literal("priority"),
+            t.Literal("created_at"),
+          ]),
+        ),
+        order: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
       }),
       isAuth: true,
     },

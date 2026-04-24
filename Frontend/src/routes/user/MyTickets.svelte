@@ -14,11 +14,15 @@
   let requestedTickets = $state<Ticket[]>([]);
   let requestedPagination = $state({ page: 1, limit: 20, total: 0, pages: 0 });
   let requestedLoading = $state(true);
+  let requestedSort = $state("created_at");
+  let requestedOrder = $state<"asc" | "desc">("desc");
 
   // Assigned tickets
   let assignedTickets = $state<Ticket[]>([]);
   let assignedPagination = $state({ page: 1, limit: 20, total: 0, pages: 0 });
   let assignedLoading = $state(true);
+  let assignedSort = $state("created_at");
+  let assignedOrder = $state<"asc" | "desc">("desc");
 
   // Filters (for the "all tickets" view when admin/MIS)
   let search = $state("");
@@ -28,6 +32,8 @@
   let allTickets = $state<Ticket[]>([]);
   let allPagination = $state({ page: 1, limit: 20, total: 0, pages: 0 });
   let allLoading = $state(false);
+  let allSort = $state("created_at");
+  let allOrder = $state<"asc" | "desc">("desc");
 
   let showAllView = $derived(hasRole("admin", "mis"));
 
@@ -41,7 +47,7 @@
     requestedLoading = true;
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/my/requested?page=${page}&limit=20`,
+        `/tickets/my/requested?page=${page}&limit=20&sort=${requestedSort}&order=${requestedOrder}`,
       );
       if (res) {
         requestedTickets = res.data;
@@ -58,7 +64,7 @@
     assignedLoading = true;
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/my/assigned?page=${page}&limit=20`,
+        `/tickets/my/assigned?page=${page}&limit=20&sort=${assignedSort}&order=${assignedOrder}`,
       );
       if (res) {
         assignedTickets = res.data;
@@ -76,8 +82,8 @@
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", "20");
-    params.set("sort", "created_at");
-    params.set("order", "desc");
+    params.set("sort", allSort);
+    params.set("order", allOrder);
     if (search) params.set("search", search);
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
@@ -95,6 +101,36 @@
       /* handled */
     }
     allLoading = false;
+  }
+
+  function handleRequestedSort(field: string) {
+    if (requestedSort === field) {
+      requestedOrder = requestedOrder === "asc" ? "desc" : "asc";
+    } else {
+      requestedSort = field;
+      requestedOrder = "asc";
+    }
+    loadRequested(1);
+  }
+
+  function handleAssignedSort(field: string) {
+    if (assignedSort === field) {
+      assignedOrder = assignedOrder === "asc" ? "desc" : "asc";
+    } else {
+      assignedSort = field;
+      assignedOrder = "asc";
+    }
+    loadAssigned(1);
+  }
+
+  function handleAllSort(field: string) {
+    if (allSort === field) {
+      allOrder = allOrder === "asc" ? "desc" : "asc";
+    } else {
+      allSort = field;
+      allOrder = "asc";
+    }
+    loadAll(1);
   }
 
   function handleSearch() {
@@ -259,7 +295,13 @@
             ></span>
           </div>
         {:else}
-          <TicketTable tickets={requestedTickets} showAssignee={true} />
+          <TicketTable
+            tickets={requestedTickets}
+            showAssignee={true}
+            sort={requestedSort}
+            order={requestedOrder}
+            onSort={handleRequestedSort}
+          />
           <div class="flex justify-center p-4">
             <Pagination
               pagination={requestedPagination}
@@ -274,7 +316,13 @@
             ></span>
           </div>
         {:else}
-          <TicketTable tickets={assignedTickets} showRequester={true} />
+          <TicketTable
+            tickets={assignedTickets}
+            showRequester={true}
+            sort={assignedSort}
+            order={assignedOrder}
+            onSort={handleAssignedSort}
+          />
           <div class="flex justify-center p-4">
             <Pagination
               pagination={assignedPagination}
@@ -291,6 +339,9 @@
           tickets={allTickets}
           showRequester={true}
           showAssignee={true}
+          sort={allSort}
+          order={allOrder}
+          onSort={handleAllSort}
         />
         <div class="flex justify-center p-4">
           <Pagination pagination={allPagination} onPageChange={loadAll} />

@@ -14,12 +14,16 @@
     X,
     UserPlus,
     ClipboardList,
+    ChevronUp,
+    ChevronDown,
   } from "lucide-svelte";
 
   let users = $state<User[]>([]);
   let pagination = $state({ page: 1, limit: 20, total: 0, pages: 0 });
   let loading = $state(true);
   let departments = $state<Department[]>([]);
+  let sortField = $state("created_at");
+  let sortOrder = $state<"asc" | "desc">("desc");
 
   // Filters
   let search = $state("");
@@ -61,6 +65,8 @@
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", "20");
+    params.set("sort", sortField);
+    params.set("order", sortOrder);
     if (search) params.set("search", search);
     if (roleFilter) params.set("role", roleFilter);
     if (deptFilter) params.set("department_id", deptFilter);
@@ -78,6 +84,16 @@
       }
     } catch { /* handled */ }
     loading = false;
+  }
+
+  function handleSort(field: string) {
+    if (sortField === field) {
+      sortOrder = sortOrder === "asc" ? "desc" : "asc";
+    } else {
+      sortField = field;
+      sortOrder = "asc";
+    }
+    loadUsers(1);
   }
 
   function openCreate() {
@@ -252,11 +268,40 @@
           <table class="table table-sm">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Username</th>
-                <th>Email</th>
+                <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => handleSort('last_name')}>
+                  <div class="flex items-center gap-1">
+                    Name
+                    {#if sortField === 'last_name' || sortField === 'first_name'}
+                      {#if sortOrder === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+                    {/if}
+                  </div>
+                </th>
+                <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => handleSort('username')}>
+                  <div class="flex items-center gap-1">
+                    Username
+                    {#if sortField === 'username'}
+                      {#if sortOrder === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+                    {/if}
+                  </div>
+                </th>
+                <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => handleSort('email')}>
+                  <div class="flex items-center gap-1">
+                    Email
+                    {#if sortField === 'email'}
+                      {#if sortOrder === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+                    {/if}
+                  </div>
+                </th>
                 <th>Department</th>
                 <th>Roles</th>
+                <th class="cursor-pointer hover:bg-base-300 transition-colors select-none" onclick={() => handleSort('created_at')}>
+                  <div class="flex items-center gap-1">
+                    Created
+                    {#if sortField === 'created_at'}
+                      {#if sortOrder === 'asc'}<ChevronUp size={14} />{:else}<ChevronDown size={14} />{/if}
+                    {/if}
+                  </div>
+                </th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -282,6 +327,9 @@
                         <Plus size={14} />
                       </button>
                     </div>
+                  </td>
+                  <td class="text-xs opacity-60">
+                    {new Date(user.created_at).toLocaleDateString()}
                   </td>
                   <td>
                     <span class="badge badge-xs {user.is_active ? 'badge-success' : 'badge-error'}">
