@@ -214,22 +214,6 @@ export const notifications = new Elysia({ prefix: "/notifications" })
     return { publicKey: process.env.VAPID_PUBLIC_KEY };
   })
 
-  // Send a test push notification
-  .post(
-    "/test-push",
-    async ({ user, status }) => {
-      console.log(`[PUSH] Triggering test push for user ${user}`);
-      await createAndPushNotification(
-        user,
-        null,
-        "escalated",
-        "This is a test push notification! 🚀"
-      );
-      return status(200, { message: "Test push sent" });
-    },
-    { isAuth: true }
-  )
-
   // Subscribe to push notifications
   .post(
     "/push-subscribe",

@@ -179,12 +179,66 @@ approvals
         return status(403, { message: "Only admin/MIS can remove approvers" });
       }
 
-      const deleted = await prisma.ticketApprover.deleteMany({
-        where: {
-          id: params.id,
-          ticket_id: query.ticket_id,
-          status: "pending",
-        },
+      const deleted = await prisma.$transaction(async (tx) => {
+        const del = await tx.ticketApprover.deleteMany({
+          where: {
+            id: params.id,
+            ticket_id: query.ticket_id,
+            status: "pending",
+          },
+        });
+
+        if (del.count > 0) {
+          // Check remaining pending approvers
+          const remainingPending = await tx.ticketApprover.count({
+            where: {
+              ticket_id: query.ticket_id,
+              status: "pending",
+            },
+          });
+
+          // Check if any approvers remain at all
+          const totalRemaining = await tx.ticketApprover.count({
+            where: { ticket_id: query.ticket_id },
+          });
+
+          if (remainingPending === 0 && ticket.status === "pending_approval") {
+            const newStatus = ticket.assignee_id ? "in_progress" : "open";
+            await tx.ticket.update({
+              where: { id: query.ticket_id },
+              data: {
+                status: newStatus,
+                // If no approvers left at all, reset escalation flag
+                ...(totalRemaining === 0 ? { escalated_to_approval: false } : {}),
+              },
+            });
+
+            await tx.auditLog.create({
+              data: {
+                ticket_id: query.ticket_id,
+                performed_by_id: user,
+                action: "status_change",
+                old_value: "pending_approval",
+                new_value: newStatus,
+                notes:
+                  "Ticket returned to " +
+                  newStatus +
+                  " because no pending approvers remain." +
+                  (totalRemaining === 0 ? " Escalation flag reset." : ""),
+              },
+            });
+
+            broadcaster.ticketUpdated(query.ticket_id, {
+              field: "status",
+              old_value: "pending_approval",
+              new_value: newStatus,
+              status: newStatus,
+              updated_by: `MIS Staff #${user}`,
+            });
+          }
+        }
+
+        return del;
       });
 
       if (deleted.count === 0) {

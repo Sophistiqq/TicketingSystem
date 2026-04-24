@@ -1079,12 +1079,20 @@
                               ? 'btn-primary'
                               : 'btn-ghost border-base-300'}"
                             onclick={() => toggleApprover(approver.id)}
-                            disabled={statusLoading || hasDecided}
+                            disabled={statusLoading ||
+                              hasDecided ||
+                              ["resolved", "closed", "rejected"].includes(
+                                ticket.status,
+                              )}
                             title={hasDecided
                               ? "Cannot remove after decision"
-                              : isSelected
-                                ? "Click to remove"
-                                : "Click to add"}
+                              : ["resolved", "closed", "rejected"].includes(
+                                    ticket.status,
+                                  )
+                                ? "Cannot manage approvers on completed ticket"
+                                : isSelected
+                                  ? "Click to remove"
+                                  : "Click to add"}
                           >
                             <div class="avatar avatar-placeholder">
                               <div
@@ -1190,6 +1198,10 @@
                                 class="btn btn-ghost btn-xs btn-square text-error"
                                 onclick={() =>
                                   toggleApprover(approval.approver_id)}
+                                disabled={statusLoading ||
+                                  ["resolved", "closed", "rejected"].includes(
+                                    ticket.status,
+                                  )}
                                 title="Remove Approver"
                               >
                                 <Trash2 size={12} />

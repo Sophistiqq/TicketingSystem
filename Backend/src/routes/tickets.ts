@@ -878,87 +878,174 @@ tickets
       });
       if (!ticket) return status(404, { message: "Ticket not found" });
 
-      const existing = ticket.approvers.find(a => a.approver_id === approverId);
+      // Prevent managing approvers on completed tickets
+      if (["resolved", "closed", "rejected"].includes(ticket.status)) {
+        return status(400, {
+          message: "Cannot manage approvers on a completed or rejected ticket.",
+        });
+      }
+
+      const existing = ticket.approvers.find((a) => a.approver_id === approverId);
 
       if (existing) {
         // If already approved/rejected, don't allow removal via simple toggle
-        if (existing.status !== 'pending') {
-          return status(400, { message: "Cannot remove an approver who has already decided." });
+        if (existing.status !== "pending") {
+          return status(400, {
+            message: "Cannot remove an approver who has already decided.",
+          });
         }
 
-        await prisma.ticketApprover.delete({ where: { id: existing.id } });
-        await createAuditLog(ticketId, user, "approver_removed", null, approverId.toString());
-        return status(200, { action: 'removed' });
-      } else {
-        // Verify user is valid approver
-        const approverUser = await prisma.user.findFirst({
-          where: { id: approverId, is_active: true, roles: { some: { role: 'approver' } } }
-        });
-        if (!approverUser) return status(400, { message: "Invalid approver selected." });
-
         return await prisma.$transaction(async (tx) => {
-          await tx.ticketApprover.create({
-            data: {
+          await tx.ticketApprover.delete({ where: { id: existing.id } });
+
+          // Check remaining pending approvers
+          const remainingPending = await tx.ticketApprover.count({
+            where: {
               ticket_id: ticketId,
-              approver_id: approverId,
-              status: 'pending'
-            }
+              status: "pending",
+            },
           });
 
-          // Auto-escalate if not currently in approval mode
-          const needsEscalation = !ticket.requires_approval && !ticket.escalated_to_approval;
-          if (needsEscalation) {
+          // Check if any approvers remain at all
+          const totalRemaining = await tx.ticketApprover.count({
+            where: { ticket_id: ticketId },
+          });
+
+          let newStatus = ticket.status;
+          if (remainingPending === 0 && ticket.status === "pending_approval") {
+            // Move back to in_progress if assigned, else open
+            newStatus = ticket.assignee_id ? "in_progress" : "open";
             await tx.ticket.update({
               where: { id: ticketId },
               data: {
-                status: "pending_approval",
-                escalated_to_approval: true,
-                escalated_at: new Date(),
-                escalated_by_id: user,
-              }
+                status: newStatus,
+                // If no approvers left at all, reset escalation flag
+                ...(totalRemaining === 0 ? { escalated_to_approval: false } : {}),
+              },
             });
 
             await tx.auditLog.create({
               data: {
                 ticket_id: ticketId,
                 performed_by_id: user,
-                action: "escalated",
+                action: "status_change",
+                old_value: "pending_approval",
+                new_value: newStatus,
+                notes:
+                  "Ticket returned to " +
+                  newStatus +
+                  " because no pending approvers remain." +
+                  (totalRemaining === 0 ? " Escalation flag reset." : ""),
+              },
+            });
+
+            // Broadcast status change
+            broadcaster.ticketUpdated(ticketId, {
+              field: "status",
+              old_value: "pending_approval",
+              new_value: newStatus,
+              status: newStatus,
+              updated_by: `MIS Staff #${user}`,
+            });
+          }
+
+          await createAuditLog(
+            ticketId,
+            user,
+            "approver_removed",
+            null,
+            approverId.toString(),
+          );
+          return { action: "removed", status: newStatus };
+        });
+      } else {
+        // Verify user is valid approver
+        const approverUser = await prisma.user.findFirst({
+          where: {
+            id: approverId,
+            is_active: true,
+            roles: { some: { role: "approver" } },
+          },
+        });
+        if (!approverUser)
+          return status(400, { message: "Invalid approver selected." });
+
+        return await prisma.$transaction(async (tx) => {
+          await tx.ticketApprover.create({
+            data: {
+              ticket_id: ticketId,
+              approver_id: approverId,
+              status: "pending",
+            },
+          });
+
+          // Always move to pending_approval if not already there when adding a pending approver
+          const needsStatusUpdate = ticket.status !== "pending_approval";
+          const needsEscalationFlag =
+            !ticket.requires_approval && !ticket.escalated_to_approval;
+
+          if (needsStatusUpdate || needsEscalationFlag) {
+            await tx.ticket.update({
+              where: { id: ticketId },
+              data: {
+                status: "pending_approval",
+                ...(needsEscalationFlag
+                  ? {
+                      escalated_to_approval: true,
+                      escalated_at: new Date(),
+                      escalated_by_id: user,
+                    }
+                  : {}),
+              },
+            });
+
+            await tx.auditLog.create({
+              data: {
+                ticket_id: ticketId,
+                performed_by_id: user,
+                action: needsEscalationFlag ? "escalated" : "status_change",
                 old_value: ticket.status,
                 new_value: "pending_approval",
-                notes: "Ticket escalated via approver assignment.",
-              }
+                notes: needsEscalationFlag
+                  ? "Ticket escalated via approver assignment."
+                  : "Ticket returned to pending approval due to new approver assignment.",
+              },
             });
           }
 
           const approverName = `${approverUser.first_name} ${approverUser.last_name}`;
-          await createAuditLog(ticketId, user, "approver_added", null, approverName);
+          await createAuditLog(
+            ticketId,
+            user,
+            "approver_added",
+            null,
+            approverName,
+          );
 
           await createAndPushNotification(
             approverId,
             ticketId,
             "approval_requested",
             `You have been requested to approve ticket #${ticketId}: ${ticket.title}`,
-            tx
+            tx,
           );
 
-          // Broadcast update if escalated
-          if (needsEscalation) {
-            broadcaster.ticketUpdated(ticketId, {
-              field: 'status, escalated',
-              old_value: ticket.status,
-              new_value: 'pending_approval',
-              status: 'pending_approval',
-              updated_by: `MIS Staff #${user}`
-            });
-          }
+          // Broadcast update
+          broadcaster.ticketUpdated(ticketId, {
+            field: "status, escalated",
+            old_value: ticket.status,
+            new_value: "pending_approval",
+            status: "pending_approval",
+            updated_by: `MIS Staff #${user}`,
+          });
 
-          return { action: 'added', escalated: needsEscalation };
+          return { action: "added", escalated: needsEscalationFlag };
         });
       }
     },
     {
       params: t.Object({ id: t.Numeric() }),
       body: t.Object({ approver_id: t.Numeric() }),
-      hasRole: ["mis", "admin"]
-    }
+      hasRole: ["mis", "admin"],
+    },
   );
