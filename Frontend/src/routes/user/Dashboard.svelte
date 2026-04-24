@@ -324,7 +324,7 @@
         <div class="card-body p-0 max-h-64 overflow-y-auto">
           {#each activeUsers.slice(0, 6) as staff (staff.id)}
             <a
-              href="/messages?userId={staff.id}"
+              href="/messages/{staff.id}"
               class="w-full px-4 py-3 flex items-center gap-3 hover:bg-base-200 transition-colors border-b border-base-200 last:border-0 group"
             >
               <div class="avatar online">

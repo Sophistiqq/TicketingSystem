@@ -17,7 +17,7 @@
     Bell,
     BellOff,
   } from "lucide-svelte";
-  import { navigate } from "../../router.svelte";
+  import { navigate, route } from "../../router.svelte";
   import { location } from "../../lib/location.svelte";
   import { triggerAlert } from "../../stores/ui.svelte";
 
@@ -181,23 +181,28 @@
     };
   });
 
-  // Route Params
-  $effect(() => {
-    const params = new URLSearchParams(location.search);
-    const userId = params.get("userId");
-    const ticketId = params.get("ticketId");
-    const ticketTitle = params.get("ticketTitle");
+  // Reactive route param watcher
+  let userId = $derived(route.params?.userId);
 
-    if (ticketId) {
-      selectedTicketId = Number(ticketId);
-      selectedTicketTitle = ticketTitle;
-    }
+  $effect(() => {
+    console.log("Router/Params changed: userId =", userId);
 
     if (userId) {
       const contactId = Number(userId);
-      if (selectedContactId !== contactId) selectContact(contactId);
+      loadMessages(contactId);
       showChatOnMobile = true;
+    } else {
+        selectedContactId = null;
+        messages = [];
+        showChatOnMobile = false;
     }
+  });
+
+  // Keep ticket params separate from user
+  $effect(() => {
+    const params = new URLSearchParams(location.search);
+    selectedTicketId = params.get("ticketId") ? Number(params.get("ticketId")) : null;
+    selectedTicketTitle = params.get("ticketTitle");
   });
 
   // Websocket
@@ -506,7 +511,7 @@
               contact.id
                 ? 'bg-primary/10 border-r-4 border-r-primary'
                 : ''}"
-              onclick={() => selectContact(contact.id)}
+              onclick={async () => await (navigate as any)(`/messages/${contact.id}`)}
             >
               <div class="avatar {isOnline(contact.id) ? 'online' : 'offline'}">
                 <div
@@ -556,8 +561,7 @@
             item.id
               ? 'bg-primary/10 border-r-4 border-r-primary'
               : ''}"
-            onclick={() => selectContact(item.id)}
-          >
+            onclick={async () => await (navigate as any)(`/messages/${item.id}`)}          >
             <div class="avatar {isOnline(item.id) ? 'online' : 'offline'}">
               <div
                 class="w-10 h-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-bold text-xs"

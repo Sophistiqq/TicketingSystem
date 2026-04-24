@@ -79,30 +79,30 @@
           Online
         </h3>
         {#each activeUsers as contact (contact.id)}
-          <a
-            onclick={() => (navigate as any)(`/messages?userId=${contact.id}`)}
-            class="w-full px-4 py-2 flex items-center gap-3 hover:bg-base-300 transition-colors group"
+          <button
+            onclick={async () => await (navigate as any)(`/messages/${contact.id}`)}
+            class="w-full px-4 py-2 flex items-center gap-3 hover:bg-base-300 transition-colors group text-left"
           >
             <div class="avatar online">
               <div
-                class="w-8 h-8 rounded-full bg-neutral flex items-center justify-center text-[10px] font-bold text-neutral-content"
+                class="w-8 h-8 rounded-full bg-neutral text-neutral-content flex items-center justify-center text-[10px] font-bold"
               >
                 {contact.first_name[0]}{contact.last_name[0]}
               </div>
             </div>
             <p class="text-xs font-bold truncate">{getContactName(contact)}</p>
-          </a>
+          </button>
         {/each}
-      {/if}
+        {/if}
 
-      <!-- All Contacts Section -->
-      <h3 class="px-4 text-[10px] font-bold opacity-30 uppercase mb-2 mt-4">
+        <!-- All Contacts Section -->
+        <h3 class="px-4 text-[10px] font-bold opacity-30 uppercase mb-2 mt-4">
         All Staff
-      </h3>
-      {#each allUsers as contact (contact.id)}
-        <a
-          href="/messages?userId={contact.id}"
-          class="w-full px-4 py-2 flex items-center gap-3 hover:bg-base-300 transition-colors group"
+        </h3>
+        {#each allUsers as contact (contact.id)}
+        <button
+          onclick={async () => await (navigate as any)(`/messages/${contact.id}`)}
+          class="w-full px-4 py-2 flex items-center gap-3 hover:bg-base-300 transition-colors group text-left"
         >
           <div class="avatar">
             <div
@@ -112,8 +112,8 @@
             </div>
           </div>
           <p class="text-xs font-bold truncate">{getContactName(contact)}</p>
-        </a>
-      {/each}
+        </button>
+        {/each}
     {/if}
   </div>
 

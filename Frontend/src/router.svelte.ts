@@ -78,6 +78,7 @@ export const { p, navigate, isActive, route } = createRouter({
   '/notifications': Notifications,
   '/profile': Profile,
   '/messages': Messages,
+  '/messages/:userId': Messages,
 
   // ── Staff / Admin ───────────────────────────────────────
   '/approvals': MyApprovals,

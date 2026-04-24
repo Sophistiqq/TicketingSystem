@@ -519,12 +519,8 @@
         receiver_id: Number(sharingToId),
         ticket_id: ticket.id,
       });
-      if (window.location.pathname === "/messages") {
-        window.location.search = `?userId=${sharingToId}`;
-      } else {
-        (navigate as any)(`/messages?userId=${sharingToId}`);
-      }
-    } catch {
+      (navigate as any)(`/messages/${sharingToId}`);
+      } catch {
       /* handled */
     }
     shareLoading = false;
@@ -1338,8 +1334,8 @@
                     {ticket?.requester?.last_name}
                   </span>
                   {#if ticket && ticket.requester_id !== user?.id}
-                    <a
-                      href="/messages?userId={ticket.requester_id}"
+                      <a
+                      href="/messages/{ticket.requester_id}"
                       class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/req:opacity-100 transition-opacity text-primary flex items-center justify-center"
                       title="Chat with Requester"
                     >
@@ -1368,7 +1364,7 @@
                   </span>
                   {#if ticket && ticket.assignee && ticket.assignee_id !== user?.id}
                     <a
-                      href="/messages?userId={ticket.assignee_id}"
+                      href="/messages/{ticket.assignee_id}"
                       class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/ass:opacity-100 transition-opacity text-primary flex items-center justify-center"
                       title="Chat with Assignee"
                     >
