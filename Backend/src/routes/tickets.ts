@@ -255,7 +255,7 @@ tickets
           const system = affectedSystemId
             ? await tx.affectedSystem.findUnique({ where: { id: affectedSystemId } })
             : null;
-          
+
           if (system?.department_id) {
             departmentId = system.department_id;
           } else {
@@ -421,10 +421,16 @@ tickets
           return status(403, { message: "Only an administrator can close this ticket." });
         }
 
-        // ENFORCEMENT: Only requester can reopen a ticket
-        if (body.status === "open" && (ticket.status === "closed" || ticket.status === "resolved")) {
-          if (ticket.requester_id !== user) {
-            return status(403, { message: "Only the requester can reopen this ticket." });
+        // ENFORCEMENT: Only requester or staff (MIS/Admin) can reopen a ticket
+        if (
+          body.status === "open" &&
+          (ticket.status === "closed" || ticket.status === "resolved" || ticket.status === "rejected")
+        ) {
+          const isStaff = roles?.includes("admin") || roles?.includes("mis");
+          if (ticket.requester_id !== user && !isStaff) {
+            return status(403, {
+              message: "Only the requester or staff can reopen this ticket.",
+            });
           }
         }
 
@@ -462,7 +468,7 @@ tickets
         }
 
         // Clear started_at when going back to open (unassign/reset)
-        if (body.status === "open" && ticket.status === "in_progress") {
+        if (body.status === "open" && (ticket.status === "in_progress" || ticket.status === "resolved" || ticket.status === "closed" || ticket.status === "rejected")) {
           updateData.started_at = null;
         }
 
@@ -492,7 +498,10 @@ tickets
         }
 
         // If reopening
-        if (body.status === "open" && ticket.status === "closed") {
+        if (
+          body.status === "open" &&
+          (ticket.status === "closed" || ticket.status === "resolved" || ticket.status === "rejected")
+        ) {
           const latestAttempt = await prisma.resolutionAttempt.findFirst({
             where: { ticket_id: params.id },
             orderBy: { created_at: "desc" },
@@ -506,7 +515,16 @@ tickets
               },
             });
           }
+
+          // Delete existing CSAT so it can be rated again after new resolution
+          await prisma.cSAT.deleteMany({
+            where: { ticket_id: params.id },
+          });
+
           updateData.reopen_count = { increment: 1 };
+          updateData.assignee_id = null; // Unassign on reopen
+          updateData.started_at = null; // Clear timer
+          updateData.completed_at = null; // Clear timer
 
           await createAndPushNotification(
             ticket.requester_id,
@@ -549,7 +567,7 @@ tickets
               ticket_id: params.id,
             }
           });
-          
+
           broadcaster.messageSent(body.assignee_id, {
             content: `You have been assigned to ticket #${params.id}: ${ticket.title}`,
             sender_id: user,
@@ -683,7 +701,7 @@ tickets
       }
 
       const hasPendingApproval = ticket.approvers.some(a => a.status === 'pending');
-      
+
       return await prisma.$transaction(async (tx) => {
         // Find a default approver if none exist
         if (!hasPendingApproval) {
@@ -692,10 +710,10 @@ tickets
           });
 
           if (!defaultApprover) {
-             // Fallback to admin if no specific approver found
-             defaultApprover = await tx.user.findFirst({
-               where: { is_active: true, roles: { some: { role: 'admin' } } },
-             });
+            // Fallback to admin if no specific approver found
+            defaultApprover = await tx.user.findFirst({
+              where: { is_active: true, roles: { some: { role: 'admin' } } },
+            });
           }
 
           if (defaultApprover) {
@@ -991,10 +1009,10 @@ tickets
                 status: "pending_approval",
                 ...(needsEscalationFlag
                   ? {
-                      escalated_to_approval: true,
-                      escalated_at: new Date(),
-                      escalated_by_id: user,
-                    }
+                    escalated_to_approval: true,
+                    escalated_at: new Date(),
+                    escalated_by_id: user,
+                  }
                   : {}),
               },
             });

@@ -182,7 +182,6 @@ export const auth = new Elysia({ prefix: "/auth" })
       if (!user) return status(401, { message: "Unauthorized" });
 
       const { first_name, last_name, email, password, username, message_notifications } = body;
-      console.log(body);
 
       const existingUser = await prisma.user.findUnique({
         where: { id: user }

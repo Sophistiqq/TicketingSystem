@@ -60,9 +60,6 @@ const app = new Elysia()
       message: error.message || "An unexpected error occurred",
     };
   })
-  .onRequest(({ request }) => {
-    console.log(`[${request.method}] ${request.url} - Origin: ${request.headers.get('origin')}`);
-  })
   .use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : true,
     credentials: true,
@@ -119,7 +116,7 @@ const app = new Elysia()
     return file;
   })
   .get("/health", ({ status }) => {
-    console.log('health hit: ', Date.now())
+    // console.log('health hit: ', Date.now())
     return status(200)
   })
   .get("/", () => "Hello Elysia")

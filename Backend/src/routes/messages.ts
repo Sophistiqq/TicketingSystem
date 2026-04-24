@@ -172,7 +172,6 @@ export const messages = new Elysia({ prefix: "/messages" })
       results.sort((a, b) => {
         const dateA = a.last_message?.created_at ? new Date(a.last_message.created_at).getTime() : 0;
         const dateB = b.last_message?.created_at ? new Date(b.last_message.created_at).getTime() : 0;
-        console.log(`Comparing A (${dateA}) and B (${dateB}): result ${dateB - dateA}`);
         return dateB - dateA;
       });
 

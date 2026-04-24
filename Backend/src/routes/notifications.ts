@@ -57,11 +57,11 @@ export async function createAndPushNotification(
   });
 
   if (subscriptions.length === 0) {
-    console.log(`[PUSH] No push subscriptions found for user ${userId}`);
+    // console.log(`[PUSH] No push subscriptions found for user ${userId}`);
     return notification;
   }
 
-  console.log(`[PUSH] Found ${subscriptions.length} subscriptions for user ${userId}`);
+  // console.log(`[PUSH] Found ${subscriptions.length} subscriptions for user ${userId}`);
 
   if (!publicVapidKey || !privateVapidKey || !contactEmail) {
     console.error("[PUSH] CRITICAL: VAPID configuration is incomplete in environment!");
@@ -121,10 +121,10 @@ export async function createAndPushNotification(
           },
         }
       );
-      console.log(`[PUSH] Successfully sent to endpoint: ${sub.endpoint.substring(0, 40)}...`);
+      // console.log(`[PUSH] Successfully sent to endpoint: ${sub.endpoint.substring(0, 40)}...`);
     } catch (error: any) {
       if (error.statusCode === 404 || error.statusCode === 410) {
-        console.log(`[PUSH] Subscription expired/invalid for user ${userId}, removing...`);
+        // console.log(`[PUSH] Subscription expired/invalid for user ${userId}, removing...`);
         await prisma.pushSubscription.delete({
           where: { id: sub.id },
         });

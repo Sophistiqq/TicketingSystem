@@ -133,13 +133,9 @@
   // Quick actions: visible when assignee is viewing an active ticket
   let canResolve = $derived(
     isAssigned &&
-      ticket?.status !== "resolved" &&
-      ticket?.status !== "closed" &&
-      ticket?.status !== "rejected",
+      (ticket?.status === "in_progress" || ticket?.status === "pending_hard_copy"),
   );
-  let canClose = $derived(
-    hasRole("admin") && ticket?.status === "resolved",
-  );
+  let canClose = $derived(hasRole("admin") && ticket?.status === "resolved");
   let canReject = $derived(
     canManage &&
       ticket?.status !== "closed" &&
@@ -147,7 +143,10 @@
       ticket?.status !== "rejected",
   );
   let canReopen = $derived(
-    isOwner && (ticket?.status === "closed" || ticket?.status === "resolved")
+    (isOwner || hasRole("admin", "mis")) &&
+      (ticket?.status === "closed" ||
+        ticket?.status === "resolved" ||
+        ticket?.status === "rejected"),
   );
 
   function startEditing() {
@@ -233,8 +232,8 @@
       "Reopen reason:",
       "Why is this ticket being reopened?",
     );
-    if (!reason) return;
-    await updateStatus("open", reason);
+    if (reason === null) return;
+    await updateStatus("open", reason || "Ticket reopened");
   }
 
   async function toggleApprover(approverId: number) {
@@ -587,6 +586,11 @@
             >
             <StatusBadge status={ticket.status} />
             <PriorityBadge priority={ticket.priority} />
+            {#if ticket.reopen_count > 0}
+              <span class="badge badge-warning badge-sm gap-1">
+                <Undo2 size={10} /> REOPENED
+              </span>
+            {/if}
             {#if ticket.sla_breached}
               <span class="badge badge-error badge-sm gap-1 animate-pulse">
                 <TriangleAlert size={10} /> OVERDUE
@@ -634,6 +638,13 @@
               <div class="flex items-center gap-1">
                 <Calendar size={11} />
                 <span>Due {formatDateShort(ticket.due_date)}</span>
+              </div>
+            {/if}
+            {#if ticket.completed_at && (ticket.status === "resolved" || ticket.status === "closed")}
+              <span>•</span>
+              <div class="flex items-center gap-1 text-success">
+                <CheckCheck size={11} />
+                <span>Resolved {formatDate(ticket.completed_at)}</span>
               </div>
             {/if}
           </div>
@@ -779,44 +790,109 @@
           </div>
         </div>
 
-        <!-- CSAT banner -->
+        <!-- CSAT section -->
         {#if showCsat}
-          <div class="card bg-warning/5 border border-warning/20">
-            <div class="card-body p-3">
-              <div class="flex items-center gap-2 mb-1">
-                <Star size={14} class="text-warning" fill="currentColor" />
-                <h3 class="font-bold text-xs">Rate your experience</h3>
+          <div
+            class="card bg-warning/5 border border-warning/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300"
+          >
+            <div class="card-body p-4">
+              <div class="flex items-center gap-2 mb-3">
+                <Star size={16} class="text-warning" fill="currentColor" />
+                <h3 class="font-bold text-sm">Rate your experience</h3>
               </div>
-              <div class="flex items-center gap-3">
+
+              <div class="flex flex-col gap-4">
+                <div class="flex items-center gap-3">
+                  <span class="text-xs font-medium opacity-60"
+                    >Your Rating:</span
+                  >
+                  <div class="flex gap-1">
+                    {#each [1, 2, 3, 4, 5] as star}
+                      <button
+                        class="btn btn-ghost btn-sm btn-square p-0 hover:bg-warning/20 transition-colors"
+                        onclick={() => (csatRating = star)}
+                      >
+                        <Star
+                          size={24}
+                          fill={star <= csatRating ? "currentColor" : "none"}
+                          class={star <= csatRating
+                            ? "text-warning"
+                            : "opacity-20"}
+                        />
+                      </button>
+                    {/each}
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <textarea
+                    class="textarea textarea-bordered textarea-sm w-full bg-base-100 min-h-[80px] text-sm leading-relaxed"
+                    placeholder="Tell us more about your experience (optional)..."
+                    bind:value={csatComment}
+                  ></textarea>
+
+                  <div class="flex justify-end">
+                    <button
+                      class="btn btn-warning btn-sm px-6 gap-2 shadow-sm"
+                      onclick={submitCsat}
+                      disabled={csatRating < 1 || csatLoading}
+                    >
+                      {#if csatLoading}
+                        <span class="loading loading-spinner loading-xs"></span>
+                      {:else}
+                        <Send size={14} />
+                      {/if}
+                      Submit Feedback
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        {/if}
+
+        {#if ticket?.csat}
+          <div class="card bg-base-100 shadow-sm border border-base-300">
+            <div class="card-body p-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <Star size={14} class="text-warning" fill="currentColor" />
+                  <h3
+                    class="font-bold text-[10px] uppercase tracking-wider text-base-content/50"
+                  >
+                    Service Feedback
+                  </h3>
+                </div>
+                <span class="text-[10px] opacity-40"
+                  >{formatDate(ticket.csat.submitted_at)}</span
+                >
+              </div>
+
+              <div class="flex flex-col gap-3">
                 <div class="flex gap-0.5">
                   {#each [1, 2, 3, 4, 5] as star}
-                    <button
-                      class="btn btn-ghost btn-xs btn-square"
-                      onclick={() => (csatRating = star)}
-                    >
-                      <Star
-                        size={16}
-                        fill={star <= csatRating ? "currentColor" : "none"}
-                        class={star <= csatRating
-                          ? "text-warning"
-                          : "opacity-20"}
-                      />
-                    </button>
+                    <Star
+                      size={18}
+                      fill={star <= ticket.csat.rating
+                        ? "currentColor"
+                        : "none"}
+                      class={star <= ticket.csat.rating
+                        ? "text-warning"
+                        : "opacity-10"}
+                    />
                   {/each}
                 </div>
-                <input
-                  type="text"
-                  class="input input-bordered input-xs flex-1"
-                  placeholder="Feedback (optional)"
-                  bind:value={csatComment}
-                />
-                <button
-                  class="btn btn-warning btn-xs px-4"
-                  onclick={submitCsat}
-                  disabled={csatRating < 1 || csatLoading}
-                >
-                  Submit
-                </button>
+
+                {#if ticket.csat.comment}
+                  <div class="relative">
+                    <div
+                      class="absolute -left-2 top-0 bottom-0 w-1 bg-warning/20 rounded-full"
+                    ></div>
+                    <p class="text-sm italic opacity-80 pl-3 leading-relaxed">
+                      "{ticket.csat.comment}"
+                    </p>
+                  </div>
+                {/if}
               </div>
             </div>
           </div>
@@ -1366,7 +1442,7 @@
         </div>
 
         <!-- Management Card -->
-        {#if canManage || canClaim}
+        {#if canManage || canClaim || canReopen}
           <div class="card bg-base-100 shadow-md border border-primary/10">
             <div class="card-body p-4 gap-3">
               <h3
@@ -1385,6 +1461,24 @@
                     <Plus size={14} /> Assign to Myself
                   </button>
                   <div class="divider my-0 opacity-20"></div>
+                {/if}
+
+                {#if !hasRole("admin", "mis") && canReopen}
+                  <div class="flex flex-col gap-1.5">
+                    <span
+                      class="text-[10px] font-bold uppercase tracking-wider text-base-content/40 mb-1"
+                    >
+                      Workflow Actions
+                    </span>
+                    <button
+                      class="btn btn-ghost btn-sm justify-start gap-2 border border-base-300"
+                      onclick={quickReopen}
+                      disabled={statusLoading}
+                    >
+                      <ArrowUpCircle size={14} /> Reopen Ticket
+                    </button>
+                  </div>
+                  <div class="divider my-1 opacity-20"></div>
                 {/if}
 
                 {#if hasRole("admin", "mis")}
