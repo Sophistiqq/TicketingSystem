@@ -191,100 +191,100 @@ async function main() {
   console.log(`  ✓ ${1 + misStaffs.length + approvers.length + regularUsers.length} users created/updated`);
 
   // ── Diverse Tickets ──
-  console.log("  ⚙ Generating 100 diverse tickets...");
-  const priorities = ["low", "medium", "high", "critical"];
-  const statuses = ["open", "in_progress", "pending_approval", "pending_hard_copy", "resolved", "closed", "rejected"];
-  
-  for (let i = 1; i <= 100; i++) {
-    const requester = regularUsers[Math.floor(Math.random() * regularUsers.length)];
-    const priority = priorities[Math.floor(Math.random() * priorities.length)];
-    
-    // Favor resolved/closed for more CSAT data (60% chance for completed)
-    let status;
-    const statusRoll = Math.random();
-    if (statusRoll < 0.4) status = "closed";
-    else if (statusRoll < 0.6) status = "resolved";
-    else status = statuses[Math.floor(Math.random() * statuses.length)];
-
-    const system = systems[Math.floor(Math.random() * systems.length)];
-    const reqType = requestTypes[Math.floor(Math.random() * requestTypes.length)];
-    const misStaff = misStaffs[Math.floor(Math.random() * misStaffs.length)];
-    
-    // Dates for trend reports (last 30 days)
-    const createdAt = new Date();
-    createdAt.setDate(createdAt.getDate() - Math.floor(Math.random() * 30));
-    
-    let startedAt = null;
-    let completedAt = null;
-    
-    if (["in_progress", "resolved", "closed"].includes(status)) {
-      startedAt = new Date(createdAt);
-      startedAt.setHours(startedAt.getHours() + 2);
-    }
-    
-    if (["resolved", "closed"].includes(status)) {
-      completedAt = new Date(startedAt || createdAt);
-      completedAt.setHours(completedAt.getHours() + Math.floor(Math.random() * 48) + 1);
-    }
-
-    const ticket = await prisma.ticket.create({
-      data: {
-        title: `Seeded Ticket #${i}: ${reqType.name} in ${system.name}`,
-        description: `This is a generated description for seeded ticket #${i}. It needs to be at least 20 characters long to pass validation.`,
-        priority,
-        status,
-        requester_id: requester.id,
-        assignee_id: (status !== "open" && status !== "pending_approval") ? misStaff.id : null,
-        affected_system_id: system.id,
-        request_type_id: reqType.id,
-        department_id: system.department_id || departments[0].id,
-        created_at: createdAt,
-        updated_at: completedAt || startedAt || createdAt,
-        started_at: startedAt,
-        completed_at: completedAt,
-        due_date: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000), // 3 days SLA
-        sla_breached: completedAt ? (completedAt.getTime() > (createdAt.getTime() + 72 * 60 * 60 * 1000)) : false,
-      }
-    });
-
-    // Create CSAT for resolved/closed tickets (80% chance)
-    if (["resolved", "closed"].includes(status) && Math.random() > 0.2) {
-      const rating = Math.floor(Math.random() * 5) + 1;
-      await prisma.cSAT.create({
-        data: {
-          ticket_id: ticket.id,
-          rating,
-          comment: rating <= 3 ? "Could be better, took too long." : "Great job!",
-          agent_id: ticket.assignee_id,
-          submitted_at: completedAt || new Date(),
-        }
-      });
-    }
-
-    // Create Audit Logs
-    await prisma.auditLog.create({
-      data: {
-        ticket_id: ticket.id,
-        performed_by_id: requester.id,
-        action: "ticket_created",
-        new_value: "open",
-        created_at: createdAt,
-      }
-    });
-
-    if (status !== "open") {
-       await prisma.auditLog.create({
-        data: {
-          ticket_id: ticket.id,
-          performed_by_id: admin.id,
-          action: "status_change",
-          old_value: "open",
-          new_value: status,
-          created_at: startedAt || createdAt,
-        }
-      });
-    }
-  }
+  // console.log("  ⚙ Generating 100 diverse tickets...");
+  // const priorities = ["low", "medium", "high", "critical"];
+  // const statuses = ["open", "in_progress", "pending_approval", "pending_hard_copy", "resolved", "closed", "rejected"];
+  //
+  // for (let i = 1; i <= 100; i++) {
+  //   const requester = regularUsers[Math.floor(Math.random() * regularUsers.length)];
+  //   const priority = priorities[Math.floor(Math.random() * priorities.length)];
+  //
+  //   // Favor resolved/closed for more CSAT data (60% chance for completed)
+  //   let status;
+  //   const statusRoll = Math.random();
+  //   if (statusRoll < 0.4) status = "closed";
+  //   else if (statusRoll < 0.6) status = "resolved";
+  //   else status = statuses[Math.floor(Math.random() * statuses.length)];
+  //
+  //   const system = systems[Math.floor(Math.random() * systems.length)];
+  //   const reqType = requestTypes[Math.floor(Math.random() * requestTypes.length)];
+  //   const misStaff = misStaffs[Math.floor(Math.random() * misStaffs.length)];
+  //
+  //   // Dates for trend reports (last 30 days)
+  //   const createdAt = new Date();
+  //   createdAt.setDate(createdAt.getDate() - Math.floor(Math.random() * 30));
+  //
+  //   let startedAt = null;
+  //   let completedAt = null;
+  //
+  //   if (["in_progress", "resolved", "closed"].includes(status)) {
+  //     startedAt = new Date(createdAt);
+  //     startedAt.setHours(startedAt.getHours() + 2);
+  //   }
+  //
+  //   if (["resolved", "closed"].includes(status)) {
+  //     completedAt = new Date(startedAt || createdAt);
+  //     completedAt.setHours(completedAt.getHours() + Math.floor(Math.random() * 48) + 1);
+  //   }
+  //
+  //   const ticket = await prisma.ticket.create({
+  //     data: {
+  //       title: `Seeded Ticket #${i}: ${reqType.name} in ${system.name}`,
+  //       description: `This is a generated description for seeded ticket #${i}. It needs to be at least 20 characters long to pass validation.`,
+  //       priority,
+  //       status,
+  //       requester_id: requester.id,
+  //       assignee_id: (status !== "open" && status !== "pending_approval") ? misStaff.id : null,
+  //       affected_system_id: system.id,
+  //       request_type_id: reqType.id,
+  //       department_id: system.department_id || departments[0].id,
+  //       created_at: createdAt,
+  //       updated_at: completedAt || startedAt || createdAt,
+  //       started_at: startedAt,
+  //       completed_at: completedAt,
+  //       due_date: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000), // 3 days SLA
+  //       sla_breached: completedAt ? (completedAt.getTime() > (createdAt.getTime() + 72 * 60 * 60 * 1000)) : false,
+  //     }
+  //   });
+  //
+  //   // Create CSAT for resolved/closed tickets (80% chance)
+  //   if (["resolved", "closed"].includes(status) && Math.random() > 0.2) {
+  //     const rating = Math.floor(Math.random() * 5) + 1;
+  //     await prisma.cSAT.create({
+  //       data: {
+  //         ticket_id: ticket.id,
+  //         rating,
+  //         comment: rating <= 3 ? "Could be better, took too long." : "Great job!",
+  //         agent_id: ticket.assignee_id,
+  //         submitted_at: completedAt || new Date(),
+  //       }
+  //     });
+  //   }
+  //
+  //   // Create Audit Logs
+  //   await prisma.auditLog.create({
+  //     data: {
+  //       ticket_id: ticket.id,
+  //       performed_by_id: requester.id,
+  //       action: "ticket_created",
+  //       new_value: "open",
+  //       created_at: createdAt,
+  //     }
+  //   });
+  //
+  //   if (status !== "open") {
+  //      await prisma.auditLog.create({
+  //       data: {
+  //         ticket_id: ticket.id,
+  //         performed_by_id: admin.id,
+  //         action: "status_change",
+  //         old_value: "open",
+  //         new_value: status,
+  //         created_at: startedAt || createdAt,
+  //       }
+  //     });
+  //   }
+  // }
 
   console.log("✅ Seed complete!");
 }
