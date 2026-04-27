@@ -6,8 +6,10 @@
     displayName,
     userInitials,
   } from "../../stores/user.svelte";
-  import { Save, Lock, User as UserIcon, Bell } from "lucide-svelte";
+  import { Save, Lock, User as UserIcon, Bell, BookOpen } from "lucide-svelte";
   import { requestNotificationPermission } from "../../lib/pwa";
+  import { createTicketTour } from "../../lib/tutorial";
+  import { navigate } from "../../router.svelte";
 
   let user = $derived(getCurrentUser());
 
@@ -278,6 +280,37 @@
                 <Bell size={14} /> Enable Notifications
               </button>
             {/if}
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-200 shadow-sm border border-base-300 mt-6">
+        <div class="card-body p-6">
+          <div class="flex items-center gap-2 mb-2">
+            <BookOpen size={16} class="text-info" />
+            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">
+              Guided Tutorials
+            </h3>
+          </div>
+          <p class="text-xs opacity-60 mb-4">
+            Need a refresher? Watch our step-by-step guides to master the ticketing system.
+          </p>
+
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="text-sm font-bold">Ticket Creation</span>
+              <span class="text-[10px] opacity-50">Learn how to file effective tickets</span>
+            </div>
+            <button
+              class="btn btn-outline btn-info btn-sm gap-2"
+              onclick={async () => {
+                await navigate("/tickets/new");
+                // Small delay to ensure page is loaded before starting tour
+                setTimeout(() => createTicketTour().drive(), 500);
+              }}
+            >
+              <BookOpen size={14} /> Watch Guide
+            </button>
           </div>
         </div>
       </div>

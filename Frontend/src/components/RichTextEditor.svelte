@@ -11,6 +11,7 @@
     value = $bindable(""),
     disabled = $bindable(false),
     class: className = "min-h-[500px]",
+    "data-tour": dataTour = undefined,
   } = $props();
 
   let element: HTMLDivElement;
@@ -60,7 +61,7 @@
   });
 </script>
 
-<div class="flex flex-col flex-1 overflow-x-auto bg-base-100">
+<div class="flex flex-col flex-1 overflow-x-auto bg-base-100" data-tour={dataTour}>
   <div bind:this={element} class="flex flex-col flex-1"></div>
 </div>
 

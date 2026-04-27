@@ -20,7 +20,9 @@
     ShieldCheck,
     Paperclip,
     Upload,
+    HelpCircle,
   } from "lucide-svelte";
+  import { createTicketTour, startTourIfNeverSeen } from "../../lib/tutorial";
 
   let title = $state("");
   let description = $state("");
@@ -54,8 +56,9 @@
   let isOtherDepartment = $derived(
     departments.find((d) => d.id === department_id)?.name === "Others",
   );
-
   onMount(() => {
+    startTourIfNeverSeen("ticket_create", createTicketTour);
+
     const draft = localStorage.getItem("ticket_draft");
     if (draft) {
       try {
@@ -152,6 +155,14 @@
         <Send size={16} />
       </div>
       <h1 class="text-2xl font-bold tracking-tight">Create Support Ticket</h1>
+      <button
+        type="button"
+        class="btn btn-ghost btn-xs btn-circle text-base-content/40 hover:text-primary transition-colors"
+        title="Show Guide"
+        onclick={() => createTicketTour().drive()}
+      >
+        <HelpCircle size={16} />
+      </button>
     </div>
     <p class="text-xs text-base-content/60 max-w-2xl">
       Describe your issue in detail. Our team will route your request to the
@@ -194,6 +205,7 @@
               placeholder="e.g. Printer in Accounting not responding"
               bind:value={title}
               required
+              data-tour="ticket-subject"
             />
           </div>
 
@@ -212,6 +224,7 @@
               <RichTextEditor
                 bind:value={description}
                 class="flex-1 h-full overflow-y-auto"
+                data-tour="ticket-description"
               />
             </div>
             <div class="flex items-center gap-2 mt-2 shrink-0">
@@ -257,6 +270,7 @@
               icon={LayoutGrid}
               items={requestTypes}
               bind:value={request_type_id}
+              data-tour="ticket-request-type"
             />
             {#if isOtherRequestType}
               <div class="mt-2 animate-in fade-in slide-in-from-top-1">
@@ -277,6 +291,7 @@
               icon={FileCheckCorner}
               items={systems}
               bind:value={affected_system_id}
+              data-tour="ticket-system"
             />
             {#if isOtherAffectedSystem}
               <div class="mt-2 animate-in fade-in slide-in-from-top-1">
@@ -297,6 +312,7 @@
               icon={Building2}
               items={departments}
               bind:value={department_id}
+              data-tour="ticket-department"
             />
             {#if isOtherDepartment}
               <div class="mt-2 animate-in fade-in slide-in-from-top-1">
@@ -326,6 +342,7 @@
             </label>
             <div
               class="flex flex-col gap-2 p-3 bg-base-200/30 rounded-xl border border-dashed border-base-300"
+              data-tour="ticket-attachments"
             >
               <input
                 type="file"
@@ -351,12 +368,15 @@
                       <button
                         type="button"
                         class="badge badge-primary badge-outline text-[9px] truncate max-w-[120px] cursor-pointer hover:bg-primary hover:text-white transition-all"
-                        onclick={() => (selectedZoomImage = getPreviewUrl(file))}
+                        onclick={() =>
+                          (selectedZoomImage = getPreviewUrl(file))}
                       >
                         {file.name}
                       </button>
                     {:else}
-                      <span class="badge badge-ghost text-[9px] truncate max-w-[120px]">
+                      <span
+                        class="badge badge-ghost text-[9px] truncate max-w-[120px]"
+                      >
                         {file.name}
                       </span>
                     {/if}
@@ -369,6 +389,7 @@
           <!-- Approval -->
           <label
             class="flex items-center gap-3 p-2 bg-base-200/30 rounded-xl border border-base-300 hover:border-primary/40 transition-all cursor-pointer group"
+            data-tour="ticket-approval"
           >
             <input
               type="checkbox"
@@ -393,6 +414,7 @@
           class="btn btn-primary w-full h-12 text-sm font-bold shadow-lg shadow-primary/20 rounded-xl gap-2 mt-auto"
           type="submit"
           disabled={loading}
+          data-tour="ticket-submit"
         >
           {#if loading}
             <span class="loading loading-spinner loading-sm"></span>

@@ -13,6 +13,7 @@
     label = "",
     icon: Icon = undefined,
     disabled = false,
+    "data-tour": dataTour = undefined,
   } = $props();
 
   let searchQuery = $state("");
@@ -50,7 +51,7 @@
   );
 </script>
 
-<div class="form-control w-full relative">
+<div class="form-control w-full relative" data-tour={dataTour}>
   {#if label}
     <label class="label py-1" for="searchable-select">
       <span
