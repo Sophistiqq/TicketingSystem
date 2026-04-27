@@ -7,6 +7,7 @@
     getDepartments,
   } from "../../stores/reference.svelte";
   import { navigate } from "../../router.svelte";
+  import { hasRole } from "../../stores/user.svelte";
   import RichTextEditor from "../../components/RichTextEditor.svelte";
   import SearchableSelect from "../../components/SearchableSelect.svelte";
   import {
@@ -21,15 +22,18 @@
     Paperclip,
     Upload,
     HelpCircle,
+    Calendar,
   } from "lucide-svelte";
   import { createTicketTour, startTourIfNeverSeen } from "../../lib/tutorial";
 
   let title = $state("");
   let description = $state("");
+  let priority = $state("medium");
   let request_type_id = $state<number | undefined>(undefined);
   let affected_system_id = $state<number | undefined>(undefined);
   let department_id = $state<number | undefined>(undefined);
   let requires_approval = $state(false);
+  let due_date = $state("");
 
   // Other details
   let other_request_type = $state("");
@@ -65,9 +69,11 @@
         const parsed = JSON.parse(draft);
         title = parsed.title || "";
         description = parsed.description || "";
+        priority = parsed.priority || "medium";
         request_type_id = parsed.request_type_id;
         affected_system_id = parsed.affected_system_id;
         department_id = parsed.department_id;
+        due_date = parsed.due_date || "";
         other_request_type = parsed.other_request_type || "";
         other_affected_system = parsed.other_affected_system || "";
         other_department = parsed.other_department || "";
@@ -81,6 +87,8 @@
       JSON.stringify({
         title,
         description,
+        priority,
+        due_date,
         request_type_id,
         affected_system_id,
         department_id,
@@ -100,6 +108,7 @@
       const body: Record<string, unknown> = {
         title,
         description,
+        priority,
         request_type_id,
         affected_system_id,
         department_id,
@@ -110,6 +119,7 @@
           : undefined,
         other_department: isOtherDepartment ? other_department : undefined,
       };
+      if (due_date) body.due_date = new Date(due_date).toISOString();
 
       const res = await api.post<{ id: number }>("/tickets/", body);
       if (res?.id) {
@@ -142,6 +152,13 @@
   function isImage(file: File) {
     return file.type.startsWith("image/");
   }
+
+  let slaHint = $derived.by(() => {
+    if (priority === "critical") return "4 Hours";
+    if (priority === "high") return "24 Hours";
+    if (priority === "medium") return "3 Days";
+    return "5 Days";
+  });
 
   import { Search, CircleX } from "lucide-svelte";
 </script>
@@ -331,6 +348,58 @@
         <div class="divider opacity-10 my-0"></div>
 
         <div class="space-y-4">
+          {#if hasRole("admin", "mis")}
+            <!-- Priority -->
+            <div class="form-control w-full">
+              <label class="label py-1" for="priority">
+                <span
+                  class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+                >
+                  <TriangleAlert size={12} class="text-primary" /> Priority Level
+                </span>
+              </label>
+              <select
+                id="priority"
+                class="select select-bordered w-full select-sm font-bold h-9 min-h-0"
+                bind:value={priority}
+                data-tour="ticket-priority"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+              <div
+                class="bg-base-200/50 rounded-lg p-2 mt-2 border border-base-300/50"
+              >
+                <div class="flex justify-between items-center text-[10px]">
+                  <span class="opacity-60 font-bold uppercase">SLA:</span>
+                  <span class="font-black text-primary uppercase">{slaHint}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Due Date -->
+            <div class="form-control w-full">
+              <label class="label py-1" for="due_date">
+                <span
+                  class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+                >
+                  <Calendar size={12} class="text-primary" /> Desired Due Date
+                </span>
+              </label>
+              <input
+                id="due_date"
+                type="datetime-local"
+                class="input input-bordered w-full input-sm h-9 min-h-0 font-medium"
+                bind:value={due_date}
+                data-tour="ticket-due-date"
+              />
+            </div>
+
+            <div class="divider opacity-10 my-0"></div>
+          {/if}
+
           <!-- Attachments -->
           <div class="form-control w-full">
             <label class="label py-1">

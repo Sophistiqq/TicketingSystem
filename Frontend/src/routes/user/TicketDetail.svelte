@@ -177,7 +177,7 @@
     editDepartmentId = ticket.department_id ?? null;
     editRequestTypeId = ticket.request_type_id ?? null;
     editAffectedSystemId = ticket.affected_system_id ?? null;
-    editDueDate = ticket.due_date ? ticket.due_date.split("T")[0] : "";
+    editDueDate = formatForDateTimeLocal(ticket.due_date);
     editOtherRequestType = ticket.other_request_type ?? "";
     editOtherAffectedSystem = ticket.other_affected_system ?? "";
     editOtherDepartment = ticket.other_department ?? "";
@@ -216,6 +216,36 @@
       statusError = e.message;
     }
     saveLoading = false;
+  }
+
+  async function updateDueDate(val: string) {
+    if (!ticket) return;
+    statusLoading = true;
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        due_date: val ? new Date(val).toISOString() : null,
+      });
+      await loadTicket();
+      triggerAlert("Due date updated.");
+    } catch (e: any) {
+      statusError = e.message;
+    }
+    statusLoading = false;
+  }
+
+  async function updatePriority(val: string) {
+    if (!ticket) return;
+    statusLoading = true;
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        priority: val,
+      });
+      await loadTicket();
+      triggerAlert("Priority updated.");
+    } catch (e: any) {
+      statusError = e.message;
+    }
+    statusLoading = false;
   }
 
   async function updateStatus(status: string, notes?: string) {
@@ -520,6 +550,19 @@
     if (!d) return "-";
     return new Date(d).toLocaleDateString();
   }
+
+  function formatForDateTimeLocal(d: string | undefined): string {
+    if (!d) return "";
+    const date = new Date(d);
+    if (isNaN(date.getTime())) return "";
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
+
   // Helpers
   async function scrollToBottom() {
     await tick();
@@ -680,7 +723,7 @@
                   </select>
 
                   <input
-                    type="date"
+                    type="datetime-local"
                     class="input input-bordered input-xs h-7 min-h-0 text-[10px] font-bold"
                     bind:value={editDueDate}
                   />
@@ -1583,8 +1626,7 @@
                     <span
                       class="font-medium {ticket.sla_breached
                         ? 'text-error'
-                        : ''}">{formatDateShort(ticket.due_date)}</span
-                    >
+                        : ''}">{formatDateShort(ticket.due_date)}</span>
                   </div>
                 {/if}
               </div>
@@ -1670,6 +1712,35 @@
 
                 {#if hasRole("admin", "mis")}
                   <div class="space-y-3">
+                    <div class="grid grid-cols-2 gap-2">
+                      <div class="flex flex-col gap-1">
+                        <span class="text-[9px] font-bold uppercase opacity-40">Priority</span>
+                        <select
+                          class="select select-bordered select-xs w-full h-8"
+                          value={ticket.priority}
+                          onchange={(e) => updatePriority(e.currentTarget.value)}
+                          disabled={statusLoading}
+                        >
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                          <option value="critical">Critical</option>
+                        </select>
+                      </div>
+                      <div class="flex flex-col gap-1">
+                        <span class="text-[9px] font-bold uppercase opacity-40">Due Date</span>
+                        <input
+                          type="datetime-local"
+                          class="input input-bordered input-xs w-full h-8"
+                          value={formatForDateTimeLocal(ticket.due_date)}
+                          onchange={(e) => updateDueDate(e.currentTarget.value)}
+                          disabled={statusLoading}
+                        />
+                      </div>
+                    </div>
+
+                    <div class="divider my-0 opacity-10"></div>
+
                     <div class="flex flex-col gap-1.5">
                       <span
                         class="text-[10px] font-bold uppercase tracking-wider text-base-content/40 mb-1"
