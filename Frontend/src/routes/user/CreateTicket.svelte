@@ -17,18 +17,26 @@
     Building2,
     TriangleAlert,
     FileCheckCorner,
-    Calendar,
     ShieldCheck,
+    Paperclip,
+    Upload,
   } from "lucide-svelte";
 
   let title = $state("");
   let description = $state("");
-  let priority = $state("medium");
   let request_type_id = $state<number | undefined>(undefined);
   let affected_system_id = $state<number | undefined>(undefined);
   let department_id = $state<number | undefined>(undefined);
   let requires_approval = $state(false);
-  let due_date = $state("");
+
+  // Other details
+  let other_request_type = $state("");
+  let other_affected_system = $state("");
+  let other_department = $state("");
+
+  let files = $state<FileList | null>(null);
+  let fileInput = $state<HTMLInputElement | undefined>(undefined);
+  let selectedZoomImage = $state<string | null>(null);
 
   let error = $state("");
   let loading = $state(false);
@@ -37,6 +45,16 @@
   let requestTypes = $derived(getRequestTypes());
   let departments = $derived(getDepartments());
 
+  let isOtherRequestType = $derived(
+    requestTypes.find((t) => t.id === request_type_id)?.name === "Others",
+  );
+  let isOtherAffectedSystem = $derived(
+    systems.find((s) => s.id === affected_system_id)?.name === "Others",
+  );
+  let isOtherDepartment = $derived(
+    departments.find((d) => d.id === department_id)?.name === "Others",
+  );
+
   onMount(() => {
     const draft = localStorage.getItem("ticket_draft");
     if (draft) {
@@ -44,10 +62,12 @@
         const parsed = JSON.parse(draft);
         title = parsed.title || "";
         description = parsed.description || "";
-        priority = parsed.priority || "medium";
         request_type_id = parsed.request_type_id;
         affected_system_id = parsed.affected_system_id;
         department_id = parsed.department_id;
+        other_request_type = parsed.other_request_type || "";
+        other_affected_system = parsed.other_affected_system || "";
+        other_department = parsed.other_department || "";
       } catch {}
     }
   });
@@ -58,10 +78,12 @@
       JSON.stringify({
         title,
         description,
-        priority,
         request_type_id,
         affected_system_id,
         department_id,
+        other_request_type,
+        other_affected_system,
+        other_department,
       }),
     );
   });
@@ -75,16 +97,22 @@
       const body: Record<string, unknown> = {
         title,
         description,
-        priority,
         request_type_id,
         affected_system_id,
         department_id,
         requires_approval,
+        other_request_type: isOtherRequestType ? other_request_type : undefined,
+        other_affected_system: isOtherAffectedSystem
+          ? other_affected_system
+          : undefined,
+        other_department: isOtherDepartment ? other_department : undefined,
       };
-      if (due_date) body.due_date = new Date(due_date).toISOString();
 
       const res = await api.post<{ id: number }>("/tickets/", body);
       if (res?.id) {
+        if (files && files.length > 0) {
+          await api.upload(res.id, files);
+        }
         localStorage.removeItem("ticket_draft");
         await navigate("/tickets/:id", { params: { id: String(res.id) } });
       } else {
@@ -97,11 +125,22 @@
     }
   }
 
-  let slaHint = $derived.by(() => {
-    if (priority === "critical") return "4 Hours";
-    if (priority === "high") return "24 Hours";
-    return "3-5 Days";
-  });
+  function handleFileChange(e: Event) {
+    const target = e.target as HTMLInputElement;
+    if (target.files) {
+      files = target.files;
+    }
+  }
+
+  function getPreviewUrl(file: File) {
+    return URL.createObjectURL(file);
+  }
+
+  function isImage(file: File) {
+    return file.type.startsWith("image/");
+  }
+
+  import { Search, CircleX } from "lucide-svelte";
 </script>
 
 <div class="h-full flex flex-col max-w-7xl mx-auto w-full px-4 py-2 md:py-4">
@@ -212,75 +251,119 @@
         </h3>
 
         <div class="space-y-4">
-          <SearchableSelect
-            label="Request Type"
-            icon={LayoutGrid}
-            items={requestTypes}
-            bind:value={request_type_id}
-          />
+          <div>
+            <SearchableSelect
+              label="Request Type"
+              icon={LayoutGrid}
+              items={requestTypes}
+              bind:value={request_type_id}
+            />
+            {#if isOtherRequestType}
+              <div class="mt-2 animate-in fade-in slide-in-from-top-1">
+                <input
+                  type="text"
+                  class="input input-bordered input-sm w-full"
+                  placeholder="Specify request type..."
+                  bind:value={other_request_type}
+                  required
+                />
+              </div>
+            {/if}
+          </div>
 
-          <SearchableSelect
-            label="Affected System"
-            icon={FileCheckCorner}
-            items={systems}
-            bind:value={affected_system_id}
-          />
+          <div>
+            <SearchableSelect
+              label="Affected System"
+              icon={FileCheckCorner}
+              items={systems}
+              bind:value={affected_system_id}
+            />
+            {#if isOtherAffectedSystem}
+              <div class="mt-2 animate-in fade-in slide-in-from-top-1">
+                <input
+                  type="text"
+                  class="input input-bordered input-sm w-full"
+                  placeholder="Specify system name..."
+                  bind:value={other_affected_system}
+                  required
+                />
+              </div>
+            {/if}
+          </div>
 
-          <SearchableSelect
-            label="Target Department"
-            icon={Building2}
-            items={departments}
-            bind:value={department_id}
-          />
+          <div>
+            <SearchableSelect
+              label="Target Department"
+              icon={Building2}
+              items={departments}
+              bind:value={department_id}
+            />
+            {#if isOtherDepartment}
+              <div class="mt-2 animate-in fade-in slide-in-from-top-1">
+                <input
+                  type="text"
+                  class="input input-bordered input-sm w-full"
+                  placeholder="Specify department..."
+                  bind:value={other_department}
+                  required
+                />
+              </div>
+            {/if}
+          </div>
         </div>
 
         <div class="divider opacity-10 my-0"></div>
 
-        <div class="space-y-4 flex-1">
-          <!-- Priority -->
+        <div class="space-y-4">
+          <!-- Attachments -->
           <div class="form-control w-full">
-            <label class="label py-1" for="priority">
+            <label class="label py-1">
               <span
                 class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
               >
-                <TriangleAlert size={12} class="text-primary" /> Priority Level
+                <Paperclip size={12} class="text-primary" /> Attachments
               </span>
             </label>
-            <select
-              id="priority"
-              class="select select-bordered w-full select-sm font-bold h-9 min-h-0"
-              bind:value={priority}
-            >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
             <div
-              class="bg-base-200/50 rounded-lg p-2 mt-2 border border-base-300/50"
+              class="flex flex-col gap-2 p-3 bg-base-200/30 rounded-xl border border-dashed border-base-300"
             >
-              <div class="flex justify-between items-center text-[10px]">
-                <span class="opacity-60 font-bold uppercase">SLA:</span>
-                <span class="font-black text-primary uppercase">{slaHint}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Due Date -->
-          <div class="form-control w-full">
-            <label class="label py-1" for="due_date">
-              <span
-                class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
+              <input
+                type="file"
+                multiple
+                class="hidden"
+                bind:this={fileInput}
+                onchange={handleFileChange}
+              />
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm w-full gap-2 text-xs border border-base-300 bg-base-100"
+                onclick={() => fileInput?.click()}
               >
-                <Calendar size={12} class="text-primary" /> Desired Due Date
-              </span>
-            </label>
-            <input
-              id="due_date"
-              type="date"
-              class="input input-bordered w-full input-sm h-9 min-h-0 font-medium"
-              bind:value={due_date}
-            />
+                <Upload size={14} />
+                {files && files.length > 0
+                  ? `${files.length} files selected`
+                  : "Choose Files"}
+              </button>
+              {#if files && files.length > 0}
+                <div class="flex flex-wrap gap-1 mt-1">
+                  {#each Array.from(files) as file}
+                    {#if isImage(file)}
+                      <button
+                        type="button"
+                        class="badge badge-primary badge-outline text-[9px] truncate max-w-[120px] cursor-pointer hover:bg-primary hover:text-white transition-all"
+                        onclick={() => (selectedZoomImage = getPreviewUrl(file))}
+                      >
+                        {file.name}
+                      </button>
+                    {:else}
+                      <span class="badge badge-ghost text-[9px] truncate max-w-[120px]">
+                        {file.name}
+                      </span>
+                    {/if}
+                  {/each}
+                </div>
+              {/if}
+            </div>
           </div>
 
           <!-- Approval -->
@@ -323,3 +406,25 @@
     </div>
   </form>
 </div>
+
+<!-- Image zoom modal -->
+{#if selectedZoomImage}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 animate-in fade-in duration-200"
+    onclick={() => (selectedZoomImage = null)}
+  >
+    <button
+      class="absolute top-4 right-4 btn btn-circle btn-ghost text-white"
+      onclick={() => (selectedZoomImage = null)}
+    >
+      <CircleX size={28} />
+    </button>
+    <img
+      src={selectedZoomImage}
+      alt="Zoomed preview"
+      class="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-200"
+    />
+  </div>
+{/if}

@@ -69,6 +69,10 @@
   let editDepartmentId = $state<number | null>(null);
   let editRequestTypeId = $state<number | null>(null);
   let editAffectedSystemId = $state<number | null>(null);
+  let editDueDate = $state("");
+  let editOtherRequestType = $state("");
+  let editOtherAffectedSystem = $state("");
+  let editOtherDepartment = $state("");
   let saveLoading = $state(false);
 
   // Comment form
@@ -171,6 +175,10 @@
     editDepartmentId = ticket.department_id ?? null;
     editRequestTypeId = ticket.request_type_id ?? null;
     editAffectedSystemId = ticket.affected_system_id ?? null;
+    editDueDate = ticket.due_date ? ticket.due_date.split("T")[0] : "";
+    editOtherRequestType = ticket.other_request_type ?? "";
+    editOtherAffectedSystem = ticket.other_affected_system ?? "";
+    editOtherDepartment = ticket.other_department ?? "";
     isEditingContent = true;
   }
 
@@ -182,14 +190,23 @@
     if (!ticket || !editTitle.trim() || !editDescription.trim()) return;
     saveLoading = true;
     try {
-      await api.put(`/tickets/${ticket.id}`, {
+      const body: any = {
         title: editTitle,
         description: editDescription,
-        priority: editPriority,
         department_id: editDepartmentId,
         request_type_id: editRequestTypeId,
         affected_system_id: editAffectedSystemId,
-      });
+      };
+
+      if (hasRole("admin", "mis")) {
+        body.priority = editPriority;
+        body.due_date = editDueDate ? new Date(editDueDate).toISOString() : null;
+        body.other_request_type = editOtherRequestType || null;
+        body.other_affected_system = editOtherAffectedSystem || null;
+        body.other_department = editOtherDepartment || null;
+      }
+
+      await api.put(`/tickets/${ticket.id}`, body);
       triggerAlert("Ticket updated successfully.");
       isEditingContent = false;
       await loadTicket();
@@ -647,15 +664,23 @@
                 placeholder="Ticket Title"
               />
               <div class="flex flex-wrap gap-2">
-                <select
-                  class="select select-bordered select-xs h-7 min-h-0 text-[10px] font-bold uppercase"
-                  bind:value={editPriority}
-                >
-                  <option value="low">Low Priority</option>
-                  <option value="medium">Medium Priority</option>
-                  <option value="high">High Priority</option>
-                  <option value="critical">Critical Priority</option>
-                </select>
+                {#if hasRole("admin", "mis")}
+                  <select
+                    class="select select-bordered select-xs h-7 min-h-0 text-[10px] font-bold uppercase"
+                    bind:value={editPriority}
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                    <option value="critical">Critical Priority</option>
+                  </select>
+
+                  <input
+                    type="date"
+                    class="input input-bordered input-xs h-7 min-h-0 text-[10px] font-bold"
+                    bind:value={editDueDate}
+                  />
+                {/if}
 
                 <select
                   class="select select-bordered select-xs h-7 min-h-0 text-[10px] max-w-[150px]"
@@ -686,6 +711,33 @@
                     <option value={sys.id}>{sys.name}</option>
                   {/each}
                 </select>
+
+                {#if hasRole("admin", "mis")}
+                  {#if requestTypes.find((t) => t.id === editRequestTypeId)?.name === "Others"}
+                    <input
+                      type="text"
+                      class="input input-bordered input-xs h-7 min-h-0 text-[10px] w-full max-w-[150px]"
+                      placeholder="Specify Request Type..."
+                      bind:value={editOtherRequestType}
+                    />
+                  {/if}
+                  {#if systems.find((s) => s.id === editAffectedSystemId)?.name === "Others"}
+                    <input
+                      type="text"
+                      class="input input-bordered input-xs h-7 min-h-0 text-[10px] w-full max-w-[150px]"
+                      placeholder="Specify System..."
+                      bind:value={editOtherAffectedSystem}
+                    />
+                  {/if}
+                  {#if departments.find((d) => d.id === editDepartmentId)?.name === "Others"}
+                    <input
+                      type="text"
+                      class="input input-bordered input-xs h-7 min-h-0 text-[10px] w-full max-w-[150px]"
+                      placeholder="Specify Department..."
+                      bind:value={editOtherDepartment}
+                    />
+                  {/if}
+                {/if}
               </div>
             </div>
           {:else}
@@ -1447,25 +1499,40 @@
                   <span class="opacity-40 flex items-center gap-1"
                     ><LayoutGrid size={10} /> Type</span
                   >
-                  <span class="font-medium"
-                    >{ticket.request_type?.name ?? "-"}</span
-                  >
+                  <span class="font-medium">
+                    {ticket.request_type?.name ?? "-"}
+                    {#if ticket.other_request_type}
+                      <span class="opacity-60 italic text-[10px]"
+                        >({ticket.other_request_type})</span
+                      >
+                    {/if}
+                  </span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
                   <span class="opacity-40 flex items-center gap-1"
                     ><Monitor size={10} /> System</span
                   >
-                  <span class="font-medium truncate max-w-[120px]"
-                    >{ticket.affected_system?.name ?? "-"}</span
-                  >
+                  <span class="font-medium truncate max-w-[120px]">
+                    {ticket.affected_system?.name ?? "-"}
+                    {#if ticket.other_affected_system}
+                      <span class="opacity-60 italic text-[10px]"
+                        >({ticket.other_affected_system})</span
+                      >
+                    {/if}
+                  </span>
                 </div>
                 <div class="flex items-center justify-between text-[11px]">
                   <span class="opacity-40 flex items-center gap-1"
                     ><Building2 size={10} /> Department</span
                   >
-                  <span class="font-medium truncate max-w-[120px]"
-                    >{ticket.department?.name ?? "-"}</span
-                  >
+                  <span class="font-medium truncate max-w-[120px]">
+                    {ticket.department?.name ?? "-"}
+                    {#if ticket.other_department}
+                      <span class="opacity-60 italic text-[10px]"
+                        >({ticket.other_department})</span
+                      >
+                    {/if}
+                  </span>
                 </div>
                 {#if ticket.due_date}
                   <div class="flex items-center justify-between text-[11px]">

@@ -235,6 +235,10 @@ model Ticket {
   affected_system_id Int?
   affected_system    AffectedSystem? @relation(fields: [affected_system_id], references: [id])
 
+  other_request_type    String?
+  other_affected_system String?
+  other_department      String?
+
   approvers           TicketApprover[]
   attachments         Attachment[]
   comments            TicketComment[]

@@ -302,6 +302,9 @@ tickets
             requires_approval: requiresApproval,
             status: requiresApproval ? "pending_approval" : "open",
             due_date: dueDate,
+            other_request_type: body.other_request_type,
+            other_affected_system: body.other_affected_system,
+            other_department: body.other_department,
           },
           include: {
             requester: { omit: { password: true } },
@@ -383,6 +386,9 @@ tickets
         department_id: t.Optional(t.Numeric()),
         requires_approval: t.Optional(t.Boolean()),
         due_date: t.Optional(t.String({ format: "date-time" })),
+        other_request_type: t.Optional(t.String()),
+        other_affected_system: t.Optional(t.String()),
+        other_department: t.Optional(t.String()),
       }),
       isAuth: true,
     },
@@ -684,6 +690,17 @@ tickets
         updateData.affected_system_id = body.affected_system_id;
       }
 
+      // Handle other_ fields
+      if (body.other_request_type !== undefined) {
+        updateData.other_request_type = body.other_request_type;
+      }
+      if (body.other_affected_system !== undefined) {
+        updateData.other_affected_system = body.other_affected_system;
+      }
+      if (body.other_department !== undefined) {
+        updateData.other_department = body.other_department;
+      }
+
       const updated = await prisma.ticket.update({
         where: { id: params.id },
         data: updateData,
@@ -723,6 +740,9 @@ tickets
         reopen_reason: t.Optional(t.String()),
         resolution_notes: t.Optional(t.String()),
         due_date: t.Optional(t.Nullable(t.String({ format: "date-time" }))),
+        other_request_type: t.Optional(t.Nullable(t.String())),
+        other_affected_system: t.Optional(t.Nullable(t.String())),
+        other_department: t.Optional(t.Nullable(t.String())),
       }),
       isAuth: true,
     },

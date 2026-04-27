@@ -107,6 +107,9 @@ export type Ticket = {
   affected_system?: AffectedSystem;
   department_id?: number | null;
   department?: Department;
+  other_request_type?: string | null;
+  other_affected_system?: string | null;
+  other_department?: string | null;
   approvers?: TicketApprover[];
   attachments?: Attachment[];
   comments?: TicketComment[];
