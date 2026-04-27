@@ -120,7 +120,7 @@ async function main() {
   });
 
   const misStaffs = await Promise.all([
-    "mis", "mis1", "mis2", "mis3", "mis4"
+    "mis",
   ].map(async (u) => {
     const user = await prisma.user.upsert({
       where: { username: u },
@@ -143,7 +143,7 @@ async function main() {
   }));
 
   const approvers = await Promise.all([
-    "approver", "manager1", "manager2"
+    "approver",
   ].map(async (u) => {
     const user = await prisma.user.upsert({
       where: { username: u },
@@ -166,7 +166,7 @@ async function main() {
   }));
 
   const regularUsers = await Promise.all([
-    "user", "user1", "user2", "user3", "user4", "user5"
+    "user"
   ].map(async (u) => {
     const user = await prisma.user.upsert({
       where: { username: u },

@@ -1,5 +1,6 @@
 import { treaty } from '@elysiajs/eden';
 import { triggerAlert } from '../stores/ui.svelte';
+import { setCurrentUser } from '../stores/user.svelte';
 
 type App = any;
 
@@ -27,6 +28,7 @@ async function safeJson(r: Response, suppressAlert = false) {
   // If we are getting a 401 and the app hasn't cleared the user yet, 
   // it might be a session expiry. But if suppressAlert is true (transitions), we stay silent.
   if (r.status === 401) {
+    setCurrentUser(null);
     throw new ApiError('Unauthorized', 401);
   }
 

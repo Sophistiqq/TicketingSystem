@@ -82,7 +82,7 @@ export const auth = new Elysia({ prefix: "/auth" })
       department_id: t.Optional(t.Numeric())
     })
   })
-  .post("/login", async ({ body, status, jwt_token, cookie: { auth_cookie } }) => {
+  .post("/login", async ({ body, status, jwt_token, cookie: { auth_cookie }, request }) => {
     const { username, password } = body;
     try {
       const user = await prisma.user.findFirst({
@@ -127,13 +127,13 @@ export const auth = new Elysia({ prefix: "/auth" })
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7
       });
 
-      const isProduction = process.env.NODE_ENV === 'production';
+      const isSecure = request.url.startsWith('https') || request.headers.get('x-forwarded-proto') === 'https';
 
       auth_cookie.set({
         value: token,
         httpOnly: true,
-        secure: isProduction,
-        sameSite: isProduction ? 'none' : 'lax',
+        secure: isSecure,
+        sameSite: isSecure ? 'none' : 'lax',
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
       });
@@ -243,14 +243,14 @@ export const auth = new Elysia({ prefix: "/auth" })
     })
   })
 
-  .post('/logout', async ({ cookie: { auth_cookie }, status, user }) => {
-    const isProduction = process.env.NODE_ENV === 'production';
+  .post('/logout', async ({ cookie: { auth_cookie }, status, user, request }) => {
+    const isSecure = request.url.startsWith('https') || request.headers.get('x-forwarded-proto') === 'https';
 
     auth_cookie.set({
       value: '',
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      secure: isSecure,
+      sameSite: isSecure ? 'none' : 'lax',
       path: "/",
       maxAge: 0,
     });
