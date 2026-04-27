@@ -178,70 +178,84 @@
     class="stats stats-vertical lg:stats-horizontal shadow-sm bg-base-200 w-full overflow-hidden border border-base-300"
   >
     {#if hasRole("approver", "admin") && totalPendingApprovals > 0}
-      <StatsCard
-        icon={ClipboardCheck}
-        label="To Approve"
-        value={totalPendingApprovals}
-        color="primary"
-        sub="Pending your decision"
-      />
+      <a href="/approvals" class="contents">
+        <StatsCard
+          icon={ClipboardCheck}
+          label="To Approve"
+          value={totalPendingApprovals}
+          color="primary"
+          sub="Pending your decision"
+        />
+      </a>
     {/if}
     {#if hasRole("admin", "mis")}
-      <StatsCard
-        icon={UserCheck}
-        label="My Workload"
-        value={totalAssignedToMe}
-        color="secondary"
-        sub="Assigned to you"
-      />
+      <a href="/my-tickets?tab=assigned&status=in_progress" class="contents">
+        <StatsCard
+          icon={UserCheck}
+          label="My Workload"
+          value={totalAssignedToMe}
+          color="secondary"
+          sub="Assigned to you"
+        />
+      </a>
     {/if}
     {#if hasRole("admin", "mis") && user?.department_id}
-      <StatsCard
-        icon={Briefcase}
-        label="Dept Unassigned"
-        value={totalDepartmentUnassigned}
-        color="accent"
-        sub="Open in your dept"
-      />
+      <a href="/my-tickets?tab=all&status=open" class="contents">
+        <StatsCard
+          icon={Briefcase}
+          label="Dept Unassigned"
+          value={totalDepartmentUnassigned}
+          color="accent"
+          sub="Open in your dept"
+        />
+      </a>
     {/if}
-    <StatsCard
-      icon={Inbox}
-      label="Total Open"
-      value={totalOpen}
-      color="info"
-      pct={totalTickets > 0 ? Math.round((totalOpen / totalTickets) * 100) : 0}
-      sub="New requests"
-    />
-    <StatsCard
-      icon={Clock}
-      label="In Progress"
-      value={totalInProgress}
-      color="warning"
-      pct={totalTickets > 0
-        ? Math.round((totalInProgress / totalTickets) * 100)
-        : 0}
-      sub="Active work"
-    />
-    <StatsCard
-      icon={TriangleAlert}
-      label="Overdue"
-      value={totalOverdue}
-      color="error"
-      pct={totalTickets > 0
-        ? Math.round((totalOverdue / totalTickets) * 100)
-        : 0}
-      sub="SLA breached"
-    />
-    <StatsCard
-      icon={CircleCheckBig}
-      label="Resolved"
-      value={totalResolved}
-      color="success"
-      pct={totalTickets > 0
-        ? Math.round((totalResolved / totalTickets) * 100)
-        : 0}
-      sub="Finalized today"
-    />
+    <a href="/my-tickets?tab={hasRole('admin', 'mis') ? 'all' : 'requested'}&status=open" class="contents">
+      <StatsCard
+        icon={Inbox}
+        label="Total Open"
+        value={totalOpen}
+        color="info"
+        pct={totalTickets > 0 ? Math.round((totalOpen / totalTickets) * 100) : 0}
+        sub="New requests"
+      />
+    </a>
+    <a href="/my-tickets?tab={hasRole('admin', 'mis') ? 'all' : 'requested'}&status=in_progress" class="contents">
+      <StatsCard
+        icon={Clock}
+        label="In Progress"
+        value={totalInProgress}
+        color="warning"
+        pct={totalTickets > 0
+          ? Math.round((totalInProgress / totalTickets) * 100)
+          : 0}
+        sub="Active work"
+      />
+    </a>
+    <a href="/my-tickets?tab={hasRole('admin', 'mis') ? 'all' : 'requested'}&overdue=true" class="contents">
+      <StatsCard
+        icon={TriangleAlert}
+        label="Overdue"
+        value={totalOverdue}
+        color="error"
+        pct={totalTickets > 0
+          ? Math.round((totalOverdue / totalTickets) * 100)
+          : 0}
+        sub="SLA breached"
+      />
+    </a>
+    <a href="/my-tickets?tab={hasRole('admin', 'mis') ? 'all' : 'requested'}&status=resolved" class="contents">
+      <StatsCard
+        icon={CircleCheckBig}
+        label="Resolved"
+        value={totalResolved}
+        color="success"
+        pct={totalTickets > 0
+          ? Math.round((totalResolved / totalTickets) * 100)
+          : 0}
+        sub="Finalized today"
+      />
+    </a>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -260,7 +274,7 @@
                 placeholder="All Departments"
               />
             </div>
-            <a href="/my-tickets" class="btn btn-ghost btn-sm shrink-0"
+            <a href="/my-tickets?tab={hasRole('admin', 'mis') ? 'all' : 'requested'}" class="btn btn-ghost btn-sm shrink-0"
               >View All</a
             >
           </div>

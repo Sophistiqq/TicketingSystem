@@ -7,8 +7,32 @@
   import { hasRole } from "../../stores/user.svelte";
   import { Plus, Search } from "lucide-svelte";
   import { getCurrentUser } from "../../stores/user.svelte";
+  import { route, navigate } from "../../router.svelte";
 
-  let activeTab = $state<"requested" | "assigned">("requested");
+  const query = $derived(new URLSearchParams(window.location.search));
+
+  let activeTab = $state<"requested" | "assigned" | "all">("requested");
+
+  // Filters (for the "all tickets" view when admin/MIS)
+  let search = $state("");
+  let statusFilter = $state("");
+  let priorityFilter = $state("");
+  let overdueOnly = $state(false);
+
+  // Sync state with URL on navigation/mount
+  $effect(() => {
+    // This effect runs when route.pathname or window.location.search changes
+    // as it depends on `query` derived from window.location.search
+    const q = new URLSearchParams(window.location.search);
+    activeTab = (q.get("tab") as any) || "requested";
+    search = q.get("search") || "";
+    statusFilter = q.get("status") || "";
+    priorityFilter = q.get("priority") || "";
+    overdueOnly = q.get("overdue") === "true";
+    
+    // Trigger loads based on active tab
+    loadCurrentTab(1, false); 
+  });
 
   // Requested tickets
   let requestedTickets = $state<Ticket[]>([]);
@@ -24,11 +48,7 @@
   let assignedSort = $state("created_at");
   let assignedOrder = $state<"asc" | "desc">("desc");
 
-  // Filters (for the "all tickets" view when admin/MIS)
-  let search = $state("");
-  let statusFilter = $state("");
-  let priorityFilter = $state("");
-  let overdueOnly = $state(false);
+  // All tickets (for admin/MIS)
   let allTickets = $state<Ticket[]>([]);
   let allPagination = $state({ page: 1, limit: 20, total: 0, pages: 0 });
   let allLoading = $state(false);
@@ -37,9 +57,27 @@
 
   let showAllView = $derived(hasRole("admin", "mis"));
 
+  function updateUrl() {
+    const params = new URLSearchParams();
+    if (activeTab !== "requested") params.set("tab", activeTab);
+    if (search) params.set("search", search);
+    if (statusFilter) params.set("status", statusFilter);
+    if (priorityFilter) params.set("priority", priorityFilter);
+    if (overdueOnly) params.set("overdue", "true");
+
+    const qs = params.toString();
+    const currentQs = window.location.search.replace(/^\?/, "");
+    if (qs !== currentQs) {
+      const newPath = qs ? `/my-tickets?${qs}` : "/my-tickets";
+      window.history.replaceState({}, "", newPath);
+    }
+  }
+
   onMount(() => {
+    // Initial loads for counts
     loadRequested();
     loadAssigned();
+    if (showAllView) loadAll();
   });
 
   async function loadRequested(page = 1) {
@@ -131,6 +169,7 @@
       requestedOrder = "asc";
     }
     loadRequested(1);
+    updateUrl();
   }
 
   function handleAssignedSort(field: string) {
@@ -141,6 +180,7 @@
       assignedOrder = "asc";
     }
     loadAssigned(1);
+    updateUrl();
   }
 
   function handleAllSort(field: string) {
@@ -151,12 +191,14 @@
       allOrder = "asc";
     }
     loadAll(1);
+    updateUrl();
   }
 
-  function loadCurrentTab(page = 1) {
+  function loadCurrentTab(page = 1, shouldUpdateUrl = true) {
+    if (shouldUpdateUrl) updateUrl();
     if (activeTab === "requested") loadRequested(page);
     else if (activeTab === "assigned") loadAssigned(page);
-    else loadAll(page);
+    else if (activeTab === "all") loadAll(page);
   }
 
   function handleSearch() {
@@ -181,7 +223,10 @@
       role="tab"
       class="tab"
       class:tab-active={activeTab === "requested"}
-      onclick={() => (activeTab = "requested")}
+      onclick={() => {
+        activeTab = "requested";
+        loadCurrentTab(1);
+      }}
     >
       My Requests ({requestedPagination.total})
     </button>
@@ -189,7 +234,10 @@
       role="tab"
       class="tab"
       class:tab-active={activeTab === "assigned"}
-      onclick={() => (activeTab = "assigned")}
+      onclick={() => {
+        activeTab = "assigned";
+        loadCurrentTab(1);
+      }}
     >
       Assigned to Me ({assignedPagination.total})
     </button>
@@ -197,10 +245,10 @@
       <button
         role="tab"
         class="tab"
-        class:tab-active={activeTab === ("all" as any)}
+        class:tab-active={activeTab === "all"}
         onclick={() => {
-          activeTab = "all" as any;
-          if (!allTickets.length) loadAll();
+          activeTab = "all";
+          loadCurrentTab(1);
         }}
       >
         All Tickets

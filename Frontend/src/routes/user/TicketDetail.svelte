@@ -103,7 +103,9 @@
   let uploadLoading = $state(false);
 
   // CSAT
-  let csatRating = $state(0);
+  let csatRatingSpeed = $state(0);
+  let csatRatingAttitude = $state(0);
+  let csatRatingImpact = $state(0);
   let csatComment = $state("");
   let csatSubmitted = $state(false);
   let csatLoading = $state(false);
@@ -474,12 +476,14 @@
   }
 
   async function submitCsat() {
-    if (!ticket || csatRating < 1) return;
+    if (!ticket || csatRatingSpeed < 1 || csatRatingAttitude < 1 || csatRatingImpact < 1) return;
     csatLoading = true;
     try {
       await api.post("/csat/", {
         ticket_id: ticket.id,
-        rating: csatRating,
+        rating_speed: csatRatingSpeed,
+        rating_attitude: csatRatingAttitude,
+        rating_impact: csatRatingImpact,
         comment: csatComment || undefined,
       });
       csatSubmitted = true;
@@ -930,32 +934,69 @@
               </div>
 
               <div class="flex flex-col gap-4">
-                <div class="flex items-center gap-3">
-                  <span class="text-xs font-medium opacity-60"
-                    >Your Rating:</span
-                  >
-                  <div class="flex gap-1">
-                    {#each [1, 2, 3, 4, 5] as star}
-                      <button
-                        class="btn btn-ghost btn-sm btn-square p-0 hover:bg-warning/20 transition-colors"
-                        onclick={() => (csatRating = star)}
-                      >
-                        <Star
-                          size={24}
-                          fill={star <= csatRating ? "currentColor" : "none"}
-                          class={star <= csatRating
-                            ? "text-warning"
-                            : "opacity-20"}
-                        />
-                      </button>
-                    {/each}
+                <div class="space-y-3">
+                  <!-- Speed -->
+                  <div class="flex items-center justify-between gap-3 bg-base-100 p-2 rounded-lg border border-base-200">
+                    <span class="text-xs font-bold opacity-60">How fast were we?</span>
+                    <div class="flex gap-1">
+                      {#each [1, 2, 3, 4, 5] as star}
+                        <button
+                          class="btn btn-ghost btn-xs btn-square p-0 hover:bg-warning/20 transition-colors"
+                          onclick={() => (csatRatingSpeed = star)}
+                        >
+                          <Star
+                            size={18}
+                            fill={star <= csatRatingSpeed ? "currentColor" : "none"}
+                            class={star <= csatRatingSpeed ? "text-warning" : "opacity-20"}
+                          />
+                        </button>
+                      {/each}
+                    </div>
+                  </div>
+
+                  <!-- Attitude -->
+                  <div class="flex items-center justify-between gap-3 bg-base-100 p-2 rounded-lg border border-base-200">
+                    <span class="text-xs font-bold opacity-60">How was the attitude of the resolver?</span>
+                    <div class="flex gap-1">
+                      {#each [1, 2, 3, 4, 5] as star}
+                        <button
+                          class="btn btn-ghost btn-xs btn-square p-0 hover:bg-warning/20 transition-colors"
+                          onclick={() => (csatRatingAttitude = star)}
+                        >
+                          <Star
+                            size={18}
+                            fill={star <= csatRatingAttitude ? "currentColor" : "none"}
+                            class={star <= csatRatingAttitude ? "text-warning" : "opacity-20"}
+                          />
+                        </button>
+                      {/each}
+                    </div>
+                  </div>
+
+                  <!-- Impact -->
+                  <div class="flex items-center justify-between gap-3 bg-base-100 p-2 rounded-lg border border-base-200">
+                    <span class="text-xs font-bold opacity-60">Did it help your work?</span>
+                    <div class="flex gap-1">
+                      {#each [1, 2, 3, 4, 5] as star}
+                        <button
+                          class="btn btn-ghost btn-xs btn-square p-0 hover:bg-warning/20 transition-colors"
+                          onclick={() => (csatRatingImpact = star)}
+                        >
+                          <Star
+                            size={18}
+                            fill={star <= csatRatingImpact ? "currentColor" : "none"}
+                            class={star <= csatRatingImpact ? "text-warning" : "opacity-20"}
+                          />
+                        </button>
+                      {/each}
+                    </div>
                   </div>
                 </div>
 
                 <div class="flex flex-col gap-2">
                   <textarea
                     class="textarea textarea-bordered textarea-sm w-full bg-base-100 min-h-[80px] text-sm leading-relaxed"
-                    placeholder="Tell us more about your experience (optional)..."
+                    placeholder="Anything else we should know? (optional)..."
                     bind:value={csatComment}
                   ></textarea>
 
@@ -963,7 +1004,7 @@
                     <button
                       class="btn btn-warning btn-sm px-6 gap-2 shadow-sm"
                       onclick={submitCsat}
-                      disabled={csatRating < 1 || csatLoading}
+                      disabled={csatRatingSpeed < 1 || csatRatingAttitude < 1 || csatRatingImpact < 1 || csatLoading}
                     >
                       {#if csatLoading}
                         <span class="loading loading-spinner loading-xs"></span>

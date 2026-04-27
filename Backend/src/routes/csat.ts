@@ -42,7 +42,10 @@ export const csat = new Elysia({ prefix: "/csat" })
       const csat = await prisma.cSAT.create({
         data: {
           ticket_id: body.ticket_id,
-          rating: body.rating,
+          rating: Math.round((body.rating_speed + body.rating_attitude + body.rating_impact) / 3),
+          rating_speed: body.rating_speed,
+          rating_attitude: body.rating_attitude,
+          rating_impact: body.rating_impact,
           comment: body.comment ?? null,
           resolution_time_ms: resolutionTimeMs,
           agent_id: ticket.assignee_id,
@@ -72,7 +75,9 @@ export const csat = new Elysia({ prefix: "/csat" })
     {
       body: t.Object({
         ticket_id: t.Numeric(),
-        rating: t.Integer({ minimum: 1, maximum: 5 }),
+        rating_speed: t.Integer({ minimum: 1, maximum: 5 }),
+        rating_attitude: t.Integer({ minimum: 1, maximum: 5 }),
+        rating_impact: t.Integer({ minimum: 1, maximum: 5 }),
         comment: t.Optional(t.String()),
       }),
       isAuth: true,

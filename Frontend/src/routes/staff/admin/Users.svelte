@@ -329,7 +329,7 @@
                     </div>
                   </td>
                   <td class="text-xs opacity-60">
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                   </td>
                   <td>
                     <span class="badge badge-xs {user.is_active ? 'badge-success' : 'badge-error'}">

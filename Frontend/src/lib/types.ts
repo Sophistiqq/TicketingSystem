@@ -219,6 +219,9 @@ export type Message = {
 export type CSAT = {
   id: number;
   rating: number;
+  rating_speed?: number;
+  rating_attitude?: number;
+  rating_impact?: number;
   comment?: string;
   resolution_time_ms?: number;
   submitted_at: string;
@@ -233,7 +236,7 @@ export type CSATStats = {
   total_responses: number;
   distribution: Record<number, number>;
   trend: { date: string; average: number }[];
-  agent_leaderboard: { agent_id: number; name: string; average: number }[];
+  agent_leaderboard: { agent_id: number; name: string; average: number; count: number }[];
   dimension_breakdown: {
     departments: Record<string, number>;
     priorities: Record<string, number>;

@@ -381,7 +381,10 @@ model TicketComment {
 /// Not triggered on intermediate resolutions that later get reopened.
 model CSAT {
   id                 Int      @id @default(autoincrement())
-  rating             Int // 1 to 5
+  rating             Int // 1 to 5 (average of speed, attitude, impact)
+  rating_speed       Int?
+  rating_attitude    Int?
+  rating_impact      Int?
   comment            String?
   resolution_time_ms Int? // Time taken to resolve in milliseconds
   submitted_at       DateTime @default(now())
