@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import { api } from "../../lib/api";
+  import { location } from "../../lib/location.svelte";
   import type { Ticket, PaginatedResponse } from "../../lib/types";
   import TicketTable from "../../components/TicketTable.svelte";
   import Pagination from "../../components/Pagination.svelte";
@@ -9,7 +10,7 @@
   import { getCurrentUser } from "../../stores/user.svelte";
   import { route, navigate } from "../../router.svelte";
 
-  const query = $derived(new URLSearchParams(window.location.search));
+  const query = $derived(new URLSearchParams(location.search));
 
   let activeTab = $state<"requested" | "assigned" | "all">("requested");
 
@@ -21,17 +22,19 @@
 
   // Sync state with URL on navigation/mount
   $effect(() => {
-    // This effect runs when route.pathname or window.location.search changes
-    // as it depends on `query` derived from window.location.search
-    const q = new URLSearchParams(window.location.search);
-    activeTab = (q.get("tab") as any) || "requested";
-    search = q.get("search") || "";
-    statusFilter = q.get("status") || "";
-    priorityFilter = q.get("priority") || "";
-    overdueOnly = q.get("overdue") === "true";
+    // This effect runs when query changes (which is reactive to navigation)
+    const q = query;
     
-    // Trigger loads based on active tab
-    loadCurrentTab(1, false); 
+    untrack(() => {
+      activeTab = (q.get("tab") as any) || "requested";
+      search = q.get("search") || "";
+      statusFilter = q.get("status") || "";
+      priorityFilter = q.get("priority") || "";
+      overdueOnly = q.get("overdue") === "true";
+      
+      // Trigger loads based on active tab
+      loadCurrentTab(1, false); 
+    });
   });
 
   // Requested tickets
