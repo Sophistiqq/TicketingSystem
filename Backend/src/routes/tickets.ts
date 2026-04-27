@@ -596,6 +596,12 @@ tickets
 
         updateData.assignee_id = body.assignee_id;
 
+        // If a CSAT already exists for this ticket, update its agent_id to the new assignee
+        await prisma.cSAT.updateMany({
+          where: { ticket_id: params.id },
+          data: { agent_id: body.assignee_id },
+        });
+
         if (body.assignee_id) {
           await createAndPushNotification(
             body.assignee_id,
