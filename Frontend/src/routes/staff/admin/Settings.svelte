@@ -138,7 +138,7 @@
 
 <div class="flex flex-col gap-6">
   <div>
-    <h1 class="text-3xl font-bold">Settings</h1>
+    <h1 class="text-3xl font-bold">Management</h1>
     <p class="text-sm opacity-60 mt-1">Manage reference data for dropdowns</p>
   </div>
 

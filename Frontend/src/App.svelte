@@ -65,16 +65,41 @@
     { icon: LayoutDashboard, label: "Dashboard", href: "/" },
     { icon: Plus, label: "New Ticket", href: "/tickets/new" },
     { icon: ListTodo, label: "My Tickets", href: "/my-tickets" },
-    { icon: MessageSquare, label: "Messages", href: "/messages", badge: () => msgUnread },
-    { icon: ClipboardCheck, label: "My Approvals", href: "/approvals", roles: ["approver", "admin"] },
-    { icon: Bell, label: "Notifications", href: "/notifications", badge: () => unread },
+    {
+      icon: MessageSquare,
+      label: "Messages",
+      href: "/messages",
+      badge: () => msgUnread,
+    },
+    {
+      icon: ClipboardCheck,
+      label: "My Approvals",
+      href: "/approvals",
+      roles: ["approver", "admin"],
+    },
+    {
+      icon: Bell,
+      label: "Notifications",
+      href: "/notifications",
+      badge: () => unread,
+    },
   ];
 
   const adminItems: NavItem[] = [
     { icon: Users, label: "Users", href: "/admin/users", roles: ["admin"] },
-    { icon: ScrollText, label: "Audit Log", href: "/admin/audit", roles: ["admin", "mis"] },
+    {
+      icon: ScrollText,
+      label: "Audit Log",
+      href: "/admin/audit",
+      roles: ["admin", "mis"],
+    },
     { icon: Star, label: "CSAT", href: "/admin/csat", roles: ["admin", "mis"] },
-    { icon: Settings, label: "Settings", href: "/admin/settings", roles: ["admin"] },
+    {
+      icon: Settings,
+      label: "Management",
+      href: "/admin/management",
+      roles: ["admin"],
+    },
   ];
 
   function canSee(item: NavItem): boolean {
@@ -104,29 +129,50 @@
     <input id="app-drawer" type="checkbox" class="drawer-toggle" />
     <div class="drawer-content flex flex-col h-full overflow-hidden">
       <!-- Navbar -->
-      <nav class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2">
-        <label for="app-drawer" class="btn btn-ghost btn-sm btn-square lg:hidden"><Menu size={20} /></label>
+      <nav
+        class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2"
+      >
+        <label
+          for="app-drawer"
+          class="btn btn-ghost btn-sm btn-square lg:hidden"
+          ><Menu size={20} /></label
+        >
         <div class="flex-1 flex items-center gap-2">
           {#if !isActive("/")}
-            <button class="btn btn-ghost btn-sm btn-square" onclick={() => navigate(-1)}><ChevronLeft size={20} /></button>
+            <button
+              class="btn btn-ghost btn-sm btn-square"
+              onclick={() => navigate(-1)}><ChevronLeft size={20} /></button
+            >
           {/if}
         </div>
-        
+
         <button class="btn btn-ghost btn-sm btn-square" onclick={toggleTheme}>
           {#if isDark}<Sun size={18} />{:else}<Moon size={18} />{/if}
         </button>
 
-        <a href="/messages" class="btn btn-ghost btn-sm btn-square indicator" title="Messages">
+        <a
+          href="/messages"
+          class="btn btn-ghost btn-sm btn-square indicator"
+          title="Messages"
+        >
           <MessageSquare size={18} />
           {#if msgUnread > 0}
-            <span class="indicator-item badge badge-primary badge-xs">{msgUnread}</span>
+            <span class="indicator-item badge badge-primary badge-xs"
+              >{msgUnread}</span
+            >
           {/if}
         </a>
 
-        <a href="/notifications" class="btn btn-ghost btn-sm btn-square indicator" title="Notifications">
+        <a
+          href="/notifications"
+          class="btn btn-ghost btn-sm btn-square indicator"
+          title="Notifications"
+        >
           <Bell size={18} />
           {#if unread > 0}
-            <span class="indicator-item badge badge-primary badge-xs">{unread}</span>
+            <span class="indicator-item badge badge-primary badge-xs"
+              >{unread}</span
+            >
           {/if}
         </a>
 
@@ -137,15 +183,22 @@
                 <span class="text-xs">{userInitials()}</span>
               </div>
             </div>
-            <span class="hidden sm:inline text-sm whitespace-nowrap">{displayName()}</span>
+            <span class="hidden sm:inline text-sm whitespace-nowrap"
+              >{displayName()}</span
+            >
           </summary>
-          <ul class="dropdown-content menu bg-base-200 rounded-box z-50 w-52 p-2 shadow-lg mt-2">
+          <ul
+            class="dropdown-content menu bg-base-200 rounded-box z-50 w-52 p-2 shadow-lg mt-2"
+          >
             <li class="menu-title text-xs opacity-60">
-              {user.roles?.map((r) => String(r).toUpperCase()).join(", ") || "USER"}
+              {user.roles?.map((r) => String(r).toUpperCase()).join(", ") ||
+                "USER"}
             </li>
             <li><a href="/profile"><UserIcon size={16} /> Profile</a></li>
             <li>
-              <button onclick={() => auth.logout()}><LogOut size={16} /> Logout</button>
+              <button onclick={() => auth.logout()}
+                ><LogOut size={16} /> Logout</button
+              >
             </li>
           </ul>
         </details>
@@ -153,7 +206,13 @@
 
       <!-- Main Layout -->
       <div class="flex flex-1 min-h-0 overflow-hidden">
-        <main class="flex-1 flex flex-col min-h-0 p-4 md:p-6 {route.pathname?.startsWith('/messages') || route.pathname === '/tickets/new' ? 'overflow-hidden' : 'overflow-y-auto'}">
+        <main
+          class="flex-1 flex flex-col min-h-0 p-4 md:p-6 {route.pathname?.startsWith(
+            '/messages',
+          ) || route.pathname === '/tickets/new'
+            ? 'overflow-hidden'
+            : 'overflow-y-auto'}"
+        >
           <Router />
         </main>
       </div>
@@ -162,7 +221,9 @@
     <!-- Navigation Drawer -->
     <div class="drawer-side z-40">
       <label for="app-drawer" class="drawer-overlay"></label>
-      <aside class="bg-base-200 w-72 min-h-full flex flex-col border-r border-base-300">
+      <aside
+        class="bg-base-200 w-72 min-h-full flex flex-col border-r border-base-300"
+      >
         <div class="p-6">
           <h2 class="text-xl font-black">TICKETING</h2>
         </div>
@@ -170,12 +231,23 @@
           {#each navItems as item}
             {#if canSee(item)}
               <li>
-                <a href={item.href} onclick={closeDrawer} class="flex items-center justify-between px-6 py-4 rounded-none {isActive(item.href as any) ? 'bg-primary/10 text-primary font-bold' : ''}">
+                <a
+                  href={item.href}
+                  onclick={closeDrawer}
+                  class="flex items-center justify-between px-6 py-4 rounded-none {isActive(
+                    item.href as any,
+                  )
+                    ? 'bg-primary/10 text-primary font-bold'
+                    : ''}"
+                >
                   <div class="flex items-center gap-3">
-                    <item.icon size={20} /> {item.label}
+                    <item.icon size={20} />
+                    {item.label}
                   </div>
                   {#if item.badge && item.badge() > 0}
-                    <span class="badge badge-primary badge-sm font-bold">{item.badge()}</span>
+                    <span class="badge badge-primary badge-sm font-bold"
+                      >{item.badge()}</span
+                    >
                   {/if}
                 </a>
               </li>
@@ -184,12 +256,25 @@
 
           {#if adminItems.some(canSee)}
             <div class="divider px-6 opacity-20"></div>
-            <li class="menu-title px-6 text-[10px] uppercase tracking-widest opacity-40 font-bold mb-2">Administration</li>
+            <li
+              class="menu-title px-6 text-[10px] uppercase tracking-widest opacity-40 font-bold mb-2"
+            >
+              Administration
+            </li>
             {#each adminItems as item}
               {#if canSee(item)}
                 <li>
-                  <a href={item.href} onclick={closeDrawer} class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(item.href as any) ? 'bg-primary/10 text-primary font-bold' : ''}">
-                    <item.icon size={20} /> {item.label}
+                  <a
+                    href={item.href}
+                    onclick={closeDrawer}
+                    class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(
+                      item.href as any,
+                    )
+                      ? 'bg-primary/10 text-primary font-bold'
+                      : ''}"
+                  >
+                    <item.icon size={20} />
+                    {item.label}
                   </a>
                 </li>
               {/if}

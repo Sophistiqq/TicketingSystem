@@ -85,7 +85,7 @@ export const { p, navigate, isActive, route } = createRouter({
   '/admin/users': Users,
   '/admin/audit': AuditLog,
   '/admin/csat': CsatDashboard,
-  '/admin/settings': Settings,
+  '/admin/management': Settings,
 
   // ── Fallback ────────────────────────────────────────────
   '*': Dashboard,
