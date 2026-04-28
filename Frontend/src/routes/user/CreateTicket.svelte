@@ -163,8 +163,8 @@
   import { Search, CircleX } from "lucide-svelte";
 </script>
 
-<div class="h-full flex flex-col max-w-7xl mx-auto w-full px-4 py-2 md:py-4">
-  <header class="mb-4 shrink-0">
+<div class="flex flex-col max-w-7xl mx-auto w-full px-0 sm:px-4 py-0 sm:py-4">
+  <header class="mb-4 px-4 sm:px-0 pt-4 sm:pt-0">
     <div class="flex items-center gap-3 mb-1">
       <div
         class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center"
@@ -189,7 +189,7 @@
 
   {#if error}
     <div
-      class="alert alert-error mb-4 shadow-sm border-none rounded-xl py-2 shrink-0"
+      class="alert alert-error mb-4 shadow-sm border-none rounded-xl py-2"
     >
       <TriangleAlert size={16} />
       <span class="text-sm">{error}</span>
@@ -198,16 +198,16 @@
 
   <form
     onsubmit={handleSubmit}
-    class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"
+    class="grid grid-cols-1 lg:grid-cols-12 gap-0 sm:gap-6"
   >
     <!-- Main Content (Left Column) -->
-    <div class="lg:col-span-8 flex flex-col min-h-0">
+    <div class="lg:col-span-8 flex flex-col">
       <div
-        class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl overflow-hidden flex-1 flex flex-col"
+        class="card bg-base-100 sm:border border-base-300 sm:shadow-sm rounded-none sm:rounded-2xl overflow-hidden flex flex-col"
       >
-        <div class="p-5 flex-1 flex flex-col gap-5 min-h-0">
+        <div class="p-4 sm:p-5 flex flex-col gap-4 sm:gap-5">
           <!-- Title Input -->
-          <div class="form-control w-full shrink-0">
+          <div class="form-control w-full">
             <label class="label py-1" for="title">
               <span
                 class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
@@ -227,7 +227,7 @@
           </div>
 
           <!-- Description / Editor -->
-          <div class="form-control w-full flex-1 flex flex-col min-h-0">
+          <div class="form-control w-full flex flex-col">
             <label class="label py-1" for="description">
               <span
                 class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
@@ -236,11 +236,11 @@
               </span>
             </label>
             <div
-              class="flex-1 min-h-0 rounded-xl border border-base-300 overflow-hidden focus-within:border-primary transition-all duration-200 flex flex-col"
+              class="min-h-[400px] rounded-xl border border-base-300 overflow-hidden focus-within:border-primary transition-all duration-200 flex flex-col"
             >
               <RichTextEditor
                 bind:value={description}
-                class="flex-1 h-full overflow-y-auto"
+                class="flex-1"
                 data-tour="ticket-description"
               />
             </div>
@@ -250,10 +250,6 @@
                 >Supports:</span
               >
               <div class="flex gap-1">
-                <span
-                  class="badge badge-ghost text-[9px] h-4 py-0 px-1.5 opacity-60"
-                  >Images</span
-                >
                 <span
                   class="badge badge-ghost text-[9px] h-4 py-0 px-1.5 opacity-60"
                   >Tables</span
@@ -270,9 +266,9 @@
     </div>
 
     <!-- Sidebar / Config (Right Column) -->
-    <div class="lg:col-span-4 flex flex-col min-h-0">
+    <div class="lg:col-span-4 flex flex-col">
       <div
-        class="card bg-base-100 border border-base-300 shadow-sm rounded-2xl p-5 flex flex-col gap-4 overflow-y-auto max-h-full"
+        class="card bg-base-100 sm:border border-base-300 sm:shadow-sm rounded-none sm:rounded-2xl p-5 flex flex-col gap-4"
       >
         <h3
           class="text-xs font-black uppercase tracking-widest opacity-40 flex items-center gap-2"
