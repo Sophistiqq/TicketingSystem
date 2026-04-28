@@ -26,13 +26,30 @@ let modalState = $state<{
   resolve: (result: ConfirmResult) => void;
 } | null>(null);
 
-let hideChromeState = $state(false);
+// Flag to prevent double navigation when closing manually
+let closingFromPopstate = false;
+
+// Listen for back button
+if (typeof window !== 'undefined') {
+  window.addEventListener('popstate', () => {
+    if (modalState && modalState.show && !window.location.hash.includes('modal')) {
+      closingFromPopstate = true;
+      closeModal(false);
+      closingFromPopstate = false;
+    }
+  });
+}
 
 export function getModalState() {
   return modalState;
 }
 
 export function openCustomModal(component: any, props: any = {}): Promise<ConfirmResult> {
+  // Push state to history for back button support
+  if (typeof window !== 'undefined') {
+    window.history.pushState(null, '', '#modal');
+  }
+
   return new Promise((resolve) => {
     modalState = {
       show: true,
@@ -91,6 +108,11 @@ export function setHideChrome(hide: boolean) {
 export function confirm(options: ConfirmOptions | string): Promise<ConfirmResult> {
   const opts: ConfirmOptions = typeof options === 'string' ? { message: options } : options;
   
+  // Push state to history for back button support
+  if (typeof window !== 'undefined') {
+    window.history.pushState(null, '', '#modal');
+  }
+
   return new Promise((resolve) => {
     modalState = {
       show: true,
@@ -123,6 +145,11 @@ export async function simplePrompt(message: string, placeholder = "", defaultVal
 
 export function closeModal(confirmed: boolean, value?: string) {
   if (modalState) {
+    // If not triggered by popstate (back button), we need to manually remove the hash
+    if (!closingFromPopstate && typeof window !== 'undefined' && window.location.hash.includes('modal')) {
+      window.history.back();
+    }
+    
     modalState.resolve({ confirmed, value });
     modalState = null;
   }

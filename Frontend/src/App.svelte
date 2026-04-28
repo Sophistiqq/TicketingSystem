@@ -49,6 +49,8 @@
   let unread = $derived(getUnreadCount());
   let msgUnread = $derived(getMessageUnreadCount());
   let isDark = $state(true);
+  let drawerOpen = $state(false);
+  let closingFromPopstate = false;
 
   onMount(() => {
     themeChange(false);
@@ -59,6 +61,19 @@
     if (currentUser) {
       initPushNotifications(currentUser).catch(console.error);
     }
+
+    const handlePopstate = () => {
+      if (window.location.hash !== "#drawer" && drawerOpen) {
+        closingFromPopstate = true;
+        drawerOpen = false;
+        setTimeout(() => {
+          closingFromPopstate = false;
+        }, 100);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopstate);
+    return () => window.removeEventListener("popstate", handlePopstate);
   });
 
   const navItems: NavItem[] = [
@@ -114,9 +129,23 @@
     localStorage.setItem("theme", newTheme);
   }
 
+  function handleDrawerChange(e: Event) {
+    const checked = (e.target as HTMLInputElement).checked;
+    drawerOpen = checked;
+    if (checked) {
+      window.history.pushState(null, "", "#drawer");
+    } else if (!closingFromPopstate && window.location.hash === "#drawer") {
+      window.history.back();
+    }
+  }
+
   function closeDrawer() {
-    const drawer = document.getElementById("app-drawer") as HTMLInputElement;
-    if (drawer) drawer.checked = false;
+    if (drawerOpen) {
+      drawerOpen = false;
+      if (window.location.hash === "#drawer") {
+        window.history.back();
+      }
+    }
   }
 </script>
 
@@ -126,7 +155,13 @@
   </div>
 {:else}
   <div class="drawer lg:drawer-open h-screen overflow-hidden">
-    <input id="app-drawer" type="checkbox" class="drawer-toggle" />
+    <input
+      id="app-drawer"
+      type="checkbox"
+      class="drawer-toggle"
+      bind:checked={drawerOpen}
+      onchange={handleDrawerChange}
+    />
     <div class="drawer-content flex flex-col h-full overflow-hidden">
       <!-- Navbar -->
       <nav
