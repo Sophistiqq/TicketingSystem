@@ -37,6 +37,11 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
+  // If user clicked the 'close' button, do nothing else
+  if (event.action === 'close') {
+    return
+  }
+
   const dataUrl = event.notification.data?.url || '/notifications'
   const urlToOpen = new URL(dataUrl, self.location.origin).href
 
