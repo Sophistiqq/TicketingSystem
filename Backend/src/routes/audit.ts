@@ -4,44 +4,41 @@ import { validator } from "../plugins/authValidator";
 
 export const audit = new Elysia({ prefix: "/audit" })
   .use(validator)
-
   // Get auth audit logs (admin/MIS only)
-  .get(
-    "/auth",
-    async ({ query, status }) => {
-      const {
-        action,
-        exclude_action,
-        performed_by_id,
-        page = 1,
-        limit = 50,
-      } = query;
+  .get("/auth", async ({ query, status }) => {
+    const {
+      action,
+      exclude_action,
+      performed_by_id,
+      page = 1,
+      limit = 50,
+    } = query;
 
-      const where: any = { ticket_id: null }; // Auth logs have NO ticket_id
-      if (performed_by_id) where.performed_by_id = performed_by_id;
-      if (action) where.action = { contains: action };
-      if (exclude_action) where.action = { not: exclude_action };
+    const where: any = { ticket_id: null }; // Auth logs have NO ticket_id
+    if (performed_by_id) where.performed_by_id = performed_by_id;
+    if (action) where.action = { contains: action };
+    if (exclude_action) where.action = { not: exclude_action };
 
-      const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit;
 
-      const data = await prisma.auditLog.findMany({
-        where,
-        include: {
-          performed_by: {
-            select: { id: true, first_name: true, last_name: true, username: true },
-          },
+    const data = await prisma.auditLog.findMany({
+      where,
+      include: {
+        performed_by: {
+          select: { id: true, first_name: true, last_name: true, username: true },
         },
-        orderBy: { created_at: "desc" },
-        skip,
-        take: limit,
-      });
-      const total = await prisma.auditLog.count({ where });
+      },
+      orderBy: { created_at: "desc" },
+      skip,
+      take: limit,
+    });
+    const total = await prisma.auditLog.count({ where });
 
-      return status(200, {
-        data,
-        pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-      });
-    },
+    return status(200, {
+      data,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    });
+  },
     {
       query: t.Object({
         action: t.Optional(t.String()),
@@ -107,8 +104,8 @@ export const audit = new Elysia({ prefix: "/audit" })
 
     // IMPORTANT: Ticket Activity MUST have a ticket_id
     // Auth activity has ticket_id: null
-    const where: any = { ticket_id: { not: null } }; 
-    
+    const where: any = { ticket_id: { not: null } };
+
     if (ticket_id) where.ticket_id = ticket_id;
     if (performed_by_id) where.performed_by_id = performed_by_id;
     if (action) where.action = { contains: action };

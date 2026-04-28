@@ -29,7 +29,7 @@ export const validator = new Elysia()
       // Throttle background update of last_active
       const now = Date.now();
       const lastUpdate = lastActiveCache.get(userId) || 0;
-      
+
       if (now - lastUpdate > THROTTLE_MS) {
         lastActiveCache.set(userId, now);
         prisma.user.update({
