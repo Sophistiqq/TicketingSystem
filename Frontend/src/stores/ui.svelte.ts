@@ -26,6 +26,8 @@ let modalState = $state<{
   resolve: (result: ConfirmResult) => void;
 } | null>(null);
 
+let hideChromeState = $state(false);
+
 // Flag to prevent double navigation when closing manually
 let closingFromPopstate = false;
 

@@ -23,9 +23,10 @@
 {#if modal?.show}
   <div class="modal modal-open z-100">
     {#if modal.component}
+      {@const Component = modal.component}
       <!-- Custom Modal Component -->
       <div class="modal-box p-0 max-w-none w-auto bg-transparent shadow-none">
-        <svelte:component this={modal.component} {...modal.props} />
+        <Component {...modal.props} />
       </div>
     {:else}
       <!-- Standard Modal -->

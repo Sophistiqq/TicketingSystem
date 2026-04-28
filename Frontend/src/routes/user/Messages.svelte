@@ -33,7 +33,7 @@
   let messages = $state<Message[]>([]);
 
   // Notification Preference
-  let messageNotifications = $state(user?.message_notifications ?? true);
+  let messageNotifications = $state(true);
   let updatingNotifications = $state(false);
 
   $effect(() => {

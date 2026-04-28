@@ -100,7 +100,7 @@ export async function initPushNotifications(user: any) {
   }
 
   try {
-    const res = await (client.notifications as any)['vapid-public-key'].get();
+    const res = await (client as any).notifications['vapid-public-key'].get();
     
     if (res.error) {
       console.error('[PWA] Failed to get VAPID key:', res.error);

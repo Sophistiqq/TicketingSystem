@@ -72,6 +72,7 @@
       onkeydown={(e) => e.key === "Enter" && !disabled && (isOpen = !isOpen)}
       role="combobox"
       aria-expanded={isOpen}
+      aria-controls="select-options"
       aria-haspopup="listbox"
       tabindex="0"
     >
