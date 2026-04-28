@@ -6,7 +6,7 @@
     displayName,
     userInitials,
   } from "../../stores/user.svelte";
-  import { Save, Lock, User as UserIcon, Bell, BookOpen } from "lucide-svelte";
+  import { Save, Lock, User as UserIcon, Bell, BookOpen, RefreshCcw, Info } from "lucide-svelte";
   import { requestNotificationPermission } from "../../lib/pwa";
   import { createTicketTour } from "../../lib/tutorial";
   import { navigate } from "../../router.svelte";
@@ -21,12 +21,37 @@
   let confirmPassword = $state("");
 
   let loading = $state(false);
+  let checkingUpdate = $state(false);
   let error = $state("");
   let success = $state("");
 
   let notificationPermission = $state(
     typeof Notification !== "undefined" ? Notification.permission : "default",
   );
+
+  async function manualCheckUpdate() {
+    checkingUpdate = true;
+    error = "";
+    success = "";
+    
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.update();
+          success = "Update check completed. If a new version is available, a notification will appear shortly.";
+        } else {
+          error = "Service worker not found. Try refreshing the page.";
+        }
+      } else {
+        error = "Updates are not supported in this browser.";
+      }
+    } catch (e: any) {
+      error = "Failed to check for updates: " + e.message;
+    } finally {
+      setTimeout(() => { checkingUpdate = false; }, 1000);
+    }
+  }
 
   async function toggleNotifications() {
     const granted = await requestNotificationPermission();
@@ -310,6 +335,39 @@
               }}
             >
               <BookOpen size={14} /> Watch Guide
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card bg-base-200 shadow-sm border border-base-300 mt-6 mb-10">
+        <div class="card-body p-6">
+          <div class="flex items-center gap-2 mb-2">
+            <Info size={16} class="text-primary" />
+            <h3 class="font-bold text-sm uppercase tracking-wider opacity-70">
+              System Information
+            </h3>
+          </div>
+          <p class="text-xs opacity-60 mb-4">
+            Ensure you are running the latest version of the application to access new features and security improvements.
+          </p>
+
+          <div class="flex items-center justify-between">
+            <div class="flex flex-col">
+              <span class="text-sm font-bold">App Update</span>
+              <span class="text-[10px] opacity-50">Checking this will verify if new content is available on the server.</span>
+            </div>
+            <button
+              class="btn btn-outline btn-sm gap-2"
+              onclick={manualCheckUpdate}
+              disabled={checkingUpdate}
+            >
+              {#if checkingUpdate}
+                <span class="loading loading-spinner loading-xs"></span>
+              {:else}
+                <RefreshCcw size={14} />
+              {/if}
+              Check for Updates
             </button>
           </div>
         </div>
