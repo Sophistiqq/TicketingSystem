@@ -67,7 +67,7 @@ export function openCustomModal(component: any, props: any = {}): Promise<Confir
 type Alert = {
   id: number;
   message: string;
-  type: "success" | "error" | "warning";
+  type: "success" | "error" | "warning" | "info";
 };
 
 let alerts = $state<Alert[]>([]);

@@ -111,10 +111,11 @@
           tabindex="0"
           onclick={() => {
             if (!notif.is_read) markAsRead(notif.id);
-            if (notif.ticket_id)
-              (navigate as any)("/tickets/:id", {
-                params: { id: String(notif.ticket_id) },
-              });
+            if (notif.ticket_id) {
+              (navigate as any)(`/tickets/${notif.ticket_id}`);
+            } else if (notif.type === 'message_received') {
+              (navigate as any)("/messages");
+            }
           }}
           onkeydown={(e) => {
             if (e.key === "Enter") e.currentTarget.click();

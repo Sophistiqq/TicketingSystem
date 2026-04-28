@@ -209,7 +209,7 @@
       }
 
       await api.put(`/tickets/${ticket.id}`, body);
-      triggerAlert("Ticket updated successfully.");
+      triggerAlert("Ticket updated successfully.", "success");
       isEditingContent = false;
       await loadTicket();
     } catch (e: any) {
@@ -226,7 +226,7 @@
         due_date: val ? new Date(val).toISOString() : null,
       });
       await loadTicket();
-      triggerAlert("Due date updated.");
+      triggerAlert("Due date updated.", "info");
     } catch (e: any) {
       statusError = e.message;
     }
@@ -241,7 +241,7 @@
         priority: val,
       });
       await loadTicket();
-      triggerAlert("Priority updated.");
+      triggerAlert("Priority updated.", "info");
     } catch (e: any) {
       statusError = e.message;
     }
@@ -356,7 +356,7 @@
     try {
       await api.post(`/tickets/${ticket.id}/escalate`, {});
       await loadTicket();
-      triggerAlert("Ticket successfully escalated to approval.");
+      triggerAlert("Ticket successfully escalated to approval.", "success");
     } catch (e: any) {
       statusError = e?.message ?? "Escalation failed";
     }

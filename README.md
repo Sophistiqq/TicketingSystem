@@ -1,4 +1,4 @@
-# Monolith Ticketing System
+# Ticketing System
 
 A robust, full-stack ticketing and collaboration platform designed for modern enterprises. This project features a high-performance backend powered by Bun and ElysiaJS, and a reactive, mobile-first frontend built with Svelte 5.
 
@@ -56,6 +56,3 @@ To run the entire system locally, refer to the individual READMEs in the `Backen
 - [Backend Documentation](./Backend/README.md)
 - [Frontend Documentation](./Frontend/README.md)
 
-## 📜 License
-
-[MIT](./LICENSE) (or your preferred license)

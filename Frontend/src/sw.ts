@@ -37,15 +37,19 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const urlToOpen = new URL(event.notification.data.url, self.location.origin).href
+  const dataUrl = event.notification.data?.url || '/notifications'
+  const urlToOpen = new URL(dataUrl, self.location.origin).href
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // 1. If we have a window already, try to navigate it and focus
       for (const client of clientList) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return (client as WindowClient).focus()
+        if ('focus' in client && 'navigate' in client) {
+          return (client as WindowClient).navigate(urlToOpen).then(c => c?.focus())
         }
       }
+      
+      // 2. Otherwise open a new window
       if (self.clients.openWindow) {
         return self.clients.openWindow(urlToOpen)
       }
