@@ -53,8 +53,13 @@ self.addEventListener('notificationclick', (event) => {
   )
 })
 
-// Immediately take control of the page
-self.addEventListener('install', () => self.skipWaiting())
+// Handle Skip Waiting message from the frontend
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
+
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim())
 })

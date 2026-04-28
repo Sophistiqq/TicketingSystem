@@ -16,6 +16,7 @@
   import auth from "./auth.svelte";
   import ModalProvider from "./components/ModalProvider.svelte";
   import AlertProvider from "./components/AlertProvider.svelte";
+  import ReloadPrompt from "./components/ReloadPrompt.svelte";
   import {
     LayoutDashboard,
     Ticket,
@@ -202,3 +203,4 @@
 
 <ModalProvider />
 <AlertProvider />
+<ReloadPrompt />

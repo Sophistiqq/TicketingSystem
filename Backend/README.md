@@ -1,84 +1,87 @@
+# Monolith Backend
 
-# All-In-One (AIO) Central Auth Backend
-
-This project serves as the **Centralized Authentication Service** for my ecosystem of applications. 
-
-Instead of rewriting authentication logic for every new project (HR systems, Applicant trackers, internal tools), this backend acts as the single source of truth for **User Management, Identity Verification, and Session Handling**.
-
-## 🎯 Purpose & Architecture
-
-This is designed to be a "plug-and-play" auth server. Your other frontend applications or services simply consume the API provided by this project to log users in and verify who they are.
-
-* **Central User Database:** All users across different modules are stored here.
-* **Unified Session Management:** Handles JWT generation, secure HTTP-only cookies, and session validation.
-* **Reusable Middleware:** Provides a consistent way to protect routes across different endpoints.
+High-performance API service for the Monolith Ticketing System, built with **Bun**, **ElysiaJS**, and **Prisma**.
 
 ## ⚡ Tech Stack
 
-* **Runtime:** [Bun](https://bun.sh) (for ultra-fast startup and native password hashing).
-* **Framework:** [ElysiaJS](https://elysiajs.com) (Edge-compatible, ergonomic web framework).
-* **Database:** SQLite (Embedded, zero-latency).
-* **Security:** Argon2 hashing & Secure/HttpOnly Cookies.
+- **Runtime**: [Bun](https://bun.sh) (Ultra-fast JavaScript/TypeScript runtime)
+- **Framework**: [ElysiaJS](https://elysiajs.com) (Ergonomic, Type-safe web framework)
+- **ORM**: [Prisma](https://prisma.io)
+- **Database**: PostgreSQL
+- **Real-time**: WebSockets (Elysia native support)
+- **Validation**: Type-safe input/output validation via Elysia/Tiptap
 
-## 🚀 Getting Started
+## 🚀 Core Features
 
-### 1. Installation
-Clone the repository and install dependencies:
+- **Centralized Auth**: Secure JWT-based authentication with HttpOnly cookies.
+- **Ticket Lifecycle**: Full management of tickets (Creation, Assignment, Status updates, Priority).
+- **Real-time Updates**: Real-time notifications and messaging using WebSockets.
+- **CSAT & SLA Tracking**: Built-in Customer Satisfaction surveys and Service Level Agreement monitoring.
+- **Audit Logging**: Comprehensive tracking of all critical system actions.
+- **File Management**: Secure file uploads and static file serving for ticket attachments.
+- **API Documentation**: Automatic Swagger/OpenAPI documentation generation.
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh) installed.
+- PostgreSQL database (Local or Cloud).
+
+### Installation
+
+1.  Navigate to the Backend directory:
+    ```bash
+    cd Backend
+    ```
+2.  Install dependencies:
+    ```bash
+    bun install
+    ```
+3.  Set up your environment:
+    Create a `.env` file based on the required variables:
+    ```bash
+    DATABASE_URL="postgresql://user:password@localhost:5432/monolith"
+    JWT_SECRET="your-secret-key"
+    FRONTEND_URL="http://localhost:5173"
+    ```
+
+### Database Setup
+
+Run migrations and seed the database with initial data:
+
 ```bash
-bun install
-
+bun run migrate
+bun run db:seed
 ```
 
-### 2. Run the Service
+### Running the Server
 
-Start the central backend server:
+Start in development mode with hot-reloading:
 
 ```bash
 bun run dev
-
 ```
 
-The service will be live at `http://localhost:3000`.
+The API will be available at `http://localhost:3000`.
+Swagger documentation can be found at `http://localhost:3000/swagger`.
 
-> **Note:** On the first run, it will automatically create the `database.db` and seed an admin user.
-> * **User:** `admin`
-> * **Pass:** `password`
-> 
-> 
+## 📁 Project Structure
 
-## 🔗 Integration Guide
-
-### Base URL: `http://localhost:3000/auth`
-
-Any external application (e.g., your HR Dashboard) should direct authentication requests here.
-
-| Action | Endpoint | Method | Payload | Description |
-| --- | --- | --- | --- | --- |
-| **Login** | `/auth/login` | `POST` | `{username, password}` | Validates creds & sets the `auth_cookie` on the client. |
-| **Verify** | `/auth/me` | `POST` | *(Cookie)* | Call this on your app load to check if the user is logged in. |
-| **Register** | `/auth/register` | `POST` | `{username, password, email}` | Creates a new user in the central DB. |
-| **Logout** | `/auth/logout` | `POST` | *(Cookie)* | Clears the session. |
-
-## 🛡️ Security Features
-
-1. **Secure Cookies:** Tokens are never sent to the client body (preventing XSS attacks). They are stored in `HttpOnly` cookies.
-2. **Native Hashing:** Uses `Bun.password` (Argon2) which is significantly faster and more secure than JavaScript-based implementations like bcrypt.js.
-3. **Role-Based Payload:** The JWT includes the user `role`, allowing downstream apps to easily handle permissions (Admin vs User).
-
-## 🛠️ Development
-
-### Project Structure
-
-```
+```text
 src/
-├── auth.ts              # Core Authentication Logic
-├── dbconfig.ts          # Central Database & Schema Definitions
-├── plugins/
-│   └── authValidator.ts # JWT Validation Strategy
-└── index.ts             # Entry Point
-
+├── routes/          # API Route definitions (tickets, users, etc.)
+├── plugins/         # Elysia plugins (Auth validation, File uploads)
+├── ws/              # WebSocket handlers and broadcasting logic
+├── auth.ts          # Authentication strategy
+└── index.ts         # Server entry point
 ```
 
-### Adding New Modules
+## 🧪 Testing
 
-While this is primarily an Auth Backend, it is extensible. You can mount new controllers in `index.ts` alongside the auth module if you need specific logic (like HR or Job Postings) to live in the same instance.
+Run backend-specific tests (if available) or use the root test scripts.
+
+```bash
+# Example
+bun test
+```
