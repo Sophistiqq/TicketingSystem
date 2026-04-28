@@ -382,4 +382,24 @@ export const csat = new Elysia({ prefix: "/csat" })
       limit: t.Optional(t.Numeric({ minimum: 1, maximum: 100 })),
     }),
     isAuth: true,
+  })
+
+  // Get resolved tickets that need rating (requester only)
+  .get("/unrated", async ({ user, status }) => {
+    const unrated = await prisma.ticket.findMany({
+      where: {
+        requester_id: user,
+        status: { in: ["resolved", "closed"] },
+        csat: { is: null },
+      },
+      include: {
+        assignee: { select: { id: true, first_name: true, last_name: true, username: true } },
+        department: { select: { id: true, name: true } },
+      },
+      orderBy: { completed_at: "desc" },
+    });
+
+    return status(200, unrated);
+  }, {
+    isAuth: true,
   });

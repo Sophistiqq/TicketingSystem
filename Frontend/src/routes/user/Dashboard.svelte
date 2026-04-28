@@ -20,6 +20,7 @@
     UserCheck,
     Briefcase,
     LayoutDashboard,
+    Star,
   } from "lucide-svelte";
   import SearchableSelect from "../../components/SearchableSelect.svelte";
   import { getDepartments } from "../../stores/reference.svelte";
@@ -27,6 +28,7 @@
   let user = $derived(getCurrentUser());
   let tickets = $state<Ticket[]>([]);
   let pendingApprovals = $state<TicketApprover[]>([]);
+  let unratedTickets = $state<Ticket[]>([]);
   let activeUsers = $state<User[]>([]);
   let departments = $derived(getDepartments());
   let loading = $state(true);
@@ -42,6 +44,7 @@
   let totalOverdue = $state(0);
   let totalResolved = $state(0);
   let totalPendingApprovals = $state(0);
+  let totalUnrated = $state(0);
   let totalAssignedToMe = $state(0);
   let totalDepartmentUnassigned = $state(0);
 
@@ -64,6 +67,14 @@
       if (res) {
         tickets = res.data;
       }
+
+      // Fetch unrated tickets (those needing CSAT)
+      api.get<Ticket[]>("/csat/unrated").then((res) => {
+        if (res) {
+          unratedTickets = res;
+          totalUnrated = res.length;
+        }
+      });
 
       // Get accurate counts from filtered queries
       const queries = [
@@ -210,6 +221,17 @@
         />
       </a>
     {/if}
+    {#if totalUnrated > 0}
+      <div class="contents">
+        <StatsCard
+          icon={Star}
+          label="Unrated"
+          value={totalUnrated}
+          color="warning"
+          sub="Rate your resolved tickets"
+        />
+      </div>
+    {/if}
     <a href="/my-tickets?tab={hasRole('admin', 'mis') ? 'all' : 'requested'}&status=open" class="contents">
       <StatsCard
         icon={Inbox}
@@ -329,6 +351,40 @@
                   class="text-xs text-primary font-bold mt-1 hover:underline text-center"
                 >
                   View all {pendingApprovals.length} approvals
+                </a>
+              {/if}
+            </div>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Unrated Tickets Quick List -->
+      {#if unratedTickets.length > 0}
+        <div class="card bg-warning/10 border border-warning/20 shadow-sm">
+          <div class="card-body p-4">
+            <h2 class="card-title text-sm font-bold flex items-center gap-2 mb-2">
+              <Star size={18} class="text-warning fill-warning/20" />
+              Rate These Tickets
+            </h2>
+            <div class="flex flex-col gap-2">
+              {#each unratedTickets.slice(0, 5) as ticket}
+                <a
+                  href="/tickets/{ticket.id}"
+                  class="bg-base-100 p-2 rounded-lg text-xs hover:bg-base-300 transition-colors flex justify-between items-center"
+                >
+                  <span class="truncate flex-1 font-medium">{ticket.title}</span>
+                  <div class="flex items-center gap-2 ml-2">
+                    <span class="opacity-50 text-[10px]">#{ticket.id}</span>
+                    <div class="badge badge-warning badge-xs">RATE</div>
+                  </div>
+                </a>
+              {/each}
+              {#if unratedTickets.length > 5}
+                <a
+                  href="/my-tickets?tab=requested&status=resolved"
+                  class="text-xs text-warning font-bold mt-1 hover:underline text-center"
+                >
+                  View all {unratedTickets.length} unrated tickets
                 </a>
               {/if}
             </div>

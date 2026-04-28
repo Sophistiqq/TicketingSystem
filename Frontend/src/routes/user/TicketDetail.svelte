@@ -662,6 +662,38 @@
       </div>
     {/if}
 
+    <!-- CSAT Notification Banner -->
+    {#if showCsat}
+      <div
+        class="alert alert-warning shadow-md border-warning/20 flex flex-col sm:flex-row items-center justify-between gap-3 py-3"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="bg-warning/20 p-1.5 rounded-lg text-warning-content"
+          >
+            <Star size={20} class="text-warning" fill="currentColor" />
+          </div>
+          <div>
+            <h3 class="font-bold text-sm">How did we do?</h3>
+            <p class="text-xs opacity-90">
+              Your ticket has been resolved. Please share your feedback to help us improve.
+            </p>
+          </div>
+        </div>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <button
+            class="btn btn-sm btn-warning flex-1 sm:flex-none gap-1.5"
+            onclick={() => {
+              const el = document.getElementById('csat-section');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+          >
+            <FilePenLine size={14} /> Rate Now
+          </button>
+        </div>
+      </div>
+    {/if}
+
     <div
       class="bg-base-100 px-4 py-3 rounded-xl shadow-sm border border-base-300"
     >
@@ -968,6 +1000,7 @@
         <!-- CSAT section -->
         {#if showCsat}
           <div
+            id="csat-section"
             class="card bg-warning/5 border border-warning/20 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300"
           >
             <div class="card-body p-4">
