@@ -34,31 +34,25 @@ if (frontendUrl) {
 
 const app = new Elysia()
   .onError(({ code, error, set }) => {
-    if (code === "VALIDATION") {
-      const field = error.all?.[0]?.path?.replace("/", "") || "field";
-      const message = error.all?.[0]?.summary || error.message;
-
-      set.status = 422;
+    if (code === 'VALIDATION') {
+      set.status = 422
       return {
-        message: `Invalid ${field}: ${message}`,
-      };
+        message: 'Validation failed',
+        errors: error.all?.map((e) => ({
+          field: e.path?.replace('/', '') || 'unknown',
+          message: e.summary ?? e.message,
+        })),
+      }
     }
 
-    if (code === "NOT_FOUND") {
-      set.status = 404;
-      return { message: "The requested resource was not found" };
+    if (code === 'NOT_FOUND') {
+      set.status = 404
+      return { message: 'The requested resource was not found' }
     }
 
-    // Handle Prisma unique constraint error (P2002)
-    if ((error as any)?.code === "P2002") {
-      set.status = 409;
-      return { message: "A record with this unique value already exists" };
-    }
-
-    console.error(`[Error ${code}]:`, error);
-    return {
-      message: error.message || "An unexpected error occurred",
-    };
+    console.error(`[${code}]:`, error)
+    set.status = 500
+    return { message: error }
   })
   .use(cors({
     origin: allowedOrigins.length > 0 ? allowedOrigins : true,
@@ -82,37 +76,14 @@ const app = new Elysia()
   .use(messages)
   // Serve uploaded files statically
   .get("/uploads/:filename", async ({ params, set }) => {
-    const { filename } = params;
-    const filePath = `./uploads/${filename}`;
-    const file = Bun.file(filePath);
+    const file = Bun.file(`./uploads/${params.filename}`);
 
     if (!(await file.exists())) {
       set.status = 404;
       return "File not found";
     }
 
-    // Set content type based on extension
-    const ext = filename.split(".").pop()?.toLowerCase();
-    const mimeTypes: Record<string, string> = {
-      png: "image/png",
-      jpg: "image/jpeg",
-      jpeg: "image/jpeg",
-      gif: "image/gif",
-      webp: "image/webp",
-      svg: "image/svg+xml",
-      pdf: "application/pdf",
-      doc: "application/msword",
-      docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      xls: "application/vnd.ms-excel",
-      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      txt: "text/plain",
-      csv: "text/csv",
-      zip: "application/zip",
-    };
-    if (ext && mimeTypes[ext]) {
-      set.headers["content-type"] = mimeTypes[ext];
-    }
-
+    // Bun resolves content-type from the file automatically
     return file;
   })
   .get("/health", ({ status }) => {
@@ -124,8 +95,7 @@ const app = new Elysia()
 
   .listen(PORT);
 
-export type App = typeof app;
-
+export type App = typeof app
 registerApp(app);
 
 console.log(

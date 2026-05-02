@@ -11,15 +11,15 @@ export const wsHandler = new Elysia()
 
     async open(ws) {
       const token = await (ws.data as any).jwt_token.verify(ws.data.query.token)
-      
+
       if (!token) return ws.close()
 
       const userId = Number(token.sub)
       const roles = token.roles as string[]
 
-      // Attach metadata for lifecycle hooks
-      ;(ws.data as any).userId = userId
-      ;(ws.data as any).userRoles = roles
+        // Attach metadata for lifecycle hooks
+        ; (ws.data as any).userId = userId
+        ; (ws.data as any).userRoles = roles
 
       // Standard subscriptions
       ws.subscribe(`user:${userId}`)
@@ -29,7 +29,7 @@ export const wsHandler = new Elysia()
       prisma.user.update({
         where: { id: userId },
         data: { last_active: new Date() }
-      }).catch(() => {})
+      }).catch(() => { })
 
       ws.send({ type: 'connected', payload: { userId } })
     },
@@ -58,7 +58,7 @@ export const wsHandler = new Elysia()
 
           if (canAccess) {
             ws.subscribe(`ticket:${ticketId}`)
-            
+
             // Subscribe staff to internal channel
             if (userRoles.includes('admin') || userRoles.includes('mis') || userRoles.includes('approver')) {
               ws.subscribe(`ticket:${ticketId}:internal`)

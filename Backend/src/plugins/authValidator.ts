@@ -26,6 +26,14 @@ export const validator = new Elysia()
       const userId = Number(token.sub)
       if (!Number.isInteger(userId)) return status(400)
 
+      // Verify user is still active
+      const userRecord = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { is_active: true }
+      });
+
+      if (!userRecord || !userRecord.is_active) return status(403, { message: "Account is inactive" });
+
       // Throttle background update of last_active
       const now = Date.now();
       const lastUpdate = lastActiveCache.get(userId) || 0;
@@ -54,6 +62,14 @@ export const validator = new Elysia()
 
       const userId = Number(token.sub)
       if (!Number.isInteger(userId)) return status(400)
+
+      // Verify user is still active
+      const userRecord = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { is_active: true }
+      });
+
+      if (!userRecord || !userRecord.is_active) return status(403, { message: "Account is inactive" });
 
       const userRoles = token.roles as string[]
       const required = Array.isArray(role) ? role : [role]

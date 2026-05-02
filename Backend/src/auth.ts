@@ -103,6 +103,17 @@ export const auth = new Elysia({ prefix: "/auth" })
         return status(404, { message: "User not found" });
       }
 
+      if (!user.is_active) {
+        await createAuthAudit(
+          user.id,
+          "user_login_failed",
+          null,
+          username,
+          "Account is inactive",
+        );
+        return status(403, { message: "Account is inactive. Please contact your administrator." });
+      }
+
       // Fetch password separately since omit excludes it
       const userWithPassword = await prisma.user.findUnique({
         where: { id: user.id },
