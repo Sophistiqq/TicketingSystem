@@ -24,16 +24,16 @@
   $effect(() => {
     // This effect runs when query changes (which is reactive to navigation)
     const q = query;
-    
+
     untrack(() => {
       activeTab = (q.get("tab") as any) || "requested";
       search = q.get("search") || "";
       statusFilter = q.get("status") || "";
       priorityFilter = q.get("priority") || "";
       overdueOnly = q.get("overdue") === "true";
-      
+
       // Trigger loads based on active tab
-      loadCurrentTab(1, false); 
+      loadCurrentTab(1, false);
     });
   });
 
@@ -394,6 +394,7 @@
           <TicketTable
             tickets={assignedTickets}
             showRequester={true}
+            showAssignee={true}
             sort={assignedSort}
             order={assignedOrder}
             onSort={handleAssignedSort}
