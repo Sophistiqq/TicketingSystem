@@ -975,6 +975,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
       where,
       include: {
         requester: { omit: { password: true } },
+        assignee: { omit: { password: true } },
         request_type: true,
         affected_system: true,
       },
