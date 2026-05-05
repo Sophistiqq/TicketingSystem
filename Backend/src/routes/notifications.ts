@@ -93,11 +93,19 @@ export async function createAndPushNotification(
     }
   };
 
+  let tag = type;
+  if (ticketId) {
+    tag = `ticket-${ticketId}`;
+  } else if (type === "message_received" && extraData?.sender_id) {
+    tag = `message-${extraData.sender_id}`;
+  }
+
   const payload = JSON.stringify({
     title: getNotificationTitle(type, ticketId),
     body: message,
     url,
     type,
+    tag,
   });
 
   for (const sub of subscriptions) {

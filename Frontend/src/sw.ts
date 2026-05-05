@@ -13,11 +13,13 @@ precacheAndRoute(self.__WB_MANIFEST)
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json()
-    const options = {
+    const options: NotificationOptions = {
       body: data.body,
       icon: '/icon.png',
       badge: '/icon.png',
       vibrate: [100, 50, 100],
+      tag: data.tag,
+      renotify: !!data.tag,
       data: {
         url: data.url || '/'
       },
