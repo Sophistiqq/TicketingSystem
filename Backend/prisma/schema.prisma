@@ -120,6 +120,16 @@ model RequestType {
   tickets Ticket[]
 }
 
+/// Catalog of hardware items
+model HardwareItem {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  is_active   Boolean @default(true)
+
+  tickets Ticket[]
+}
+
 // ============================================================
 // USERS
 // ============================================================
@@ -234,6 +244,9 @@ model Ticket {
 
   affected_system_id Int?
   affected_system    AffectedSystem? @relation(fields: [affected_system_id], references: [id])
+
+  hardware_item_id Int?
+  hardware_item    HardwareItem? @relation(fields: [hardware_item_id], references: [id])
 
   other_request_type    String?
   other_affected_system String?

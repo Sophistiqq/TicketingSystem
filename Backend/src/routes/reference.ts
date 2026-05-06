@@ -7,6 +7,8 @@ import {
   AffectedSystemPlainInputUpdate,
   RequestTypePlainInputCreate,
   RequestTypePlainInputUpdate,
+  HardwareItemPlainInputCreate,
+  HardwareItemPlainInputUpdate,
 } from "../../generated/prismabox/barrel";
 import { validator } from "../plugins/authValidator";
 
@@ -162,6 +164,58 @@ export const reference = new Elysia({ prefix: "/reference" })
     if (!existing) return status(404, { message: "Request type not found" });
 
     await prisma.requestType.update({
+      where: { id: params.id },
+      data: { is_active: false },
+    });
+    return status(204);
+  }, {
+    params: t.Object({ id: t.Numeric() }),
+    hasRole: ["admin"],
+  })
+
+  // ============================================================
+  // HARDWARE ITEMS
+  // ============================================================
+  .get("/hardware-items", async ({ status }) => {
+    const items = await prisma.hardwareItem.findMany({
+      where: { is_active: true },
+      orderBy: { name: "asc" },
+    });
+    return status(200, items);
+  })
+
+  .post("/hardware-items", async ({ body, status }) => {
+    const item = await prisma.hardwareItem.create({ data: body });
+    return status(201, item);
+  }, {
+    body: HardwareItemPlainInputCreate,
+    hasRole: ["admin"],
+  })
+
+  .put("/hardware-items/:id", async ({ params, body, status }) => {
+    const existing = await prisma.hardwareItem.findUnique({
+      where: { id: params.id },
+    });
+    if (!existing) return status(404, { message: "Hardware item not found" });
+
+    const item = await prisma.hardwareItem.update({
+      where: { id: params.id },
+      data: body,
+    });
+    return status(200, item);
+  }, {
+    params: t.Object({ id: t.Numeric() }),
+    body: HardwareItemPlainInputUpdate,
+    hasRole: ["admin"],
+  })
+
+  .delete("/hardware-items/:id", async ({ params, status }) => {
+    const existing = await prisma.hardwareItem.findUnique({
+      where: { id: params.id },
+    });
+    if (!existing) return status(404, { message: "Hardware item not found" });
+
+    await prisma.hardwareItem.update({
       where: { id: params.id },
       data: { is_active: false },
     });

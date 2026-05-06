@@ -302,6 +302,17 @@ async function handleFieldUpdates(
     updateData.affected_system_id = body.affected_system_id;
   }
 
+  if (body.hardware_item_id !== undefined && body.hardware_item_id !== ticket.hardware_item_id) {
+    await createAuditLog(
+      ticketId,
+      userId,
+      "hardware_item_changed",
+      ticket.hardware_item_id?.toString() ?? "none",
+      body.hardware_item_id?.toString() ?? "none",
+    );
+    updateData.hardware_item_id = body.hardware_item_id;
+  }
+
   // Free-text "other" overrides - staff only to prevent requester abuse
   const isStaff = roles?.includes("admin") || roles?.includes("mis");
   if (isStaff) {
@@ -434,6 +445,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
         assignee: { omit: { password: true } },
         request_type: { select: { id: true, name: true, department_id: true } },
         affected_system: { select: { id: true, name: true, department_id: true } },
+        hardware_item: true,
         approvers: { include: { approver: { omit: { password: true } } } },
         attachments: true,
         resolution_attempts: { include: { handled_by: { omit: { password: true } } } },
@@ -549,6 +561,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
           requester_id: user,
           request_type_id: requestTypeId,
           affected_system_id: affectedSystemId,
+          hardware_item_id: body.hardware_item_id,
           department_id: departmentId,
           requires_approval: requiresApproval,
           status: requiresApproval ? "pending_approval" : "open",
@@ -561,6 +574,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
           requester: { omit: { password: true } },
           request_type: true,
           affected_system: true,
+          hardware_item: true,
           department: true,
         },
       });
@@ -619,6 +633,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
       priority: t.Optional(t.String()),
       request_type_id: t.Optional(t.Numeric()),
       affected_system_id: t.Optional(t.Numeric()),
+      hardware_item_id: t.Optional(t.Numeric()),
       department_id: t.Optional(t.Numeric()),
       requires_approval: t.Optional(t.Boolean()),
       due_date: t.Optional(t.String({ format: "date-time" })),
@@ -703,6 +718,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
       department_id: t.Optional(t.Nullable(t.Numeric())),
       request_type_id: t.Optional(t.Nullable(t.Numeric())),
       affected_system_id: t.Optional(t.Nullable(t.Numeric())),
+      hardware_item_id: t.Optional(t.Nullable(t.Numeric())),
       reopen_reason: t.Optional(t.String()),
       resolution_notes: t.Optional(t.String()),
       due_date: t.Optional(t.Nullable(t.String({ format: "date-time" }))),

@@ -59,6 +59,13 @@ export type RequestType = {
   department_id?: number | null;
 };
 
+export type HardwareItem = {
+  id: number;
+  name: string;
+  description?: string;
+  is_active: boolean;
+};
+
 // ── Users ───────────────────────────────────────────────────
 
 export type User = {
@@ -111,6 +118,8 @@ export type Ticket = {
   other_request_type?: string | null;
   other_affected_system?: string | null;
   other_department?: string | null;
+  hardware_item_id?: number | null;
+  hardware_item?: HardwareItem | null;
   approvers?: TicketApprover[];
   attachments?: Attachment[];
   comments?: TicketComment[];

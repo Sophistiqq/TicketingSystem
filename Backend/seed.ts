@@ -98,6 +98,36 @@ async function main() {
   ]);
   console.log(`  ✓ ${requestTypes.length} request types`);
 
+  // ── Hardware Items ──
+  const hardwareItems = await Promise.all([
+    prisma.hardwareItem.upsert({
+      where: { name: "Printer" },
+      update: {},
+      create: { name: "Printer", description: "Office printers and copiers" },
+    }),
+    prisma.hardwareItem.upsert({
+      where: { name: "Monitor" },
+      update: {},
+      create: { name: "Monitor", description: "Display monitors and screens" },
+    }),
+    prisma.hardwareItem.upsert({
+      where: { name: "Desktop" },
+      update: {},
+      create: { name: "Desktop", description: "Desktop computer units" },
+    }),
+    prisma.hardwareItem.upsert({
+      where: { name: "Laptop" },
+      update: {},
+      create: { name: "Laptop", description: "Company laptops and notebooks" },
+    }),
+    prisma.hardwareItem.upsert({
+      where: { name: "Others" },
+      update: {},
+      create: { name: "Others", description: "Other hardware equipment" },
+    }),
+  ]);
+  console.log(`  ✓ ${hardwareItems.length} hardware items`);
+
   // ── Users ──
   const hashedPassword = await Bun.password.hash("password123");
 

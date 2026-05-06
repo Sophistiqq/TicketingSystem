@@ -13,6 +13,7 @@
     getDepartments,
     getAffectedSystems,
     getRequestTypes,
+    getHardwareItems,
     fetchReferenceData,
   } from "../../stores/reference.svelte";
   import type { Ticket, TicketComment, User } from "../../lib/types";
@@ -69,6 +70,7 @@
   let editDepartmentId = $state<number | null>(null);
   let editRequestTypeId = $state<number | null>(null);
   let editAffectedSystemId = $state<number | null>(null);
+  let editHardwareItemId = $state<number | null>(null);
   let editDueDate = $state("");
   let editOtherRequestType = $state("");
   let editOtherAffectedSystem = $state("");
@@ -113,6 +115,7 @@
   let systems = $derived(getAffectedSystems());
   let requestTypes = $derived(getRequestTypes());
   let departments = $derived(getDepartments());
+  let hardwareItems = $derived(getHardwareItems());
 
   let user = $derived(getCurrentUser());
   let isOwner = $derived(
@@ -177,6 +180,7 @@
     editDepartmentId = ticket.department_id ?? null;
     editRequestTypeId = ticket.request_type_id ?? null;
     editAffectedSystemId = ticket.affected_system_id ?? null;
+    editHardwareItemId = ticket.hardware_item_id ?? null;
     editDueDate = formatForDateTimeLocal(ticket.due_date);
     editOtherRequestType = ticket.other_request_type ?? "";
     editOtherAffectedSystem = ticket.other_affected_system ?? "";
@@ -192,12 +196,15 @@
     if (!ticket || !editTitle.trim() || !editDescription.trim()) return;
     saveLoading = true;
     try {
+      const isHardware = requestTypes.find(t => t.id === editRequestTypeId)?.name === "Hardware Issue";
+
       const body: any = {
         title: editTitle,
         description: editDescription,
         department_id: editDepartmentId,
         request_type_id: editRequestTypeId,
-        affected_system_id: editAffectedSystemId,
+        affected_system_id: isHardware ? null : editAffectedSystemId,
+        hardware_item_id: isHardware ? editHardwareItemId : null,
       };
 
       if (hasRole("admin", "mis")) {
@@ -790,6 +797,18 @@
                     <option value={sys.id}>{sys.name}</option>
                   {/each}
                 </select>
+
+                {#if editRequestTypeId === requestTypes.find(t => t.name === "Hardware Issue")?.id}
+                  <select
+                    class="select select-bordered select-xs h-7 min-h-0 text-[10px] max-w-[150px]"
+                    bind:value={editHardwareItemId}
+                  >
+                    <option value={null}>No Hardware Item</option>
+                    {#each hardwareItems as item}
+                      <option value={item.id}>{item.name}</option>
+                    {/each}
+                  </select>
+                {/if}
 
                 {#if hasRole("admin", "mis")}
                   {#if requestTypes.find((t) => t.id === editRequestTypeId)?.name === "Others"}
@@ -1625,19 +1644,29 @@
                     {/if}
                   </span>
                 </div>
-                <div class="flex items-center justify-between text-[11px]">
-                  <span class="opacity-40 flex items-center gap-1"
-                    ><Monitor size={10} /> System</span
-                  >
-                  <span class="font-medium truncate max-w-[120px]">
-                    {ticket.affected_system?.name ?? "-"}
-                    {#if ticket.other_affected_system}
-                      <span class="opacity-60 italic text-[10px]"
-                        >({ticket.other_affected_system})</span
-                      >
-                    {/if}
-                  </span>
-                </div>
+                {#if ticket.request_type_id === requestTypes.find(t => t.name === "Hardware Issue")?.id}
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="opacity-40 flex items-center gap-1"
+                      ><Monitor size={10} /> Hardware</span>
+                    <span class="font-medium truncate max-w-[120px]">
+                      {ticket.hardware_item?.name ?? "-"}
+                    </span>
+                  </div>
+                {:else}
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="opacity-40 flex items-center gap-1"
+                      ><Monitor size={10} /> System</span
+                    >
+                    <span class="font-medium truncate max-w-[120px]">
+                      {ticket.affected_system?.name ?? "-"}
+                      {#if ticket.other_affected_system}
+                        <span class="opacity-60 italic text-[10px]"
+                          >({ticket.other_affected_system})</span
+                        >
+                      {/if}
+                    </span>
+                  </div>
+                {/if}
                 <div class="flex items-center justify-between text-[11px]">
                   <span class="opacity-40 flex items-center gap-1"
                     ><Building2 size={10} /> Department</span

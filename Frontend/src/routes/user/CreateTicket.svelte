@@ -5,6 +5,7 @@
     getAffectedSystems,
     getRequestTypes,
     getDepartments,
+    getHardwareItems,
   } from "../../stores/reference.svelte";
   import { navigate } from "../../router.svelte";
   import { hasRole } from "../../stores/user.svelte";
@@ -23,6 +24,7 @@
     Upload,
     HelpCircle,
     Calendar,
+    Monitor,
   } from "lucide-svelte";
   import { createTicketTour, startTourIfNeverSeen } from "../../lib/tutorial";
 
@@ -39,6 +41,7 @@
   let other_request_type = $state("");
   let other_affected_system = $state("");
   let other_department = $state("");
+  let hardware_item_id = $state<number | undefined>(undefined);
 
   let files = $state<FileList | null>(null);
   let fileInput = $state<HTMLInputElement | undefined>(undefined);
@@ -50,6 +53,17 @@
   let systems = $derived(getAffectedSystems());
   let requestTypes = $derived(getRequestTypes());
   let departments = $derived(getDepartments());
+  let hardwareOptions = $derived(getHardwareItems());
+
+  let isHardwareIssue = $derived(
+    requestTypes.find((t) => t.id === request_type_id)?.name === "Hardware Issue",
+  );
+
+  $effect(() => {
+    if (isHardwareIssue) {
+      affected_system_id = undefined;
+    }
+  });
 
   let isOtherRequestType = $derived(
     requestTypes.find((t) => t.id === request_type_id)?.name === "Others",
@@ -77,6 +91,7 @@
         other_request_type = parsed.other_request_type || "";
         other_affected_system = parsed.other_affected_system || "";
         other_department = parsed.other_department || "";
+        hardware_item_id = parsed.hardware_item_id;
       } catch {}
     }
   });
@@ -95,6 +110,7 @@
         other_request_type,
         other_affected_system,
         other_department,
+        hardware_item_id,
       }),
     );
   });
@@ -110,7 +126,8 @@
         description,
         priority,
         request_type_id,
-        affected_system_id,
+        affected_system_id: isHardwareIssue ? undefined : affected_system_id,
+        hardware_item_id: isHardwareIssue ? hardware_item_id : undefined,
         department_id,
         requires_approval,
         other_request_type: isOtherRequestType ? other_request_type : undefined,
@@ -299,23 +316,32 @@
           </div>
 
           <div>
-            <SearchableSelect
-              label="Affected System"
-              icon={FileCheckCorner}
-              items={systems}
-              bind:value={affected_system_id}
-              data-tour="ticket-system"
-            />
-            {#if isOtherAffectedSystem}
-              <div class="mt-2 animate-in fade-in slide-in-from-top-1">
-                <input
-                  type="text"
-                  class="input input-bordered input-sm w-full"
-                  placeholder="Specify system name..."
-                  bind:value={other_affected_system}
-                  required
-                />
-              </div>
+            {#if !isHardwareIssue}
+              <SearchableSelect
+                label="Affected System"
+                icon={FileCheckCorner}
+                items={systems}
+                bind:value={affected_system_id}
+                data-tour="ticket-system"
+              />
+              {#if isOtherAffectedSystem}
+                <div class="mt-2 animate-in fade-in slide-in-from-top-1">
+                  <input
+                    type="text"
+                    class="input input-bordered input-sm w-full"
+                    placeholder="Specify system name..."
+                    bind:value={other_affected_system}
+                    required
+                  />
+                </div>
+              {/if}
+            {:else}
+              <SearchableSelect
+                label="Hardware Item"
+                icon={Monitor}
+                items={hardwareOptions}
+                bind:value={hardware_item_id}
+              />
             {/if}
           </div>
 

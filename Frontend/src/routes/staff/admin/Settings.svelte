@@ -6,6 +6,7 @@
     Department,
     AffectedSystem,
     RequestType,
+    HardwareItem,
   } from "../../../lib/types";
   import { simpleConfirm } from "../../../stores/ui.svelte";
   import { Plus, Pencil, Trash2 } from "lucide-svelte";
@@ -14,14 +15,15 @@
   let departments = $state<Department[]>([]);
   let systems = $state<AffectedSystem[]>([]);
   let requestTypes = $state<RequestType[]>([]);
+  let hardwareItems = $state<HardwareItem[]>([]);
   let loading = $state(true);
 
   // Active tab
-  let activeTab = $state<"departments" | "systems" | "types">("departments");
+  let activeTab = $state<"departments" | "systems" | "types" | "hardware">("departments");
 
   // Modal
   let showModal = $state(false);
-  let modalType = $state<"departments" | "systems" | "types">("departments");
+  let modalType = $state<"departments" | "systems" | "types" | "hardware">("departments");
   let editingItem = $state<any>(null);
   let formName = $state("");
   let formDesc = $state("");
@@ -36,7 +38,9 @@
       ? departments
       : activeTab === "systems"
         ? systems
-        : requestTypes,
+        : activeTab === "types"
+          ? requestTypes
+          : hardwareItems,
   );
 
   onMount(() => loadAll());
@@ -44,14 +48,16 @@
   async function loadAll() {
     loading = true;
     try {
-      const [d, s, r] = await Promise.all([
+      const [d, s, r, h] = await Promise.all([
         api.get<Department[]>("/reference/departments"),
         api.get<AffectedSystem[]>("/reference/affected-systems"),
         api.get<RequestType[]>("/reference/request-types"),
+        api.get<HardwareItem[]>("/reference/hardware-items"),
       ]);
       departments = d ?? [];
       systems = s ?? [];
       requestTypes = r ?? [];
+      hardwareItems = h ?? [];
     } catch {
       /* handled */
     }
@@ -63,11 +69,12 @@
       departments: "/reference/departments",
       systems: "/reference/affected-systems",
       types: "/reference/request-types",
+      hardware: "/reference/hardware-items",
     };
     return map[type] ?? "";
   }
 
-  function openCreate(type: "departments" | "systems" | "types") {
+  function openCreate(type: "departments" | "systems" | "types" | "hardware") {
     modalType = type;
     editingItem = null;
     formName = "";
@@ -78,7 +85,7 @@
     showModal = true;
   }
 
-  function openEdit(type: "departments" | "systems" | "types", item: any) {
+  function openEdit(type: "departments" | "systems" | "types" | "hardware", item: any) {
     modalType = type;
     editingItem = item;
     formName = item.name;
@@ -118,7 +125,7 @@
     modalLoading = false;
   }
 
-  async function remove(type: "departments" | "systems" | "types", id: number) {
+  async function remove(type: "departments" | "systems" | "types" | "hardware", id: number) {
     if (!(await simpleConfirm("Delete this item? (soft delete)", true))) return;
     const endpoint = getEndpoint(type);
     await api.delete(`${endpoint}/${id}`);
@@ -131,6 +138,7 @@
       departments: "Departments",
       systems: "Affected Systems",
       types: "Request Types",
+      hardware: "Hardware Items",
     };
     return map[type] ?? type;
   }
@@ -167,6 +175,14 @@
       onclick={() => (activeTab = "types")}
     >
       Request Types ({requestTypes.length})
+    </button>
+    <button
+      role="tab"
+      class="tab"
+      class:tab-active={activeTab === "hardware"}
+      onclick={() => (activeTab = "hardware")}
+    >
+      Hardware Items ({hardwareItems.length})
     </button>
   </div>
 
