@@ -3,7 +3,7 @@
     icon: any;
     label: string;
     value: string | number;
-    color: "primary" | "secondary" | "accent" | "info" | "success" | "warning" | "error";
+    color: "primary" | "secondary" | "accent" | "info" | "success" | "warning" | "error" | "neutral";
     sub?: string;
     pct?: number; // Optional percentage for a progress indicator
   }>();
@@ -15,7 +15,8 @@
     info: "text-info",
     success: "text-success",
     warning: "text-warning",
-    error: "text-error"
+    error: "text-error",
+    neutral: "text-neutral-content"
   };
 
   const bgClasses: Record<string, string> = {
@@ -25,7 +26,8 @@
     info: "bg-info/10 text-info",
     success: "bg-success/10 text-success",
     warning: "bg-warning/10 text-warning",
-    error: "bg-error/10 text-error"
+    error: "bg-error/10 text-error",
+    neutral: "bg-neutral text-neutral-content"
   };
 </script>
 
@@ -36,8 +38,8 @@
     </div>
   </div>
   
-  <div class="stat-title text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-50 truncate">{label}</div>
-  <div class="stat-value text-2xl sm:text-3xl font-black {colorClasses[color]}">{value}</div>
+  <div class="stat-title text-[10px] sm:text-xs lg:text-[11px] xl:text-xs font-bold uppercase tracking-widest opacity-50 leading-tight mb-1">{label}</div>
+  <div class="stat-value text-xl sm:text-2xl xl:text-3xl font-black {colorClasses[color]}">{value}</div>
   
   {#if pct !== undefined}
     <div class="stat-desc mt-2 flex flex-col gap-1.5">

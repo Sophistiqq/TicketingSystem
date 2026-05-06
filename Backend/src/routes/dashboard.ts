@@ -16,14 +16,11 @@ export const dashboard = new Elysia({ prefix: "/dashboard" })
 
     const deptParam = department_id ? { department_id } : {};
     
-    // Base filter for general stats (respects department filter if provided)
+    // Base filter for general stats
     const baseWhere: any = { ...deptParam };
-    
-    // For regular users, they only see their own tickets in general stats? 
-    // Looking at the original Dashboard.svelte, it seems 'totalOpen' etc was global or filtered by department.
-    // However, the 'tickets' list (Recent Tickets) in the original code used `/tickets/` which 
-    // is filtered by requester_id for regular users in Backend/src/routes/tickets.ts.
-    // Let's replicate that logic here for consistency.
+    if (!isAdminOrMis && !isApprover) {
+      baseWhere.requester_id = user;
+    }
 
     const listWhere: any = { ...deptParam };
     if (!isAdminOrMis && !roles?.includes("approver")) {
@@ -84,6 +81,8 @@ export const dashboard = new Elysia({ prefix: "/dashboard" })
         } 
       }),
       prisma.ticket.count({ where: { ...baseWhere, status: "resolved" } }),
+      prisma.ticket.count({ where: { ...baseWhere, status: "closed" } }),
+      prisma.ticket.count({ where: { ...baseWhere } }),
     ];
 
     let pendingApprovalsQuery = Promise.resolve([]);
@@ -108,8 +107,8 @@ export const dashboard = new Elysia({ prefix: "/dashboard" })
 
     let extraStatsQueries: Promise<number>[] = [];
     if (isAdminOrMis) {
-      // Assigned to me
-      extraStatsQueries.push(prisma.ticket.count({ where: { assignee_id: user } }));
+      // Assigned to me (active only)
+      extraStatsQueries.push(prisma.ticket.count({ where: { assignee_id: user, status: { notIn: ["resolved", "closed"] } } }));
       
       // Department unassigned
       const userRecord = await prisma.user.findUnique({
@@ -130,6 +129,41 @@ export const dashboard = new Elysia({ prefix: "/dashboard" })
       }
     }
 
+    // Analytics Data Queries
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const trendsQuery = prisma.ticket.findMany({
+      where: {
+        ...baseWhere,
+        OR: [
+          { created_at: { gte: thirtyDaysAgo } },
+          { completed_at: { gte: thirtyDaysAgo } }
+        ]
+      },
+      select: {
+        created_at: true,
+        completed_at: true,
+        status: true
+      }
+    });
+
+    const byTypeQuery = prisma.ticket.groupBy({
+      by: ['request_type_id'],
+      where: baseWhere,
+      _count: { id: true }
+    });
+
+    const byPriorityQuery = prisma.ticket.groupBy({
+      by: ['priority'],
+      where: baseWhere,
+      _count: { id: true }
+    });
+
+    const requestTypesQuery = prisma.requestType.findMany({
+      select: { id: true, name: true }
+    });
+
     // Execute everything in parallel
     const [
       recentTickets,
@@ -139,19 +173,63 @@ export const dashboard = new Elysia({ prefix: "/dashboard" })
       totalInProgress,
       totalOverdue,
       totalResolved,
+      totalClosed,
+      totalAll,
       pendingApprovals,
-      extraStats
+      extraStats,
+      trends,
+      byType,
+      byPriority,
+      requestTypes
     ] = await Promise.all([
       recentTicketsQuery,
       unratedTicketsQuery,
       activeUsersQuery,
       ...statsQueries,
       pendingApprovalsQuery,
-      Promise.all(extraStatsQueries)
+      Promise.all(extraStatsQueries),
+      trendsQuery,
+      byTypeQuery,
+      byPriorityQuery,
+      requestTypesQuery
     ]);
 
     // Format active users (same as messages/active)
     const formattedActiveUsers = (activeUsers as any[]).filter(u => u.id !== user);
+
+    // Process trends
+    const trendsMap: Record<string, { new: number, resolved: number }> = {};
+    for (let i = 0; i <= 30; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      trendsMap[d.toISOString().split('T')[0]] = { new: 0, resolved: 0 };
+    }
+
+    for (const t of trends) {
+      const createdDate = t.created_at.toISOString().split('T')[0];
+      if (trendsMap[createdDate]) trendsMap[createdDate].new++;
+      
+      if (t.completed_at) {
+        const resolvedDate = t.completed_at.toISOString().split('T')[0];
+        if (trendsMap[resolvedDate]) trendsMap[resolvedDate].resolved++;
+      }
+    }
+
+    const trendsList = Object.entries(trendsMap)
+      .map(([date, counts]) => ({ date, ...counts }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Process distribution
+    const typeMap = Object.fromEntries(requestTypes.map(rt => [rt.id, rt.name]));
+    const byTypeList = byType.map(bt => ({
+      name: bt.request_type_id ? (typeMap[bt.request_type_id] || "Other") : "Uncategorized",
+      count: bt._count.id
+    }));
+
+    const byPriorityList = byPriority.map(bp => ({
+      name: bp.priority.charAt(0).toUpperCase() + bp.priority.slice(1),
+      count: bp._count.id
+    }));
 
     return {
       tickets: recentTickets,
@@ -163,10 +241,17 @@ export const dashboard = new Elysia({ prefix: "/dashboard" })
         totalInProgress,
         totalOverdue,
         totalResolved,
+        totalClosed,
+        totalAll,
         totalAssignedToMe: extraStats[0] || 0,
         totalDepartmentUnassigned: extraStats[1] || 0,
         totalUnrated: unratedTickets.length,
         totalPendingApprovals: pendingApprovals.length,
+      },
+      analytics: {
+        trends: trendsList,
+        byType: byTypeList,
+        byPriority: byPriorityList
       }
     };
   }, {

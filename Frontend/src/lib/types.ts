@@ -284,9 +284,16 @@ export type DashboardSummary = {
     totalInProgress: number;
     totalOverdue: number;
     totalResolved: number;
+    totalClosed: number;
+    totalAll: number;
     totalAssignedToMe: number;
     totalDepartmentUnassigned: number;
     totalUnrated: number;
     totalPendingApprovals: number;
+  };
+  analytics: {
+    trends: { date: string; new: number; resolved: number }[];
+    byType: { name: string; count: number }[];
+    byPriority: { name: string; count: number }[];
   };
 };
