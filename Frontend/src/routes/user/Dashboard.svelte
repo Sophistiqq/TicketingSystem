@@ -6,6 +6,7 @@
     PaginatedResponse,
     TicketApprover,
     User,
+    DashboardSummary,
   } from "../../lib/types";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
   import TicketTable from "../../components/TicketTable.svelte";
@@ -59,72 +60,26 @@
     loading = true;
     try {
       const deptParam = departmentId ? `&department_id=${departmentId}` : "";
-
-      // Fetch recent tickets
-      const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/?page=1&limit=10&sort=${dashboardSort}&order=${dashboardOrder}${deptParam}`,
+      
+      const res = await api.get<DashboardSummary>(
+        `/dashboard/summary?sort=${dashboardSort}&order=${dashboardOrder}${deptParam}`,
       );
+
       if (res) {
-        tickets = res.data;
+        tickets = res.tickets;
+        unratedTickets = res.unratedTickets;
+        activeUsers = res.activeUsers;
+        pendingApprovals = res.pendingApprovals;
+        
+        totalOpen = res.stats.totalOpen;
+        totalInProgress = res.stats.totalInProgress;
+        totalOverdue = res.stats.totalOverdue;
+        totalResolved = res.stats.totalResolved;
+        totalAssignedToMe = res.stats.totalAssignedToMe;
+        totalDepartmentUnassigned = res.stats.totalDepartmentUnassigned;
+        totalUnrated = res.stats.totalUnrated;
+        totalPendingApprovals = res.stats.totalPendingApprovals;
       }
-
-      // Fetch unrated tickets (those needing CSAT)
-      api.get<Ticket[]>("/csat/unrated").then((res) => {
-        if (res) {
-          unratedTickets = res;
-          totalUnrated = res.length;
-        }
-      });
-
-      // Get accurate counts from filtered queries
-      const queries = [
-        api.get<PaginatedResponse<Ticket>>(
-          `/tickets/?status=open&limit=1${deptParam}`,
-        ),
-        api.get<PaginatedResponse<Ticket>>(
-          `/tickets/?status=in_progress&limit=1${deptParam}`,
-        ),
-        api.get<PaginatedResponse<Ticket>>(
-          `/tickets/?overdue=true&limit=1${deptParam}`,
-        ),
-        api.get<PaginatedResponse<Ticket>>(
-          `/tickets/?status=resolved&limit=1${deptParam}`,
-        ),
-      ];
-
-      // If staff, also check assigned to me
-      if (hasRole("admin", "mis")) {
-        queries.push(
-          api.get<PaginatedResponse<Ticket>>(
-            `/tickets/?assignee_id=${user?.id}&limit=1`,
-          ),
-        );
-
-        // Also check unassigned in my department
-        if (user?.department_id) {
-          const url = new URL(`${API_BASE}/tickets/`);
-          url.searchParams.append(
-            "department_id",
-            user.department_id.toString(),
-          );
-          url.searchParams.append("status", "open");
-          url.searchParams.append("limit", "1");
-          // Omitted assignee_id entirely to represent "unassigned" as the backend logic expects
-          queries.push(
-            api.get<PaginatedResponse<Ticket>>(
-              url.pathname + "?" + url.searchParams.toString(),
-            ),
-          );
-        }
-      }
-
-      const results = await Promise.all(queries);
-      if (results[0]) totalOpen = results[0].pagination.total;
-      if (results[1]) totalInProgress = results[1].pagination.total;
-      if (results[2]) totalOverdue = results[2].pagination.total;
-      if (results[3]) totalResolved = results[3].pagination.total;
-      if (results[4]) totalAssignedToMe = results[4].pagination.total;
-      if (results[5]) totalDepartmentUnassigned = results[5].pagination.total;
     } catch {
       // handled
     } finally {
@@ -144,20 +99,6 @@
 
   onMount(async () => {
     await loadDashboardData();
-
-    // Fetch active users for messaging
-    api.get<User[]>("/messages/active").then((res) => {
-      if (res) activeUsers = res;
-    });
-
-    // If approver, get pending approvals
-    if (hasRole("approver", "admin")) {
-      const appRes = await api.get<TicketApprover[]>("/approvals/my/pending");
-      if (appRes) {
-        pendingApprovals = appRes;
-        totalPendingApprovals = appRes.length;
-      }
-    }
   });
 
   $effect(() => {

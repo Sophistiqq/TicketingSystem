@@ -28,7 +28,8 @@ export type NotificationType =
   | 'ticket_resolved'
   | 'ticket_reopened'
   | 'escalated'
-  | 'comment_added';
+  | 'comment_added'
+  | 'message_received';
 
 export type AttachmentType = 'approval_form' | 'screenshot' | 'document' | 'other';
 
@@ -271,4 +272,21 @@ export type PaginatedResponse<T> = {
 export type LoginResponse = {
   message: string;
   user: User;
+};
+
+export type DashboardSummary = {
+  tickets: Ticket[];
+  unratedTickets: Ticket[];
+  activeUsers: User[];
+  pendingApprovals: TicketApprover[];
+  stats: {
+    totalOpen: number;
+    totalInProgress: number;
+    totalOverdue: number;
+    totalResolved: number;
+    totalAssignedToMe: number;
+    totalDepartmentUnassigned: number;
+    totalUnrated: number;
+    totalPendingApprovals: number;
+  };
 };

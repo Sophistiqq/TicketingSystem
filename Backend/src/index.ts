@@ -17,6 +17,7 @@ import {
   csat,
   comments,
   messages,
+  dashboard,
 } from "./routes";
 
 const PORT = process.env.PORT || 3000;
@@ -74,6 +75,7 @@ const app = new Elysia()
   .use(csat)
   .use(comments)
   .use(messages)
+  .use(dashboard)
   // Serve uploaded files statically
   .get("/uploads/:filename", async ({ params, set }) => {
     const file = Bun.file(`./uploads/${params.filename}`);
