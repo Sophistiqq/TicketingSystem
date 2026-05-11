@@ -55,7 +55,7 @@ self.addEventListener('notificationclick', (event) => {
           return (client as WindowClient).navigate(urlToOpen).then(c => c?.focus())
         }
       }
-      
+
       // 2. Otherwise open a new window
       if (self.clients.openWindow) {
         return self.clients.openWindow(urlToOpen)

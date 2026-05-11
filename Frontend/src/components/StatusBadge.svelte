@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { TicketStatus } from "../lib/types";
 
-  let { status }: { status: TicketStatus } = $props();
+  let { status, suffix }: { status: TicketStatus; suffix?: string } = $props();
 
   const statusMap: Record<TicketStatus, { label: string; class: string }> = {
     open: { label: "Open", class: "badge-info" },
@@ -17,5 +17,5 @@
 </script>
 
 <div class="badge badge-sm whitespace-nowrap inline-flex items-center justify-center shrink-0 {config.class}">
-  {config.label}
+  {config.label}{suffix ? ` (${suffix})` : ""}
 </div>

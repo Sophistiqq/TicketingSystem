@@ -55,6 +55,7 @@
     ShieldCheck,
     X,
     Save,
+    Timer,
   } from "lucide-svelte";
 
 
@@ -585,6 +586,29 @@
     return ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext ?? "");
   }
 
+  function formatDuration(ms: number | undefined): string {
+    if (ms === undefined || ms < 0) return "-";
+    if (ms < 60000) return "< 1m";
+    
+    const minutes = Math.floor(ms / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    return `${minutes}m`;
+  }
+
+  function getWaitTime(t: Ticket | null): number | undefined {
+    if (!t || !t.created_at || !t.started_at) return undefined;
+    return new Date(t.started_at).getTime() - new Date(t.created_at).getTime();
+  }
+
+  function getResolutionTime(t: Ticket | null): number | undefined {
+    if (!t || !t.started_at || !t.completed_at) return undefined;
+    return new Date(t.completed_at).getTime() - new Date(t.started_at).getTime();
+  }
+
   let imageAttachments = $derived(ticket?.attachments?.filter(isImage) ?? []);
   let selectedZoomImage = $state<string | null>(null);
 
@@ -720,7 +744,12 @@
             <span class="badge badge-outline font-mono text-[10px] h-5"
               >#{ticket.id}</span
             >
-            <StatusBadge status={ticket.status} />
+            <StatusBadge 
+              status={ticket.status} 
+              suffix={ticket.completed_at && ticket.started_at && (ticket.status === "resolved" || ticket.status === "closed") 
+                ? formatDuration(getResolutionTime(ticket)) 
+                : undefined} 
+            />
             <PriorityBadge priority={ticket.priority} />
             {#if ticket.reopen_count > 0}
               <span class="badge badge-warning badge-sm gap-1">
@@ -871,6 +900,13 @@
               <div class="flex items-center gap-1 text-success">
                 <CheckCheck size={11} />
                 <span>Resolved {formatDate(ticket.completed_at)}</span>
+              </div>
+            {/if}
+            {#if ticket.started_at}
+              <span>•</span>
+              <div class="flex items-center gap-1">
+                <Timer size={11} />
+                <span>Waited {formatDuration(getWaitTime(ticket))}</span>
               </div>
             {/if}
           </div>
@@ -1689,6 +1725,24 @@
                       class="font-medium {ticket.sla_breached
                         ? 'text-error'
                         : ''}">{formatDateShort(ticket.due_date)}</span>
+                  </div>
+                {/if}
+
+                {#if ticket.started_at}
+                  <div class="pt-2 mt-1 border-t border-base-200 space-y-1.5">
+                    <span class="text-[9px] font-bold uppercase opacity-30 flex items-center gap-1">
+                      <Timer size={9} /> Lifecycle Metrics
+                    </span>
+                    <div class="flex items-center justify-between text-[11px]">
+                      <span class="opacity-40">Queue Time</span>
+                      <span class="font-medium">{formatDuration(getWaitTime(ticket))}</span>
+                    </div>
+                    {#if ticket.completed_at}
+                      <div class="flex items-center justify-between text-[11px]">
+                        <span class="opacity-40">Work Time</span>
+                        <span class="font-medium text-success">{formatDuration(getResolutionTime(ticket))}</span>
+                      </div>
+                    {/if}
                   </div>
                 {/if}
               </div>
