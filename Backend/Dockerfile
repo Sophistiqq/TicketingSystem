@@ -25,6 +25,11 @@ COPY --from=builder /app/server .
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/package.json .
 
+# Copy bun + prisma CLI from builder so we can run migrations at runtime
+COPY --from=builder /root/.bun /root/.bun
+COPY --from=builder /app/node_modules ./node_modules
+ENV PATH="/root/.bun/bin:$PATH"
+
 # Expose the backend port
 EXPOSE 3000
 
