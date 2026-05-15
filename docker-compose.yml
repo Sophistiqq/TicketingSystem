@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ticketing-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ticketing_system}
+    ports:
+      - "3003:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: ticketing-backend
+    restart: always
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ticketing_system}?schema=public
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
+      JWT_SECRET: ${JWT_SECRET:-your_jwt_secret_here}
+      NODE_ENV: production
+      PORT: 3000
+      TZ: Asia/Manila
+      VAPID_CONTACT: ${VAPID_CONTACT}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+    ports:
+      - "3002:3000"
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3002}
+    container_name: ticketing-frontend
+    restart: always
+    ports:
+      - "3001:80"
+
+volumes:
+  postgres_data:
