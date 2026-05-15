@@ -15,8 +15,6 @@ COPY . .
 # Generate Prisma client and build the self-contained binary
 RUN bun run build
 
-RUN bun run migrate:deploy
-
 # Runtime stage
 FROM oven/bun:1-slim
 
@@ -31,4 +29,4 @@ COPY --from=builder /app/package.json .
 EXPOSE 3000
 
 # Start command: Run migrations then start the server
-CMD ["sh", "-c", "./server"]
+CMD ["sh", "-c", "bunx prisma migrate deploy && ./server"]
