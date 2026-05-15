@@ -34,4 +34,4 @@ ENV PATH="/root/.bun/bin:$PATH"
 EXPOSE 3000
 
 # Start command: Run migrations then start the server
-CMD ["sh", "-c", "bunx prisma migrate deploy && ./server"]
+CMD ["sh", "-c", "bun run prisma migrate deploy && ./server"]
