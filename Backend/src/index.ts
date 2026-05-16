@@ -18,6 +18,7 @@ import {
   comments,
   messages,
   dashboard,
+  reports,
 } from "./routes";
 
 const PORT = process.env.PORT || 3000;
@@ -76,6 +77,7 @@ const app = new Elysia()
   .use(comments)
   .use(messages)
   .use(dashboard)
+  .use(reports)
   // Serve uploaded files statically
   .get("/uploads/:filename", async ({ params, set }) => {
     const file = Bun.file(`./uploads/${params.filename}`);
