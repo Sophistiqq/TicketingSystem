@@ -13,6 +13,7 @@
     Shield,
     X,
     UserPlus,
+    Users,
     ClipboardList,
     ChevronUp,
     ChevronDown,
@@ -197,11 +198,16 @@
 
 <div class="flex flex-col gap-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <h1 class="text-3xl font-bold">User Management</h1>
-      <p class="text-sm opacity-60 mt-1">{pagination.total} users</p>
+    <div class="flex flex-col">
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          <Users size={18} />
+        </div>
+        <h1 class="text-3xl font-bold tracking-tight">User Management</h1>
+      </div>
+      <p class="text-xs opacity-60 font-medium">{pagination.total} registered users in the system.</p>
     </div>
-    <button class="btn btn-primary gap-2" onclick={openCreate}>
+    <button class="btn btn-primary gap-2 shadow-lg shadow-primary/20" onclick={openCreate}>
       <UserPlus size={18} /> Add User
     </button>
   </div>

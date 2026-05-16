@@ -212,32 +212,32 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Date From -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-date-from">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Date From</span>
           </label>
           <div class="relative">
             <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={14} />
-            <input type="date" class="input input-bordered input-sm w-full pl-9" bind:value={dateFrom} />
+            <input id="rep-date-from" type="date" class="input input-bordered input-sm w-full pl-9" bind:value={dateFrom} />
           </div>
         </div>
 
         <!-- Date To -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-date-to">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Date To</span>
           </label>
           <div class="relative">
             <Calendar class="absolute left-3 top-1/2 -translate-y-1/2 opacity-30" size={14} />
-            <input type="date" class="input input-bordered input-sm w-full pl-9" bind:value={dateTo} />
+            <input id="rep-date-to" type="date" class="input input-bordered input-sm w-full pl-9" bind:value={dateTo} />
           </div>
         </div>
 
         <!-- Status -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-status">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Status</span>
           </label>
-          <select class="select select-bordered select-sm w-full" bind:value={status}>
+          <select id="rep-status" class="select select-bordered select-sm w-full" bind:value={status}>
             <option value="">All Statuses</option>
             <option value="open">Open</option>
             <option value="in_progress">In Progress</option>
@@ -251,10 +251,10 @@
 
         <!-- Priority -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-priority">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Priority</span>
           </label>
-          <select class="select select-bordered select-sm w-full" bind:value={priority}>
+          <select id="rep-priority" class="select select-bordered select-sm w-full" bind:value={priority}>
             <option value="">All Priorities</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -265,10 +265,10 @@
 
         <!-- Department -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-dept">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Department</span>
           </label>
-          <select class="select select-bordered select-sm w-full" bind:value={departmentId}>
+          <select id="rep-dept" class="select select-bordered select-sm w-full" bind:value={departmentId}>
             <option value="">All Departments</option>
             {#each departments as dept}
               <option value={dept.id}>{dept.name}</option>
@@ -278,10 +278,10 @@
 
         <!-- Request Type -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-type">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Request Type</span>
           </label>
-          <select class="select select-bordered select-sm w-full" bind:value={requestTypeId}>
+          <select id="rep-type" class="select select-bordered select-sm w-full" bind:value={requestTypeId}>
             <option value="">All Types</option>
             {#each requestTypes as type}
               <option value={type.id}>{type.name}</option>
@@ -291,10 +291,10 @@
 
         <!-- Assignee -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-assignee">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Assignee</span>
           </label>
-          <select class="select select-bordered select-sm w-full" bind:value={assigneeId}>
+          <select id="rep-assignee" class="select select-bordered select-sm w-full" bind:value={assigneeId}>
             <option value="">All Staff</option>
             {#each assignees as staff}
               <option value={staff.id}>{staff.first_name} {staff.last_name}</option>
@@ -304,10 +304,10 @@
 
         <!-- Requester -->
         <div class="form-control w-full">
-          <label class="label py-1">
+          <label class="label py-1" for="rep-requester">
             <span class="label-text text-[10px] font-bold uppercase opacity-60">Requester</span>
           </label>
-          <select class="select select-bordered select-sm w-full" bind:value={requesterId}>
+          <select id="rep-requester" class="select select-bordered select-sm w-full" bind:value={requesterId}>
             <option value="">All Requesters</option>
             {#each requesters as req}
               <option value={req.id}>{req.first_name} {req.last_name} (@{req.username})</option>

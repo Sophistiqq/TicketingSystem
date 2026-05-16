@@ -13,7 +13,7 @@ precacheAndRoute(self.__WB_MANIFEST)
 self.addEventListener('push', (event) => {
   if (event.data) {
     const data = event.data.json()
-    const options: NotificationOptions = {
+    const options: any = {
       body: data.body,
       icon: '/icon.png',
       badge: '/icon.png',

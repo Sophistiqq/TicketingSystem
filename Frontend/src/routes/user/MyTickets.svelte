@@ -6,7 +6,7 @@
   import TicketTable from "../../components/TicketTable.svelte";
   import Pagination from "../../components/Pagination.svelte";
   import { hasRole } from "../../stores/user.svelte";
-  import { Plus, Search } from "lucide-svelte";
+  import { Plus, Search, ListTodo } from "lucide-svelte";
   import { getCurrentUser } from "../../stores/user.svelte";
   import { route, navigate } from "../../router.svelte";
 
@@ -211,11 +211,16 @@
 
 <div class="flex flex-col gap-6">
   <div class="flex flex-wrap items-center justify-between gap-4">
-    <div>
-      <h1 class="text-3xl font-bold">My Tickets</h1>
-      <p class="text-sm opacity-60 mt-1">Track your requests and assignments</p>
+    <div class="flex flex-col">
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          <ListTodo size={18} />
+        </div>
+        <h1 class="text-3xl font-bold tracking-tight">My Tickets</h1>
+      </div>
+      <p class="text-xs opacity-60 font-medium">Track and manage your service requests and assigned tasks.</p>
     </div>
-    <a href="/tickets/new" class="btn btn-primary gap-2">
+    <a href="/tickets/new" class="btn btn-primary gap-2 shadow-lg shadow-primary/20">
       <Plus size={18} /> New Ticket
     </a>
   </div>

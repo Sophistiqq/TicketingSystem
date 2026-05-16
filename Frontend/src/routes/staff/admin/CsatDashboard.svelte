@@ -49,10 +49,15 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div>
-    <h1 class="text-3xl font-bold">CSAT Dashboard</h1>
-    <p class="text-sm opacity-60 mt-1">
-      Advanced Customer Satisfaction Analytics
+  <div class="flex flex-col">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        <Star size={18} />
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight">CSAT Dashboard</h1>
+    </div>
+    <p class="text-xs opacity-60 font-medium max-w-2xl">
+      Customer satisfaction analytics and agent performance metrics based on user feedback.
     </p>
   </div>
 

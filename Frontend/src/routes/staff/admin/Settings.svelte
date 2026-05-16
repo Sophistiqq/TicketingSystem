@@ -9,7 +9,7 @@
     HardwareItem,
   } from "../../../lib/types";
   import { simpleConfirm } from "../../../stores/ui.svelte";
-  import { Plus, Pencil, Trash2 } from "lucide-svelte";
+  import { Plus, Pencil, Trash2, Settings } from "lucide-svelte";
 
   // All reference data
   let departments = $state<Department[]>([]);
@@ -145,9 +145,14 @@
 </script>
 
 <div class="flex flex-col gap-6">
-  <div>
-    <h1 class="text-3xl font-bold">Management</h1>
-    <p class="text-sm opacity-60 mt-1">Manage reference data for dropdowns</p>
+  <div class="flex flex-col">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        <Settings size={18} />
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight">Management</h1>
+    </div>
+    <p class="text-xs opacity-60 font-medium max-w-2xl">Manage core system reference data, including departments, request types, and hardware inventory.</p>
   </div>
 
   <!-- Tabs -->

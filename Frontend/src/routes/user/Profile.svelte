@@ -109,11 +109,14 @@
 </script>
 
 <div class="max-w-2xl mx-auto flex flex-col gap-6">
-  <div>
-    <h1 class="text-3xl font-bold">My Profile</h1>
-    <p class="text-sm opacity-60 mt-1">
-      Manage your account information and password
-    </p>
+  <div class="flex flex-col">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        <UserIcon size={18} />
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight">My Profile</h1>
+    </div>
+    <p class="text-xs opacity-60 font-medium">Manage your personal information, security settings, and preferences.</p>
   </div>
 
   {#if error}

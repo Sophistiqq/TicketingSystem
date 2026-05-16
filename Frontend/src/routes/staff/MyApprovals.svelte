@@ -61,10 +61,15 @@
 </script>
 
 <div class="flex flex-col gap-6 max-w-5xl mx-auto w-full px-4">
-  <div>
-    <h1 class="text-3xl font-bold">My Approvals</h1>
-    <p class="text-sm opacity-60 mt-1 text-primary">
-      Tickets awaiting your authorization
+  <div class="flex flex-col">
+    <div class="flex items-center gap-3 mb-1">
+      <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+        <ClipboardCheck size={18} />
+      </div>
+      <h1 class="text-3xl font-bold tracking-tight">My Approvals</h1>
+    </div>
+    <p class="text-xs opacity-60 font-medium max-w-2xl">
+      Manage pending authorizations and review ticket requests requiring your approval.
     </p>
   </div>
 
