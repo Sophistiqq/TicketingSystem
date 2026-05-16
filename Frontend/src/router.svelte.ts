@@ -29,6 +29,7 @@ import MyApprovals from './routes/staff/MyApprovals.svelte';
 import Users from './routes/staff/admin/Users.svelte';
 import AuditLog from './routes/staff/admin/AuditLog.svelte';
 import CsatDashboard from './routes/staff/admin/CsatDashboard.svelte';
+import Reports from './routes/staff/admin/Reports.svelte';
 import Settings from './routes/staff/admin/Settings.svelte';
 
 const PUBLIC_ROUTES = ['/login', '/register'];
@@ -85,6 +86,7 @@ export const { p, navigate, isActive, route } = createRouter({
   '/admin/users': Users,
   '/admin/audit': AuditLog,
   '/admin/csat': CsatDashboard,
+  '/admin/reports': Reports,
   '/admin/management': Settings,
 
   // ── Fallback ────────────────────────────────────────────

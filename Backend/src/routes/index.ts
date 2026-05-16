@@ -9,3 +9,4 @@ export { csat } from "./csat";
 export { comments } from "./comments";
 export { messages } from "./messages";
 export { dashboard } from "./dashboard";
+export { reports } from "./reports";

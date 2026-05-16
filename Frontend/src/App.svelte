@@ -28,6 +28,7 @@
     Users,
     ScrollText,
     Star,
+    BarChart3,
     Settings,
     LogOut,
     Menu,
@@ -109,6 +110,7 @@
       roles: ["admin", "mis"],
     },
     { icon: Star, label: "CSAT", href: "/admin/csat", roles: ["admin", "mis"] },
+    { icon: BarChart3, label: "Reports", href: "/admin/reports", roles: ["admin", "mis"] },
     {
       icon: Settings,
       label: "Management",
