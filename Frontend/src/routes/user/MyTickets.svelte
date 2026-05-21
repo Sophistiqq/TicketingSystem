@@ -19,6 +19,7 @@
   let statusFilter = $state("");
   let priorityFilter = $state("");
   let overdueOnly = $state(false);
+  let unratedOnly = $state(false);
 
   // Sync state with URL on navigation/mount
   $effect(() => {
@@ -31,6 +32,7 @@
       statusFilter = q.get("status") || "";
       priorityFilter = q.get("priority") || "";
       overdueOnly = q.get("overdue") === "true";
+      unratedOnly = q.get("unrated") === "true";
 
       // Trigger loads based on active tab
       loadCurrentTab(1, false);
@@ -67,6 +69,7 @@
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (overdueOnly) params.set("overdue", "true");
+    if (unratedOnly) params.set("unrated", "true");
 
     const qs = params.toString();
     const currentQs = window.location.search.replace(/^\?/, "");
@@ -95,6 +98,7 @@
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (overdueOnly) params.set("overdue", "true");
+    if (unratedOnly) params.set("unrated", "true");
 
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
@@ -122,6 +126,7 @@
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (overdueOnly) params.set("overdue", "true");
+    if (unratedOnly) params.set("unrated", "true");
 
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
@@ -149,6 +154,7 @@
     if (statusFilter) params.set("status", statusFilter);
     if (priorityFilter) params.set("priority", priorityFilter);
     if (overdueOnly) params.set("overdue", "true");
+    if (unratedOnly) params.set("unrated", "true");
 
     try {
       const res = await api.get<PaginatedResponse<Ticket>>(
@@ -330,6 +336,18 @@
               onchange={() => loadCurrentTab(1)}
             />
             SLA Breached
+          </label>
+
+          <label
+            class="label cursor-pointer gap-2 text-xs font-bold uppercase tracking-wider opacity-70"
+          >
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-warning"
+              bind:checked={unratedOnly}
+              onchange={() => loadCurrentTab(1)}
+            />
+            Unrated
           </label>
 
           <!-- Mobile-only filters dropdown (optional but clean) -->

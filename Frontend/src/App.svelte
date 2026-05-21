@@ -145,7 +145,9 @@
     if (drawerOpen) {
       drawerOpen = false;
       if (window.location.hash === "#drawer") {
-        window.history.back();
+        const url = new URL(window.location.href);
+        url.hash = "";
+        window.history.replaceState(null, "", url.toString());
       }
     }
   }

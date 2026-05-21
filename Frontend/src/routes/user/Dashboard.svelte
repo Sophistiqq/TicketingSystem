@@ -185,7 +185,10 @@
         {/if}
 
         {#if totalUnrated > 0}
-          <div
+          <a
+            href="/my-tickets?tab={hasRole('admin', 'mis')
+              ? 'all'
+              : 'requested'}&unrated=true"
             class="flex items-center gap-4 p-4 bg-warning/10 border border-warning/20 rounded-2xl hover:bg-warning/15 transition-all group"
           >
             <div
@@ -201,7 +204,7 @@
                 Unrated Resolutions
               </div>
             </div>
-          </div>
+          </a>
         {/if}
       </div>
     </div>
