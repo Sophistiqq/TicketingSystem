@@ -15,7 +15,7 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   rejected: ["open"],
 };
 
-// Helpers 
+// Helpers
 
 async function createAuditLog(
   ticketId: number,
@@ -37,7 +37,7 @@ async function createAuditLog(
   });
 }
 
-// PUT sub-handlers 
+// PUT sub-handlers
 
 /**
  * Validates and applies a status transition.
@@ -324,7 +324,7 @@ async function handleFieldUpdates(
   return updateData;
 }
 
-// Router 
+// Router
 
 export const tickets = new Elysia({ prefix: "/tickets" })
   .use(validator)
@@ -494,65 +494,81 @@ export const tickets = new Elysia({ prefix: "/tickets" })
 
   // Create ticket
   .post("/", async ({ body, user }) => {
-    return await prisma.$transaction(async (tx) => {
-      // 1. Resolve Request Type with fallback
-      let requestTypeId = body.request_type_id;
-      if (!requestTypeId) {
-        const others = await tx.requestType.findUnique({ where: { name: "Others" } });
-        requestTypeId = others?.id;
-      }
-      const requestType = requestTypeId
-        ? await tx.requestType.findUnique({ where: { id: requestTypeId } })
-        : null;
+    // ÄÄ 1. All lookups BEFORE the transaction ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
 
-      // 2. Resolve Affected System with fallback
-      let affectedSystemId = body.affected_system_id;
-      if (!affectedSystemId) {
-        const others = await tx.affectedSystem.findUnique({ where: { name: "Others" } });
-        affectedSystemId = others?.id;
-      }
+    // Resolve Request Type with fallback
+    let requestTypeId = body.request_type_id;
+    if (!requestTypeId) {
+      const others = await prisma.requestType.findUnique({ where: { name: "Others" } });
+      requestTypeId = others?.id;
+    }
 
-      // 3. Resolve Targeted Department (Affected System > Request Type > MIS)
-      let departmentId = body.department_id;
-      if (!departmentId) {
-        const system = affectedSystemId
-          ? await tx.affectedSystem.findUnique({ where: { id: affectedSystemId } })
-          : null;
+    // Resolve Affected System with fallback
+    let affectedSystemId = body.affected_system_id;
+    if (!affectedSystemId) {
+      const others = await prisma.affectedSystem.findUnique({ where: { name: "Others" } });
+      affectedSystemId = others?.id;
+    }
 
-        if (system?.department_id) {
-          departmentId = system.department_id;
-        } else {
-          const rt = requestTypeId
-            ? await tx.requestType.findUnique({ where: { id: requestTypeId } })
-            : null;
-          if (rt?.department_id) {
-            departmentId = rt.department_id;
-          } else {
-            const misDept = await tx.department.findUnique({ where: { name: "MIS" } });
-            departmentId = misDept?.id;
-          }
-        }
-      }
+    // Resolve Targeted Department - parallel lookups where possible
+    let departmentId = body.department_id;
+    if (!departmentId) {
+      const [system, rt] = await Promise.all([
+        affectedSystemId
+          ? prisma.affectedSystem.findUnique({ where: { id: affectedSystemId } })
+          : Promise.resolve(null),
+        requestTypeId
+          ? prisma.requestType.findUnique({ where: { id: requestTypeId } })
+          : Promise.resolve(null),
+      ]);
 
-      // 4. Determine approval & priority
-      const requiresApproval = body.requires_approval ?? requestType?.requires_approval_by_default ?? false;
-      const priority = (body.priority ?? "medium") as any;
+      departmentId =
+        system?.department_id ??
+        rt?.department_id ??
+        (await prisma.department.findUnique({ where: { name: "MIS" } }))?.id;
+    }
 
-      // 5. Auto SLA calculation
-      let dueDate = body.due_date ? new Date(body.due_date) : null;
-      if (!dueDate) {
-        const now = new Date();
-        const slaHours: Record<string, number> = {
-          critical: 4,
-          high: 24,
-          medium: 72,
-          low: 120,
-        };
-        const hours = slaHours[priority] ?? 120;
-        dueDate = new Date(now.getTime() + hours * 60 * 60 * 1000);
-      }
+    const requestType = requestTypeId
+      ? await prisma.requestType.findUnique({ where: { id: requestTypeId } })
+      : null;
 
-      // 6. Create ticket
+    // Determine approval & priority
+    const requiresApproval =
+      body.requires_approval ?? requestType?.requires_approval_by_default ?? false;
+    const priority = (body.priority ?? "medium") as any;
+
+    // Auto SLA calculation
+    let dueDate = body.due_date ? new Date(body.due_date) : null;
+    if (!dueDate) {
+      const slaHours: Record<string, number> = { critical: 4, high: 24, medium: 72, low: 120 };
+      dueDate = new Date(Date.now() + (slaHours[priority] ?? 120) * 3_600_000);
+    }
+
+    // Resolve approver / MIS users in parallel - also before the transaction
+    const [defaultApprover, misUsers] = await Promise.all([
+      requiresApproval
+        ? prisma.user
+          .findFirst({ where: { is_active: true, roles: { some: { role: "approver" } } } })
+          .then(
+            (u) =>
+              u ??
+              prisma.user.findFirst({
+                where: {
+                  is_active: true,
+                  roles: { some: { role: { in: ["admin", "mis"] } } },
+                },
+              }),
+          )
+        : Promise.resolve(null),
+      !requiresApproval
+        ? prisma.user.findMany({
+          where: { roles: { some: { role: "mis" } }, is_active: true },
+        })
+        : Promise.resolve([]),
+    ]);
+
+    // ÄÄ 2. Transaction contains ONLY atomic DB writes ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    const ticket = await prisma.$transaction(async (tx) => {
       const ticket = await tx.ticket.create({
         data: {
           title: body.title,
@@ -579,7 +595,6 @@ export const tickets = new Elysia({ prefix: "/tickets" })
         },
       });
 
-      // 7. Initial audit log
       await tx.auditLog.create({
         data: {
           ticket_id: ticket.id,
@@ -590,42 +605,39 @@ export const tickets = new Elysia({ prefix: "/tickets" })
         },
       });
 
-      // 8. Handle approvers
-      if (requiresApproval) {
-        const defaultApprover =
-          (await tx.user.findFirst({
-            where: { is_active: true, roles: { some: { role: "approver" } } },
-          })) ??
-          (await tx.user.findFirst({
-            where: { is_active: true, roles: { some: { role: { in: ["admin", "mis"] } } } },
-          }));
-
-        if (defaultApprover) {
-          await tx.ticketApprover.create({
-            data: { ticket_id: ticket.id, approver_id: defaultApprover.id, status: "pending" },
-          });
-          await createAndPushNotification(
-            defaultApprover.id,
-            ticket.id,
-            "approval_requested",
-            `New approval request for ticket #${ticket.id}: ${ticket.title}`,
-            tx,
-          );
-        }
-      }
-
-      // 9. Notify MIS if no approval needed
-      if (!requiresApproval) {
-        const misUsers = await tx.user.findMany({
-          where: { roles: { some: { role: "mis" } }, is_active: true },
+      if (requiresApproval && defaultApprover) {
+        await tx.ticketApprover.create({
+          data: { ticket_id: ticket.id, approver_id: defaultApprover.id, status: "pending" },
         });
-        for (const misUser of misUsers) {
-          await createAndPushNotification(misUser.id, ticket.id, "ticket_created", `New ticket created: ${ticket.title}`, tx);
-        }
       }
 
       return ticket;
-    });
+    }); //  transaction commits here, fast
+
+    // ÄÄ 3. Notifications AFTER commit (network I/O outside the transaction) ÄÄ
+    if (requiresApproval && defaultApprover) {
+      await createAndPushNotification(
+        defaultApprover.id,
+        ticket.id,
+        "approval_requested",
+        `New approval request for ticket #${ticket.id}: ${ticket.title}`,
+      );
+    }
+
+    if (!requiresApproval && misUsers.length > 0) {
+      await Promise.all(
+        misUsers.map((misUser) =>
+          createAndPushNotification(
+            misUser.id,
+            ticket.id,
+            "ticket_created",
+            `New ticket created: ${ticket.title}`,
+          ),
+        ),
+      );
+    }
+
+    return ticket;
   }, {
     body: t.Object({
       title: t.String({ minLength: 5 }),
