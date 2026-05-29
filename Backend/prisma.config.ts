@@ -9,9 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
+    url: env("DATABASE_URL") || "file:./database.db",
     adapter: async (env) => {
       return new PrismaLibSql({
-        url: env.DATABASE_URL,
+        url: env.DATABASE_URL || "file:./database.db",
         authToken: env.AUTH_TOKEN,
       });
     },

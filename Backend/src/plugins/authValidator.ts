@@ -10,6 +10,10 @@ if (!process.env.JWT_SECRET) {
 const lastActiveCache = new Map<number, number>();
 const THROTTLE_MS = 60 * 1000; // 1 minute
 
+// Cache for user active status to avoid DB RTT on every request
+const userStatusCache = new Map<number, { active: boolean, timestamp: number }>();
+const STATUS_CACHE_MS = 5 * 60 * 1000; // 5 minutes
+
 export const validator = new Elysia()
   .use(jwt({
     name: "jwt_token",
@@ -26,16 +30,25 @@ export const validator = new Elysia()
       const userId = Number(token.sub)
       if (!Number.isInteger(userId)) return status(400)
 
-      // Verify user is still active
-      const userRecord = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { is_active: true }
-      });
+      // Verify user is still active (with caching)
+      const now = Date.now();
+      const cachedStatus = userStatusCache.get(userId);
+      let isActive = true;
 
-      if (!userRecord || !userRecord.is_active) return status(403, { message: "Account is inactive" });
+      if (cachedStatus && (now - cachedStatus.timestamp < STATUS_CACHE_MS)) {
+        isActive = cachedStatus.active;
+      } else {
+        const userRecord = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { is_active: true }
+        });
+        isActive = userRecord?.is_active ?? false;
+        userStatusCache.set(userId, { active: isActive, timestamp: now });
+      }
+
+      if (!isActive) return status(403, { message: "Account is inactive" });
 
       // Throttle background update of last_active
-      const now = Date.now();
       const lastUpdate = lastActiveCache.get(userId) || 0;
 
       if (now - lastUpdate > THROTTLE_MS) {
@@ -63,13 +76,23 @@ export const validator = new Elysia()
       const userId = Number(token.sub)
       if (!Number.isInteger(userId)) return status(400)
 
-      // Verify user is still active
-      const userRecord = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { is_active: true }
-      });
+      // Verify user is still active (with caching)
+      const now = Date.now();
+      const cachedStatus = userStatusCache.get(userId);
+      let isActive = true;
 
-      if (!userRecord || !userRecord.is_active) return status(403, { message: "Account is inactive" });
+      if (cachedStatus && (now - cachedStatus.timestamp < STATUS_CACHE_MS)) {
+        isActive = cachedStatus.active;
+      } else {
+        const userRecord = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { is_active: true }
+        });
+        isActive = userRecord?.is_active ?? false;
+        userStatusCache.set(userId, { active: isActive, timestamp: now });
+      }
+
+      if (!isActive) return status(403, { message: "Account is inactive" });
 
       const userRoles = token.roles as string[]
       const required = Array.isArray(role) ? role : [role]

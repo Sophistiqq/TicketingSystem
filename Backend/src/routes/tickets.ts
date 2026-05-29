@@ -17,6 +17,24 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
 
 // Helpers
 
+function getAuditLogData(
+  ticketId: number,
+  performedById: number,
+  action: string,
+  oldValue: string | null,
+  newValue: string | null,
+  notes?: string,
+) {
+  return {
+    ticket_id: ticketId,
+    performed_by_id: performedById,
+    action,
+    old_value: oldValue,
+    new_value: newValue,
+    notes,
+  };
+}
+
 async function createAuditLog(
   ticketId: number,
   performedById: number,
@@ -26,14 +44,7 @@ async function createAuditLog(
   notes?: string,
 ) {
   await prisma.auditLog.create({
-    data: {
-      ticket_id: ticketId,
-      performed_by_id: performedById,
-      action,
-      old_value: oldValue,
-      new_value: newValue,
-      notes,
-    },
+    data: getAuditLogData(ticketId, performedById, action, oldValue, newValue, notes),
   });
 }
 
@@ -41,7 +52,7 @@ async function createAuditLog(
 
 /**
  * Validates and applies a status transition.
- * Returns { error } on failure, or { updateData } with fields to merge.
+ * Returns { error } on failure, or { updateData, logs } with fields to merge.
  */
 async function handleStatusTransition(
   ticketId: number,
@@ -50,7 +61,7 @@ async function handleStatusTransition(
   body: any,
   userId: number,
   roles: string[] | undefined,
-): Promise<{ error?: { code: number; message: string }; updateData?: Record<string, any> }> {
+): Promise<{ error?: { code: number; message: string }; updateData?: Record<string, any>; logs?: any[] }> {
   const allowedTransitions = STATUS_TRANSITIONS[ticket.status] ?? [];
   if (!allowedTransitions.includes(newStatus)) {
     return {
@@ -90,7 +101,7 @@ async function handleStatusTransition(
     }
   }
 
-  await createAuditLog(ticketId, userId, "status_change", ticket.status, newStatus);
+  const logs = [getAuditLogData(ticketId, userId, "status_change", ticket.status, newStatus)];
 
   const updateData: Record<string, any> = { status: newStatus };
 
@@ -159,22 +170,24 @@ async function handleStatusTransition(
     );
   }
 
-  return { updateData };
+  return { updateData, logs };
 }
 
 /**
  * Handles reassigning the ticket to a new assignee (or unassigning).
- * Returns fields to merge into updateData.
+ * Returns fields to merge into updateData and logs.
  */
 async function handleReassignment(
   ticketId: number,
   ticket: any,
   newAssigneeId: number | null,
   userId: number,
-): Promise<Record<string, any>> {
+): Promise<{ updateData: Record<string, any>; logs: any[] }> {
   const oldAssigneeName = ticket.assignee
     ? `${ticket.assignee.first_name} ${ticket.assignee.last_name} (${ticket.assignee.username})`
     : "unassigned";
+
+  const logs = [];
 
   if (newAssigneeId) {
     const newAssignee = await prisma.user.findUnique({
@@ -185,7 +198,7 @@ async function handleReassignment(
       ? `${newAssignee.first_name} ${newAssignee.last_name} (${newAssignee.username})`
       : newAssigneeId.toString();
 
-    await createAuditLog(ticketId, userId, "assignment", oldAssigneeName, newAssigneeName);
+    logs.push(getAuditLogData(ticketId, userId, "assignment", oldAssigneeName, newAssigneeName));
 
     // Notify the new assignee (skip if self-assign)
     if (newAssigneeId !== userId) {
@@ -213,7 +226,7 @@ async function handleReassignment(
       `You have been assigned to ticket: ${ticket.title}`,
     );
   } else {
-    await createAuditLog(ticketId, userId, "assignment", oldAssigneeName, "unassigned");
+    logs.push(getAuditLogData(ticketId, userId, "assignment", oldAssigneeName, "unassigned"));
   }
 
   // Keep CSAT agent in sync
@@ -222,7 +235,7 @@ async function handleReassignment(
     data: { agent_id: newAssigneeId },
   });
 
-  return { assignee_id: newAssigneeId };
+  return { updateData: { assignee_id: newAssigneeId }, logs };
 }
 
 /**
@@ -235,27 +248,30 @@ async function handleFieldUpdates(
   body: any,
   userId: number,
   roles: string[] | undefined,
-): Promise<Record<string, any>> {
+): Promise<{ updateData: Record<string, any>; logs: any[] }> {
   const updateData: Record<string, any> = {};
+  const logs: any[] = [];
 
   if (body.title && body.title !== ticket.title) {
-    await createAuditLog(ticketId, userId, "title_changed", ticket.title, body.title);
+    logs.push(getAuditLogData(ticketId, userId, "title_changed", ticket.title, body.title));
     updateData.title = body.title;
   }
 
   if (body.description && body.description !== ticket.description) {
-    await createAuditLog(
-      ticketId,
-      userId,
-      "description_changed",
-      ticket.description.slice(0, 100),
-      body.description.slice(0, 100),
+    logs.push(
+      getAuditLogData(
+        ticketId,
+        userId,
+        "description_changed",
+        ticket.description.slice(0, 100),
+        body.description.slice(0, 100),
+      ),
     );
     updateData.description = body.description;
   }
 
   if (body.priority && body.priority !== ticket.priority) {
-    await createAuditLog(ticketId, userId, "priority_changed", ticket.priority, body.priority);
+    logs.push(getAuditLogData(ticketId, userId, "priority_changed", ticket.priority, body.priority));
     updateData.priority = body.priority;
   }
 
@@ -270,45 +286,53 @@ async function handleFieldUpdates(
   }
 
   if (body.department_id !== undefined && body.department_id !== ticket.department_id) {
-    await createAuditLog(
-      ticketId,
-      userId,
-      "department_changed",
-      ticket.department_id?.toString() ?? "none",
-      body.department_id?.toString() ?? "none",
+    logs.push(
+      getAuditLogData(
+        ticketId,
+        userId,
+        "department_changed",
+        ticket.department_id?.toString() ?? "none",
+        body.department_id?.toString() ?? "none",
+      ),
     );
     updateData.department_id = body.department_id;
   }
 
   if (body.request_type_id !== undefined && body.request_type_id !== ticket.request_type_id) {
-    await createAuditLog(
-      ticketId,
-      userId,
-      "request_type_changed",
-      ticket.request_type_id?.toString() ?? "none",
-      body.request_type_id?.toString() ?? "none",
+    logs.push(
+      getAuditLogData(
+        ticketId,
+        userId,
+        "request_type_changed",
+        ticket.request_type_id?.toString() ?? "none",
+        body.request_type_id?.toString() ?? "none",
+      ),
     );
     updateData.request_type_id = body.request_type_id;
   }
 
   if (body.affected_system_id !== undefined && body.affected_system_id !== ticket.affected_system_id) {
-    await createAuditLog(
-      ticketId,
-      userId,
-      "affected_system_changed",
-      ticket.affected_system_id?.toString() ?? "none",
-      body.affected_system_id?.toString() ?? "none",
+    logs.push(
+      getAuditLogData(
+        ticketId,
+        userId,
+        "affected_system_changed",
+        ticket.affected_system_id?.toString() ?? "none",
+        body.affected_system_id?.toString() ?? "none",
+      ),
     );
     updateData.affected_system_id = body.affected_system_id;
   }
 
   if (body.hardware_item_id !== undefined && body.hardware_item_id !== ticket.hardware_item_id) {
-    await createAuditLog(
-      ticketId,
-      userId,
-      "hardware_item_changed",
-      ticket.hardware_item_id?.toString() ?? "none",
-      body.hardware_item_id?.toString() ?? "none",
+    logs.push(
+      getAuditLogData(
+        ticketId,
+        userId,
+        "hardware_item_changed",
+        ticket.hardware_item_id?.toString() ?? "none",
+        body.hardware_item_id?.toString() ?? "none",
+      ),
     );
     updateData.hardware_item_id = body.hardware_item_id;
   }
@@ -321,8 +345,12 @@ async function handleFieldUpdates(
     if (body.other_department !== undefined) updateData.other_department = body.other_department;
   }
 
-  return updateData;
+  return { updateData, logs };
 }
+
+// SLA breach auto-detection throttling
+let lastSlaCheck = 0;
+const SLA_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // Router
 
@@ -376,15 +404,19 @@ export const tickets = new Elysia({ prefix: "/tickets" })
     const skip = (page - 1) * limit;
     const orderBy: any = { [sort]: order };
 
-    // Auto-detect SLA breaches
-    await prisma.ticket.updateMany({
-      where: {
-        due_date: { lte: new Date() },
-        sla_breached: false,
-        status: { notIn: ["resolved", "closed"] },
-      },
-      data: { sla_breached: true, breached_at: new Date() },
-    });
+    // Auto-detect SLA breaches (throttled, background)
+    const now = Date.now();
+    if (now - lastSlaCheck > SLA_CHECK_INTERVAL) {
+      lastSlaCheck = now;
+      prisma.ticket.updateMany({
+        where: {
+          due_date: { lte: new Date() },
+          sla_breached: false,
+          status: { notIn: ["resolved", "closed"] },
+        },
+        data: { sla_breached: true, breached_at: new Date() },
+      }).catch(err => console.error("SLA Background Update Error:", err));
+    }
 
     const [data, total] = await Promise.all([
       prisma.ticket.findMany({
@@ -438,6 +470,8 @@ export const tickets = new Elysia({ prefix: "/tickets" })
 
   // Get single ticket
   .get("/:id", async ({ params, user, roles, status }) => {
+    const isStaff = roles?.includes("admin") || roles?.includes("mis") || roles?.includes("approver");
+
     const ticket = await prisma.ticket.findUnique({
       where: { id: params.id },
       include: {
@@ -453,6 +487,13 @@ export const tickets = new Elysia({ prefix: "/tickets" })
           include: { performed_by: { omit: { password: true } } },
           orderBy: { created_at: "desc" },
         },
+        comments: {
+          where: isStaff ? {} : { is_internal: false },
+          include: {
+            user: { select: { id: true, first_name: true, last_name: true, username: true } },
+          },
+          orderBy: { created_at: "asc" },
+        },
         csat: true,
         department: true,
       },
@@ -463,13 +504,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
     const isOwner = ticket.requester_id === user;
     const isAssignee = ticket.assignee_id === user;
     const isApprover = ticket.approvers.some((a) => a.approver_id === user);
-    const hasAccess =
-      roles?.includes("admin") ||
-      roles?.includes("mis") ||
-      roles?.includes("approver") ||
-      isOwner ||
-      isAssignee ||
-      isApprover;
+    const hasAccess = isStaff || isOwner || isAssignee || isApprover;
 
     if (!hasAccess) return status(403, { message: "Access denied" });
 
@@ -494,7 +529,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
 
   // Create ticket
   .post("/", async ({ body, user }) => {
-    // ÄÄ 1. All lookups BEFORE the transaction ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    // ï¿½ï¿½ 1. All lookups BEFORE the transaction ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     // Resolve Request Type with fallback
     let requestTypeId = body.request_type_id;
@@ -567,7 +602,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
         : Promise.resolve([]),
     ]);
 
-    // ÄÄ 2. Transaction contains ONLY atomic DB writes ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+    // ï¿½ï¿½ 2. Transaction contains ONLY atomic DB writes ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     const ticket = await prisma.$transaction(async (tx) => {
       const ticket = await tx.ticket.create({
         data: {
@@ -614,7 +649,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
       return ticket;
     }); //  transaction commits here, fast
 
-    // ÄÄ 3. Notifications AFTER commit (network I/O outside the transaction) ÄÄ
+    // ï¿½ï¿½ 3. Notifications AFTER commit (network I/O outside the transaction) ï¿½ï¿½
     if (requiresApproval && defaultApprover) {
       await createAndPushNotification(
         defaultApprover.id,
@@ -674,6 +709,7 @@ export const tickets = new Elysia({ prefix: "/tickets" })
     if (!canEdit) return status(403, { message: "Access denied" });
 
     let updateData: Record<string, any> = {};
+    const auditLogs: any[] = [];
 
     // Status transition
     if (body.status && body.status !== ticket.status) {
@@ -682,32 +718,43 @@ export const tickets = new Elysia({ prefix: "/tickets" })
       );
       if (result.error) return status(result.error.code as any, { message: result.error.message });
       Object.assign(updateData, result.updateData);
+      if (result.logs) auditLogs.push(...result.logs);
     }
 
     // Reassignment
     if (body.assignee_id !== undefined && body.assignee_id !== ticket.assignee_id) {
-      const assignData = await handleReassignment(params.id, ticket, body.assignee_id, user);
-      Object.assign(updateData, assignData);
+      const result = await handleReassignment(params.id, ticket, body.assignee_id, user);
+      Object.assign(updateData, result.updateData);
+      if (result.logs) auditLogs.push(...result.logs);
     }
 
     // Field-level updates
-    const fieldData = await handleFieldUpdates(params.id, ticket, body, user, roles);
-    Object.assign(updateData, fieldData);
+    const fieldResult = await handleFieldUpdates(params.id, ticket, body, user, roles);
+    Object.assign(updateData, fieldResult.updateData);
+    if (fieldResult.logs) auditLogs.push(...fieldResult.logs);
 
     if (Object.keys(updateData).length === 0) {
       return status(200, ticket); // Nothing changed
     }
 
-    const updated = await prisma.ticket.update({
-      where: { id: params.id },
-      data: updateData,
-      include: {
-        requester: { omit: { password: true } },
-        assignee: { omit: { password: true } },
-        request_type: true,
-        affected_system: true,
-        department: true,
-      },
+    const updated = await prisma.$transaction(async (tx) => {
+      const u = await tx.ticket.update({
+        where: { id: params.id },
+        data: updateData,
+        include: {
+          requester: { omit: { password: true } },
+          assignee: { omit: { password: true } },
+          request_type: true,
+          affected_system: true,
+          department: true,
+        },
+      });
+
+      if (auditLogs.length > 0) {
+        await tx.auditLog.createMany({ data: auditLogs });
+      }
+
+      return u;
     });
 
     broadcaster.ticketUpdated(params.id, {

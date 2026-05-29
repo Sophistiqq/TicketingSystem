@@ -79,6 +79,14 @@
     }
   }
 
+  let searchTimeout: any;
+  function handleSearchInput() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      loadCurrentTab(1);
+    }, 500);
+  }
+
   onMount(() => {
     // Initial loads for counts
     loadRequested();
@@ -294,6 +302,7 @@
             class="input input-bordered input-sm join-item flex-1 focus:outline-none text-xs"
             placeholder="Search tickets..."
             bind:value={search}
+            oninput={handleSearchInput}
           />
           <select
             class="select select-bordered select-sm join-item w-auto hidden sm:block focus:outline-none whitespace-nowrap text-xs shrink-0 min-w-fit bg-none appearance-none pr-3"

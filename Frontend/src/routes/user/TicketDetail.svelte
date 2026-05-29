@@ -439,18 +439,7 @@
       if (res) {
         ticket = res;
         if (res.csat) csatSubmitted = true;
-
-        try {
-          const comments = await api.get<TicketComment[]>(
-            `/comments?ticket_id=${res.id}`,
-          );
-          if (ticket) {
-            ticket.comments = comments;
-            scrollToBottom();
-          }
-        } catch {
-          if (ticket) ticket.comments = [];
-        }
+        scrollToBottom();
       }
     } catch {
       ticket = null;
