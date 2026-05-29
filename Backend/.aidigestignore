@@ -6,4 +6,5 @@ codebase.md
 .env
 FRONTEND_GUIDE.md
 GEMINI.md
-
+src
+prisma/migrations
