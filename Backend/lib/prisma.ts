@@ -1,15 +1,11 @@
 import "dotenv/config";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "../generated/prisma/client";
 
-const connectionString = `${process.env.DATABASE_URL}`;
-
-const pool = new Pool({
-  connectionString,
-  // ssl: { rejectUnauthorized: false },
+const adapter = new PrismaLibSql({
+  url: `${process.env.DATABASE_URL}`,
+  authToken: `${process.env.AUTH_TOKEN}`,
 });
-const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 export { prisma };
