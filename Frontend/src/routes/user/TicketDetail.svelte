@@ -1024,7 +1024,9 @@
                         (selectedZoomImage = att.file_url)}
                     >
                       <img
-                        src={`${API_BASE}${att.file_url}`}
+                        src={`${API_BASE}${att.file_url}?preview=1`}
+                        loading="lazy"
+                        decoding="async"
                         alt={att.file_name}
                         class="w-full h-full object-cover transition-transform group-hover:scale-105"
                       />
@@ -1406,6 +1408,7 @@
                   <input
                     type="file"
                     multiple
+                    title="Up to 5 files, 20 MB each"
                     class="file-input file-input-bordered file-input-sm flex-1 text-xs h-8"
                     bind:this={fileInput}
                   />

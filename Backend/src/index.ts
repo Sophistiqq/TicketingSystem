@@ -79,7 +79,15 @@ const app = new Elysia()
   .use(dashboard)
   .use(reports)
   // Serve uploaded files statically
-  .get("/uploads/:filename", async ({ params, set }) => {
+  .get("/uploads/:filename", async ({ params, query, set }) => {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(params.filename)) {
+      set.status = 400;
+      return "Invalid filename";
+    }
+    if (query.preview === "1") {
+      const preview = Bun.file(`./uploads/${params.filename}.preview.webp`);
+      if (await preview.exists()) return preview;
+    }
     const file = Bun.file(`./uploads/${params.filename}`);
 
     if (!(await file.exists())) {

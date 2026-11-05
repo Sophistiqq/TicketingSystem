@@ -1,7 +1,7 @@
 import { Elysia, t } from "elysia";
 import { prisma } from "../../lib/prisma";
 import { validator } from "../plugins/authValidator";
-import { saveFile } from "../plugins/fileUpload";
+import { saveFile, deleteFile } from "../plugins/fileUpload";
 import { broadcaster } from "../ws/broadcaster";
 import { AttachmentType } from "../../generated/prismabox/AttachmentType";
 
@@ -131,7 +131,7 @@ export const attachments = new Elysia({ prefix: "/attachments" })
     {
       body: t.Object({
         ticket_id: t.Numeric(),
-        files: t.Files(),
+        files: t.Files({ maxSize: "20m", maxItems: 5 }),
         type: t.Optional(AttachmentType),
       }),
       isAuth: true,
@@ -168,13 +168,7 @@ export const attachments = new Elysia({ prefix: "/attachments" })
     if (!attachment) return status(404, { message: "Attachment not found" });
 
     // Delete file from disk
-    try {
-      const filePath = `.${attachment.file_url}`;
-      await Bun.file(filePath).exists();
-      await Bun.write(filePath, "");
-    } catch {
-      // File may not exist, continue
-    }
+    await deleteFile(`${UPLOAD_DIR}/${attachment.file_name}`);
 
     await prisma.auditLog.create({
       data: {

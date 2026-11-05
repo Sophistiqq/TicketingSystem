@@ -56,6 +56,12 @@ async function safeJson(r: Response, suppressAlert = false) {
 }
 
 export const api = {
+  validateUploads: (files: FileList | File[]) => {
+    if (files.length > 5) throw new Error('Upload up to 5 files at a time.');
+    if (Array.from(files).some(file => file.size > 20 * 1024 * 1024)) {
+      throw new Error('Each attachment must be 20 MB or smaller.');
+    }
+  },
   get: <T>(path: string, options?: { suppressAlert?: boolean }) =>
     fetch(`${API_BASE}${path}`, { credentials: 'include' }).then(r => safeJson(r, options?.suppressAlert)),
 
@@ -87,6 +93,7 @@ export const api = {
     fetch(`${API_BASE}${path}`, { method: 'DELETE', credentials: 'include' }).then(r => safeJson(r, options?.suppressAlert)),
 
   upload: (ticketId: number, files: FileList | File[], type?: string) => {
+    api.validateUploads(files);
     const formData = new FormData();
     formData.append('ticket_id', ticketId.toString());
     for (const file of files) formData.append('files', file);

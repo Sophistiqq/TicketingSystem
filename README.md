@@ -11,6 +11,24 @@ The project is split into two main components:
 
 ## Run with Docker Compose
 
+The application uses Bun 1.4.4; both Docker builds pin that version. For local
+development, install Bun 1.4.4 or newer.
+
+Image uploads retain their original bytes and full-resolution downloads.
+JPEG, PNG, and WebP uploads also get a WebP grid preview up to 480×480
+when it is smaller than the original. Previews use Bun's built-in image API with
+a 16-megapixel decode limit. Unsupported, oversized, or invalid images retain
+their originals without a preview. Existing attachments continue to work and use
+their originals; no backfill or database migration is needed. Original uploads
+and previews share the persistent uploads volume and are removed together.
+
+Uploads allow up to 5 files per request, at most 20 MB each. To run upload tests:
+
+```sh
+cd Backend
+bun test
+```
+
 Install Docker Engine with Compose v2 (or Docker Desktop using Linux containers).
 From the repository root:
 

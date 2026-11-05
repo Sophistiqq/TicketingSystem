@@ -121,6 +121,7 @@
     error = "";
 
     try {
+      if (files) api.validateUploads(files);
       const body: Record<string, unknown> = {
         title,
         description,
@@ -452,6 +453,7 @@
                   ? `${files.length} files selected`
                   : "Choose Files"}
               </button>
+              <p class="text-xs opacity-60">Up to 5 files, 20 MB each.</p>
               {#if files && files.length > 0}
                 <div class="flex flex-wrap gap-1 mt-1">
                   {#each Array.from(files) as file}
