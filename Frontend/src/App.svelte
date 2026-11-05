@@ -49,7 +49,7 @@
   let user = $derived(getCurrentUser());
   let unread = $derived(getUnreadCount());
   let msgUnread = $derived(getMessageUnreadCount());
-  let isDark = $state(true);
+  let isDark = $state(false);
   let drawerOpen = $state(false);
   let closingFromPopstate = false;
 
@@ -119,6 +119,12 @@
     },
   ];
 
+  let pageTitle = $derived(
+    [...navItems, ...adminItems].find((item) => item.href === route.pathname)?.label
+      ?? (route.pathname.startsWith('/tickets/') ? 'Ticket details'
+        : route.pathname.startsWith('/messages') ? 'Messages' : 'My profile'),
+  );
+
   function canSee(item: NavItem): boolean {
     if (!item.roles) return true;
     return item.roles.some((r) => hasRole(r as any));
@@ -154,7 +160,7 @@
 </script>
 
 {#if !user}
-  <div class="min-h-screen bg-base-200 flex items-center justify-center">
+  <div class="min-h-screen bg-base-200 flex items-center justify-center p-4 sm:p-8">
     <Router base={import.meta.env.BASE_URL.slice(0, -1)} />
   </div>
 {:else}
@@ -169,10 +175,11 @@
     <div class="drawer-content flex flex-col h-full overflow-hidden">
       <!-- Navbar -->
       <nav
-        class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 gap-2"
+        class="navbar bg-base-100 border-b border-base-300 sticky top-0 z-30 px-4 md:px-6 gap-2 min-h-16"
       >
         <label
           for="app-drawer"
+          aria-label="Open navigation"
           class="btn btn-ghost btn-sm btn-square lg:hidden"
           ><Menu size={20} /></label
         >
@@ -180,12 +187,14 @@
           {#if !isActive("/")}
             <button
               class="btn btn-ghost btn-sm btn-square"
+              aria-label="Go back"
               onclick={() => navigate(-1)}><ChevronLeft size={20} /></button
             >
           {/if}
+          <span class="text-sm font-semibold truncate">{pageTitle}</span>
         </div>
 
-        <button class="btn btn-ghost btn-sm btn-square" onclick={toggleTheme}>
+        <button class="btn btn-ghost btn-sm btn-square" onclick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
           {#if isDark}<Sun size={18} />{:else}<Moon size={18} />{/if}
         </button>
 
@@ -246,7 +255,7 @@
       <!-- Main Layout -->
       <div class="flex flex-1 min-h-0 overflow-hidden">
         <main
-          class="flex-1 flex flex-col min-h-0 p-4 md:p-6 {route.pathname?.startsWith(
+          class="workspace flex-1 flex flex-col min-w-0 min-h-0 bg-base-200 p-4 md:p-6 {route.pathname?.startsWith(
             '/messages',
           )
             ? 'overflow-hidden'
@@ -259,28 +268,29 @@
 
     <!-- Navigation Drawer -->
     <div class="drawer-side z-40">
-      <label for="app-drawer" class="drawer-overlay"></label>
+      <label for="app-drawer" class="drawer-overlay" aria-label="Close navigation"></label>
       <aside
-        class="bg-base-200 w-72 min-h-full flex flex-col border-r border-base-300"
+        class="app-sidebar bg-base-100 w-64 min-h-full flex flex-col border-r border-base-300"
       >
-        <div class="p-6">
-          <h2 class="text-xl font-black">TICKETING</h2>
+        <div class="flex items-center gap-3 px-5 min-h-16 border-b border-base-300">
+          <div class="size-8 bg-primary text-primary-content rounded-lg flex items-center justify-center"><Ticket size={18} /></div>
+          <div>
+            <h2 class="text-sm font-semibold tracking-normal">MIS Support</h2>
+            <p class="text-xs text-base-content/60">Ticketing system</p>
+          </div>
         </div>
-        <ul class="menu menu-md flex-1 p-0 py-4 w-full">
+        <ul class="menu menu-md flex-1 p-3 gap-1 w-full">
           {#each navItems as item}
             {#if canSee(item)}
               <li>
                 <a
                   href={import.meta.env.BASE_URL.slice(0, -1) + item.href}
                   onclick={closeDrawer}
-                  class="flex items-center justify-between px-6 py-4 rounded-none {isActive(
-                    item.href as any,
-                  )
-                    ? 'bg-primary/10 text-primary font-bold'
-                    : ''}"
+                  aria-current={isActive(item.href as any) ? 'page' : undefined}
+                  class="flex items-center justify-between px-3 py-2 rounded-lg"
                 >
                   <div class="flex items-center gap-3">
-                    <item.icon size={20} />
+                    <item.icon size={18} />
                     {item.label}
                   </div>
                   {#if item.badge && item.badge() > 0}
@@ -294,9 +304,9 @@
           {/each}
 
           {#if adminItems.some(canSee)}
-            <div class="divider px-6 opacity-20"></div>
+            <li aria-hidden="true" class="border-t border-base-300 my-3"></li>
             <li
-              class="menu-title px-6 text-[10px] uppercase tracking-widest opacity-40 font-bold mb-2"
+              class="menu-title px-3 text-xs font-medium text-base-content/60 mb-1"
             >
               Administration
             </li>
@@ -306,13 +316,10 @@
                   <a
                     href={import.meta.env.BASE_URL.slice(0, -1) + item.href}
                     onclick={closeDrawer}
-                    class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(
-                      item.href as any,
-                    )
-                      ? 'bg-primary/10 text-primary font-bold'
-                      : ''}"
+                    aria-current={isActive(item.href as any) ? 'page' : undefined}
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg"
                   >
-                    <item.icon size={20} />
+                    <item.icon size={18} />
                     {item.label}
                   </a>
                 </li>

@@ -412,7 +412,7 @@
 </script>
 
 <div
-  class="flex flex-1 h-full min-h-0 bg-base-100 md:rounded-2xl md:shadow-xl md:border border-base-300 overflow-hidden -m-4 md:m-0"
+  class="flex flex-1 h-full min-h-0 bg-base-100 md:rounded-2xl md:shadow-sm md:border border-base-300 overflow-hidden -m-4 md:m-0"
 >
   <!-- Sidebar -->
   <div

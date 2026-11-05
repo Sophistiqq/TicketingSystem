@@ -230,11 +230,11 @@
         <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
           <ListTodo size={18} />
         </div>
-        <h1 class="text-3xl font-bold tracking-tight">My Tickets</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">My Tickets</h1>
       </div>
       <p class="text-xs opacity-60 font-medium">Track and manage your service requests and assigned tasks.</p>
     </div>
-    <a href="{import.meta.env.BASE_URL}tickets/new" class="btn btn-primary gap-2 shadow-lg shadow-primary/20">
+    <a href="{import.meta.env.BASE_URL}tickets/new" class="btn btn-primary gap-2 shadow-none">
       <Plus size={18} /> New Ticket
     </a>
   </div>

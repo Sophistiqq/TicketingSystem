@@ -17,7 +17,7 @@
   }
 </script>
 
-<div class="card bg-base-100 shadow-xl w-full max-w-sm">
+<div class="card bg-base-100 border border-base-300 shadow-sm w-full max-w-sm">
   <div class="card-body gap-6">
     <!-- Branding -->
     <div class="flex flex-col items-center gap-2">

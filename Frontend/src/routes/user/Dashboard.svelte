@@ -106,7 +106,7 @@
   });
 </script>
 
-<div class="flex flex-col gap-8 pb-8">
+<div class="flex flex-col gap-6 pb-6">
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-4">
     <div class="flex flex-col">
@@ -114,16 +114,16 @@
         <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
           <LayoutDashboard size={18} />
         </div>
-        <h1 class="text-3xl font-black tracking-tight">Dashboard</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
       </div>
       <p class="text-xs opacity-60 font-medium max-w-2xl">
-        Welcome back, <span class="text-primary font-bold">{user?.first_name ?? user?.username ?? "User"}</span>. Here's a summary of your system activity and performance metrics.
+        Welcome back, <span class="text-primary font-bold">{user?.first_name ?? user?.username ?? "User"}</span>. Here's what needs your attention today.
       </p>
     </div>
     <div class="flex gap-2">
       <a
         href="{import.meta.env.BASE_URL}tickets/new"
-        class="btn btn-primary btn-md shadow-lg shadow-primary/20 gap-2"
+        class="btn btn-primary btn-md shadow-none gap-2"
       >
         <Plus size={20} />
         New Ticket
@@ -134,8 +134,8 @@
   <!-- 1. IMMEDIATE ACTION BAR (Top) -->
   {#if totalOverdue > 0 || totalPendingApprovals > 0 || totalUnrated > 0}
     <div class="flex flex-col gap-3">
-      <h2 class="text-xs font-black uppercase tracking-[0.2em] opacity-40 px-1">
-        Needs Immediate Attention
+      <h2 class="text-xs font-semibold opacity-60 px-1">
+        Needs attention
       </h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {#if totalOverdue > 0}
@@ -146,14 +146,14 @@
             class="flex items-center gap-4 p-4 bg-error/10 border border-error/20 rounded-2xl hover:bg-error/15 transition-all group"
           >
             <div
-              class="p-3 bg-error text-error-content rounded-xl shadow-lg shadow-error/30 group-hover:scale-110 transition-transform"
+              class="p-3 bg-error text-error-content rounded-xl shadow-none  transition-transform"
             >
               <TriangleAlert size={24} />
             </div>
             <div>
-              <div class="text-2xl font-black text-error">{totalOverdue}</div>
+              <div class="text-2xl font-semibold text-error">{totalOverdue}</div>
               <div
-                class="text-[10px] font-black uppercase tracking-widest opacity-60"
+                class="text-xs font-semibold opacity-60"
               >
                 Overdue Tickets
               </div>
@@ -167,16 +167,16 @@
             class="flex items-center gap-4 p-4 bg-primary/10 border border-primary/20 rounded-2xl hover:bg-primary/15 transition-all group"
           >
             <div
-              class="p-3 bg-primary text-primary-content rounded-xl shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform"
+              class="p-3 bg-primary text-primary-content rounded-xl shadow-none  transition-transform"
             >
               <ClipboardCheck size={24} />
             </div>
             <div>
-              <div class="text-2xl font-black text-primary">
+              <div class="text-2xl font-semibold text-primary">
                 {totalPendingApprovals}
               </div>
               <div
-                class="text-[10px] font-black uppercase tracking-widest opacity-60"
+                class="text-xs font-semibold opacity-60"
               >
                 To Approve
               </div>
@@ -192,14 +192,14 @@
             class="flex items-center gap-4 p-4 bg-warning/10 border border-warning/20 rounded-2xl hover:bg-warning/15 transition-all group"
           >
             <div
-              class="p-3 bg-warning text-warning-content rounded-xl shadow-lg shadow-warning/30 group-hover:scale-110 transition-transform"
+              class="p-3 bg-warning text-warning-content rounded-xl shadow-none  transition-transform"
             >
               <Star size={24} />
             </div>
             <div>
-              <div class="text-2xl font-black text-warning">{totalUnrated}</div>
+              <div class="text-2xl font-semibold text-warning">{totalUnrated}</div>
               <div
-                class="text-[10px] font-black uppercase tracking-widest opacity-60"
+                class="text-xs font-semibold opacity-60"
               >
                 Unrated Resolutions
               </div>
@@ -210,129 +210,8 @@
     </div>
   {/if}
 
-  <!-- 2. MAIN ANALYTICS SECTION -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <!-- Ticket Trends (Line Chart) -->
-    <div
-      class="lg:col-span-2 card bg-base-200 border border-base-300 shadow-sm overflow-hidden"
-    >
-      <div
-        class="p-5 border-b border-base-300 flex items-center justify-between bg-base-300/30"
-      >
-        <h2 class="text-sm font-black uppercase tracking-widest opacity-60">
-          Ticket Volume Trends
-        </h2>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-1.5">
-            <div class="size-2 rounded-full bg-primary"></div>
-            <span class="text-[10px] font-bold opacity-50 uppercase">New</span>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <div class="size-2 rounded-full bg-success"></div>
-            <span class="text-[10px] font-bold opacity-50 uppercase"
-              >Resolved</span
-            >
-          </div>
-        </div>
-      </div>
-      <div class="p-6 h-80">
-        {#if analytics}
-          <Chart
-            type="line"
-            data={{
-              labels: analytics.trends.map((t) =>
-                new Date(t.date).toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                }),
-              ),
-              datasets: [
-                {
-                  label: "New Tickets",
-                  data: analytics.trends.map((t) => t.new),
-                  borderColor: "#4f46e5", // Indigo-600
-                  backgroundColor: "rgba(79, 70, 229, 0.1)",
-                  fill: true,
-                  tension: 0.4,
-                },
-                {
-                  label: "Resolved",
-                  data: analytics.trends.map((t) => t.resolved),
-                  borderColor: "#22c55e", // Green-500
-                  backgroundColor: "transparent",
-                  tension: 0.4,
-                },
-              ],
-            }}
-            options={{
-              scales: {
-                y: { beginAtZero: true, grid: { display: false } },
-                x: { grid: { display: false } },
-              },
-              plugins: { legend: { display: false } },
-            }}
-          />
-        {:else}
-          <div
-            class="h-full w-full bg-base-300/20 animate-pulse rounded-xl"
-          ></div>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Distribution by Type (Doughnut) -->
-    <div
-      class="card bg-base-200 border border-base-300 shadow-sm overflow-hidden"
-    >
-      <div class="p-5 border-b border-base-300 bg-base-300/30">
-        <h2 class="text-sm font-black uppercase tracking-widest opacity-60">
-          Request Mix
-        </h2>
-      </div>
-      <div class="p-6 h-80 flex flex-col items-center justify-center">
-        {#if analytics}
-          <Chart
-            type="doughnut"
-            data={{
-              labels: analytics.byType.map((t) => t.name),
-              datasets: [
-                {
-                  data: analytics.byType.map((t) => t.count),
-                  backgroundColor: [
-                    "#4f46e5", // Indigo-600
-                    "#f59e0b", // Amber-500
-                    "#ec4899", // Pink-500
-                    "#3b82f6", // Blue-500
-                    "#10b981", // Emerald-500
-                  ],
-                  borderWidth: 0,
-                },
-              ],
-            }}
-            options={{
-              plugins: {
-                legend: {
-                  position: "bottom",
-                  labels: {
-                    boxWidth: 12,
-                    font: { size: 10, weight: "bold" },
-                  },
-                },
-              },
-              cutout: "70%",
-            }}
-          />
-        {:else}
-          <div
-            class="size-48 rounded-full border-8 border-base-300/30 border-t-primary animate-spin"
-          ></div>
-        {/if}
-      </div>
-    </div>
-  </div>
-
   <!-- 3. SECONDARY STATS & OPERATIONAL CARDS -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-4">
     {#if hasRole("admin", "mis")}
       <a href="{import.meta.env.BASE_URL}my-tickets?tab=assigned&status=in_progress" class="contents">
         <StatsCard
@@ -402,27 +281,148 @@
     {/if}
   </div>
 
+  <!-- 2. MAIN ANALYTICS SECTION -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Ticket Trends (Line Chart) -->
+    <div
+      class="lg:col-span-2 card bg-base-100 border border-base-300 shadow-sm overflow-hidden"
+    >
+      <div
+        class="p-5 border-b border-base-300 flex items-center justify-between bg-base-200/60"
+      >
+        <h2 class="text-sm font-semibold opacity-60">
+          Ticket volume
+        </h2>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-1.5">
+            <div class="size-2 rounded-full bg-primary"></div>
+            <span class="text-xs font-bold opacity-60">New</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <div class="size-2 rounded-full bg-success"></div>
+            <span class="text-xs font-bold opacity-60"
+              >Resolved</span
+            >
+          </div>
+        </div>
+      </div>
+      <div class="p-6 h-80">
+        {#if analytics}
+          <Chart
+            type="line"
+            data={{
+              labels: analytics.trends.map((t) =>
+                new Date(t.date).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                }),
+              ),
+              datasets: [
+                {
+                  label: "New Tickets",
+                  data: analytics.trends.map((t) => t.new),
+                  borderColor: "#338c83", // Teal
+                  backgroundColor: "rgba(51, 140, 131, 0.08)",
+                  fill: true,
+                  tension: 0.4,
+                },
+                {
+                  label: "Resolved",
+                  data: analytics.trends.map((t) => t.resolved),
+                  borderColor: "#739c42", // Green
+                  backgroundColor: "transparent",
+                  tension: 0.4,
+                },
+              ],
+            }}
+            options={{
+              scales: {
+                y: { beginAtZero: true, grid: { display: false } },
+                x: { grid: { display: false } },
+              },
+              plugins: { legend: { display: false } },
+            }}
+          />
+        {:else}
+          <div
+            class="h-full w-full bg-base-300/20 animate-pulse rounded-xl"
+          ></div>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Distribution by Type (Doughnut) -->
+    <div
+      class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden"
+    >
+      <div class="p-5 border-b border-base-300 bg-base-200/60">
+        <h2 class="text-sm font-semibold opacity-60">
+          Request mix
+        </h2>
+      </div>
+      <div class="p-6 h-80 flex flex-col items-center justify-center">
+        {#if analytics}
+          <Chart
+            type="doughnut"
+            data={{
+              labels: analytics.byType.map((t) => t.name),
+              datasets: [
+                {
+                  data: analytics.byType.map((t) => t.count),
+                  backgroundColor: [
+                    "#338c83", // Teal
+                    "#c38c42", // Amber
+                    "#739c42", // Green
+                    "#6386ad", // Blue
+                    "#8e969c", // Slate
+                  ],
+                  borderWidth: 0,
+                },
+              ],
+            }}
+            options={{
+              plugins: {
+                legend: {
+                  position: "bottom",
+                  labels: {
+                    boxWidth: 12,
+                    font: { size: 12, weight: "normal" },
+                  },
+                },
+              },
+              cutout: "70%",
+            }}
+          />
+        {:else}
+          <div
+            class="size-48 rounded-full border-8 border-base-300/30 border-t-primary animate-spin"
+          ></div>
+        {/if}
+      </div>
+    </div>
+  </div>
+
   <!-- 4. BOTTOM CONTENT (Recent Tickets & Staff) -->
-  <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+  <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
     <!-- Recent Tickets (3/4) -->
     <div class="xl:col-span-3 flex flex-col gap-4">
       <div
-        class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden"
+        class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden"
       >
         <div
           class="flex flex-wrap items-center justify-between px-6 py-5 border-b border-base-300 gap-4"
         >
-          <h2 class="text-lg font-black tracking-tight flex items-center gap-2">
+          <h2 class="text-lg font-semibold tracking-tight flex items-center gap-2">
             <LayoutDashboard class="text-primary" size={20} />
-            Recent Activity
+            Recent tickets
           </h2>
           <div class="flex items-center gap-3 flex-1 justify-end min-w-0">
             <a
               href="{import.meta.env.BASE_URL}my-tickets?tab={hasRole('admin', 'mis')
                 ? 'all'
                 : 'requested'}"
-              class="btn btn-ghost btn-sm font-bold uppercase tracking-widest text-[10px]"
-              >View All Activity</a
+              class="btn btn-ghost btn-sm font-bold text-xs"
+              >View all tickets</a
             >
           </div>
         </div>
@@ -448,17 +448,17 @@
     <!-- Active Staff (1/4) -->
     <div class="flex flex-col gap-6">
       <div
-        class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden"
+        class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden"
       >
         <div
           class="p-5 border-b border-base-300 bg-base-200/50 flex items-center justify-between"
         >
-          <h2 class="text-xs font-black uppercase tracking-widest opacity-50">
+          <h2 class="text-xs font-semibold opacity-60">
             Online Team
           </h2>
           <div class="flex items-center gap-1.5">
             <div class="w-2 h-2 rounded-full bg-success animate-pulse"></div>
-            <span class="text-[10px] font-black opacity-40 uppercase"
+            <span class="text-xs font-semibold opacity-60"
               >{activeUsers.length}</span
             >
           </div>
@@ -471,19 +471,19 @@
             >
               <div class="avatar online">
                 <div
-                  class="w-10 h-10 rounded-xl bg-neutral text-neutral-content flex items-center justify-center text-sm font-black"
+                  class="w-10 h-10 rounded-xl bg-neutral text-neutral-content flex items-center justify-center text-sm font-semibold"
                 >
                   {staff.first_name[0]}{staff.last_name[0]}
                 </div>
               </div>
               <div class="flex-1 min-w-0">
                 <p
-                  class="text-xs font-black truncate group-hover:text-primary transition-colors"
+                  class="text-xs font-semibold truncate group-hover:text-primary transition-colors"
                 >
                   {staff.first_name}
                   {staff.last_name}
                 </p>
-                <p class="text-[10px] font-bold opacity-40 truncate">
+                <p class="text-xs font-bold opacity-60 truncate">
                   {staff.position ?? "Technical Support"}
                 </p>
               </div>
@@ -497,7 +497,7 @@
         <div class="p-4 bg-base-200/30 border-t border-base-200">
           <a
             href="{import.meta.env.BASE_URL}messages"
-            class="btn btn-ghost btn-xs btn-block gap-2 text-[10px] font-black uppercase tracking-widest"
+            class="btn btn-ghost btn-xs btn-block gap-2 text-xs font-semibold"
           >
             Open Chat Room
           </a>

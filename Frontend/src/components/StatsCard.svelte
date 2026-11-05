@@ -8,17 +8,6 @@
     pct?: number; // Optional percentage for a progress indicator
   }>();
 
-  const colorClasses: Record<string, string> = {
-    primary: "text-primary",
-    secondary: "text-secondary",
-    accent: "text-accent",
-    info: "text-info",
-    success: "text-success",
-    warning: "text-warning",
-    error: "text-error",
-    neutral: "text-neutral-content"
-  };
-
   const bgClasses: Record<string, string> = {
     primary: "bg-primary/10 text-primary",
     secondary: "bg-secondary/10 text-secondary",
@@ -31,26 +20,26 @@
   };
 </script>
 
-<div class="stat group transition-all hover:bg-base-300/30">
-  <div class="stat-figure">
-    <div class="p-3 rounded-2xl transition-transform group-hover:scale-110 {bgClasses[color]}">
-      <Icon class="size-6 sm:size-7" />
+<div class="stat min-w-0 bg-base-100 border border-base-300 rounded-box p-4">
+  <div class="stat-figure row-span-2">
+    <div class="p-2 rounded-lg {bgClasses[color]}">
+      <Icon class="size-5" />
     </div>
   </div>
   
-  <div class="stat-title text-[10px] sm:text-xs lg:text-[11px] xl:text-xs font-bold uppercase tracking-widest opacity-50 leading-tight mb-1">{label}</div>
-  <div class="stat-value text-xl sm:text-2xl xl:text-3xl font-black {colorClasses[color]}">{value}</div>
+  <div class="stat-title text-xs text-base-content/70 leading-tight mb-2">{label}</div>
+  <div class="stat-value text-2xl font-semibold text-base-content tabular-nums">{value}</div>
   
   {#if pct !== undefined}
-    <div class="stat-desc mt-2 flex flex-col gap-1.5">
+    <div class="stat-desc col-span-2 mt-2 flex flex-col gap-1.5">
       <progress class="progress progress-{color} h-1.5 w-full" value={pct} max="100"></progress>
-      <div class="flex justify-between items-center text-[10px] font-medium opacity-60">
+      <div class="flex justify-between items-center gap-2 text-xs text-base-content/70">
         <span>{sub ?? 'Completion'}</span>
         <span>{pct}%</span>
       </div>
     </div>
   {:else if sub}
-    <div class="stat-desc text-[10px] sm:text-xs truncate font-medium opacity-60 mt-1">
+    <div class="stat-desc col-span-2 text-xs truncate text-base-content/70 mt-1">
       {sub}
     </div>
   {/if}

@@ -504,7 +504,7 @@
         </div>
 
         <button
-          class="btn btn-primary w-full h-12 text-sm font-bold shadow-lg shadow-primary/20 rounded-xl gap-2 mt-auto"
+          class="btn btn-primary w-full h-12 text-sm font-bold shadow-none rounded-xl gap-2 mt-auto"
           type="submit"
           disabled={loading}
           data-tour="ticket-submit"
