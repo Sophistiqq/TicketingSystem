@@ -9,8 +9,8 @@ Ticketing interface built with **SvelteKit 3**, **Svelte 5**, and **Bun 1.4.4**.
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) & [DaisyUI](https://daisyui.com)
 - **Icons**: [Lucide Svelte](https://lucide.dev)
 - **Editor**: [Tiptap](https://tiptap.dev) (Rich Text Editing)
-- **Validation**: Zod schemas for native authentication, profile and reference-data remote functions
-- **Database**: Drizzle over the existing SQLite database; remaining ticket workflows are migrating from Prisma
+- **Validation**: Zod schemas for native auth, profile, reference management and ticket/report/directory/audit queries
+- **Database**: Drizzle over the existing SQLite database; ticket mutations and the remaining workflows are migrating from Prisma
 - **PWA**: Native SvelteKit service worker for asset caching, push notifications, and update prompts
 
 ## 🚀 Key Features

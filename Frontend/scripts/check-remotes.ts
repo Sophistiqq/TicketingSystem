@@ -8,7 +8,7 @@ import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { eq } from 'drizzle-orm';
 import { SignJWT, jwtVerify } from 'jose';
 import { migrateDatabase } from '../src/lib/server/db/migrate';
-import { users, userRoles, departments } from '../src/lib/server/db/schema';
+import { users, userRoles, departments, tickets, ticketApprovers, ticketComments, auditLogs } from '../src/lib/server/db/schema';
 
 // Launch our own server against disposable data; never connect to an existing app or database.
 const directory = mkdtempSync(join(tmpdir(), 'ticketing-remotes-'));
@@ -31,7 +31,7 @@ try {
     const source = readFileSync(`build/server/chunks/${name}.remote.js`, 'utf8');
     return source.match(new RegExp(`"src/lib/${name}\\.remote\\.ts",\\s*"([^"]+)"`))![1];
   };
-  const ids = { auth: remoteId('auth'), reference: remoteId('reference') };
+  const ids = { auth: remoteId('auth'), reference: remoteId('reference'), tickets: remoteId('tickets'), reports: remoteId('reports'), users: remoteId('users'), audit: remoteId('audit') };
   server = Bun.spawn([process.execPath, 'build/index.js'], {
     env: { ...process.env, DATABASE_URL: `file:${filename}`, JWT_SECRET: secret, HOST: '127.0.0.1', PORT: '0' },
     stdout: 'pipe', stderr: 'pipe',
@@ -45,9 +45,10 @@ try {
   const origin = configuredOrigin === 'undefined' ? `https://${new URL(address).host}` : JSON.parse(configuredOrigin);
 
   async function rpc(module: keyof typeof ids, name: string, input?: unknown, cookie = '', method = 'POST', requestOrigin = origin) {
-    const response = await fetch(`${address}${base}/_app/remote/${ids[module]}/${name}`, {
+    const payload = input === undefined ? '' : Buffer.from(stringify(input)).toString('base64url');
+    const response = await fetch(`${address}${base}/_app/remote/${ids[module]}/${name}${method === 'GET' && payload ? `?payload=${payload}` : ''}`, {
       method, headers: { Origin: requestOrigin, Cookie: cookie, 'Content-Type': 'application/json' },
-      body: method === 'GET' ? undefined : JSON.stringify({ payload: input === undefined ? '' : Buffer.from(stringify(input)).toString('base64url'), refreshes: [] }),
+      body: method === 'GET' ? undefined : JSON.stringify({ payload, refreshes: [] }),
     });
     const envelope = await response.json() as any;
     const data = envelope.data ? parse(envelope.data) : {};
@@ -83,6 +84,40 @@ try {
   assert.equal((await rpc('reference', 'createReferenceItem', item)).status, 401);
   const forgedRoles = await new SignJWT({ sub: String(user.id), roles: ['admin'] }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(key);
   assert.equal((await rpc('reference', 'createReferenceItem', item, `auth_cookie=${forgedRoles}`)).status, 403);
+
+  const userCookie = `auth_cookie=${forgedRoles}`;
+  const ownTicket = db.insert(tickets).values({ title: 'Private user ticket', description: 'User description', requester_id: user.id }).returning().get()!;
+  const otherTicket = db.insert(tickets).values({ title: 'Private admin ticket', description: 'Admin description', requester_id: admin.id }).returning().get()!;
+  db.insert(ticketComments).values([
+    { ticket_id: ownTicket.id, user_id: admin.id, content: 'Visible reply' },
+    { ticket_id: ownTicket.id, user_id: admin.id, content: 'Staff secret', is_internal: true },
+  ]).run();
+  db.insert(ticketApprovers).values({ ticket_id: ownTicket.id, approver_id: admin.id }).run();
+  db.insert(auditLogs).values({ ticket_id: ownTicket.id, performed_by_id: admin.id, action: 'ticket_created' }).run();
+  const read = (module: keyof typeof ids, name: string, input?: unknown, session = cookie) => rpc(module, name, input, session, 'GET');
+  assert.equal((await read('tickets', 'getTickets', {}, '')).status, 401);
+  const visible = await read('tickets', 'getTickets', {}, userCookie);
+  assert.equal(visible.value.pagination.total, 1);
+  assert.equal(visible.value.data[0].id, ownTicket.id);
+  assert.equal((await read('tickets', 'getTickets', { requester_id: admin.id }, userCookie)).value.pagination.total, 0);
+  assert.equal((await read('tickets', 'getTicket', otherTicket.id, userCookie)).status, 403);
+  assert.equal((await read('tickets', 'getTicketPreview', otherTicket.id, userCookie)).status, 403);
+  const detail = (await read('tickets', 'getTicket', ownTicket.id, userCookie)).value;
+  assert.deepEqual(detail.comments.map((comment: any) => comment.content), ['Visible reply']);
+  assert.equal(typeof detail.created_at, 'string');
+  assert.ok(!JSON.stringify(detail).includes('password'));
+  assert.equal((await read('tickets', 'getTicket', ownTicket.id)).value.comments.length, 2);
+  assert.equal((await read('tickets', 'getPendingApprovals')).value.length, 1);
+  const contacts = (await read('users', 'getUserDirectory', undefined, userCookie)).value;
+  assert.ok(contacts.length >= 2);
+  assert.ok(contacts.every((contact: any) => !('password' in contact) && !('email' in contact)));
+  assert.equal((await read('audit', 'getTicketAudit', {}, userCookie)).status, 403);
+  assert.equal((await read('audit', 'getTicketAudit', {})).value.pagination.total, 1);
+  assert.equal((await read('reports', 'getTicketReport', {}, userCookie)).status, 403);
+  assert.equal((await read('reports', 'getDashboardSummary', {}, '')).status, 401);
+  assert.equal((await read('reports', 'getDashboardSummary', {}, userCookie)).status, 200);
+  assert.equal((await read('reports', 'getTicketReport', {})).status, 200);
+  assert.equal((await read('tickets', 'getTickets', { limit: 101 }, userCookie)).status, 400);
   const created = await rpc('reference', 'createReferenceItem', item, cookie);
   assert.equal(created.status, 200);
   assert.equal((await rpc('reference', 'createReferenceItem', item, cookie)).status, 409);
@@ -112,7 +147,7 @@ try {
   assert.match(logout.response.headers.get('set-cookie')!, /Max-Age=0/i);
   const expired = await new SignJWT({ sub: String(user.id) }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime(1).sign(key);
   assert.equal((await rpc('auth', 'getSession', undefined, `auth_cookie=${expired}`, 'GET')).value, null);
-  console.log('Remote auth/reference integration checks passed (isolated SQLite and Bun server).');
+  console.log('Remote auth/reference/ticket/report/directory/audit integration checks passed (isolated SQLite and Bun server).');
 } catch (error) {
   console.error('Remote integration check failed:', error);
   throw error;

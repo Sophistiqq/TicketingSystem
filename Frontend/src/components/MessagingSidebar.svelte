@@ -1,12 +1,12 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { api } from "../lib/api";
-  import type { User } from "../lib/types";
+  import { getActiveUsers, getUserDirectory } from "../lib/users.remote";
+  import type { UserContact } from "../lib/server/user-reads";
   import { Search, MessageSquare, User as UserIcon } from "lucide-svelte";
   import { navigate } from "../router.svelte";
 
-  let activeUsers = $state<User[]>([]);
-  let allUsers = $state<User[]>([]);
+  let activeUsers = $state<UserContact[]>([]);
+  let allUsers = $state<UserContact[]>([]);
   let loading = $state(true);
   let interval: any;
 
@@ -21,19 +21,20 @@
 
   async function loadContacts() {
     try {
+      await Promise.all([getActiveUsers().refresh(), getUserDirectory().refresh()]);
       const [active, all] = await Promise.all([
-        api.get<User[]>("/messages/active"),
-        api.get<User[]>("/users"), // Assuming /users exists to list all staff
+        getActiveUsers(),
+        getUserDirectory(),
       ]);
       if (active) activeUsers = active;
-      if (all) allUsers = all.data; // Adjust based on your API response structure (often paginated)
+      if (all) allUsers = all;
     } catch {
       /* handled */
     }
     loading = false;
   }
 
-  function getContactName(contact: User) {
+  function getContactName(contact: UserContact) {
     return `${contact.first_name} ${contact.last_name}`;
   }
 </script>

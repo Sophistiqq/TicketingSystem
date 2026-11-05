@@ -22,8 +22,14 @@ remote functions; uploads, downloads and integration boundaries use server endpo
   functions backed by Drizzle. Authorization reloads active status and roles from
   SQLite. Registration and profile audit writes are transactional. Client caches
   refresh after mutations and session changes.
-- Elysia/Prisma still serve ticket workflows, approvals, comments, uploads,
-  messaging, notifications, dashboards/reports and realtime transport. Their
+- T-3 reads: ticket lists/details/previews, approval lists, dashboards, ticket
+  reports, contact directories, assignee/approver lookups and audit history now use
+  native remote queries. Filtering cannot override a requester's ticket scope;
+  previews check ticket access, internal notes stay staff-only, and contact/comment
+  projections exclude private fields. Historic UTC/ISO/epoch dates compare
+  chronologically. Reads refresh after legacy writes rather than reuse stale caches.
+- Elysia/Prisma still serve ticket/approval/comment mutations, uploads,
+  user administration, CSAT, messaging, notifications and realtime transport. Their
   remaining migration/removal is tracked by T-3, T-4 and T-5.
 
 ## Database compatibility
@@ -81,6 +87,12 @@ bun test
 bun run build
 bun run test:server
 ```
+
+The Vite scripts explicitly run under Bun because server modules use `bun:sqlite`.
+The compiled-server integration check exercises auth, reference mutations and the
+new read queries against disposable SQLite data, including access denials, private
+notes, forged role claims and invalid inputs. Browser checks cover subpath login,
+dashboard, ticket lists/details, reports/audit and refresh after a legacy write.
 
 Before T-5, verify all role-specific ticket/approval transitions, internal-note
 and message privacy, attachment originals/previews/deletion, web push and realtime

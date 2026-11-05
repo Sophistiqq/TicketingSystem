@@ -164,7 +164,7 @@ export type TicketComment = {
   updated_at: string;
   ticket_id: number;
   user_id: number;
-  user?: User;
+  user?: Pick<User, 'id' | 'first_name' | 'last_name' | 'username'>;
 };
 
 // ── Resolution Attempts ─────────────────────────────────────

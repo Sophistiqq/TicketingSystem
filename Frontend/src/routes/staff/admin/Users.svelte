@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { api } from "../../../lib/api";
+  import { getReferenceData } from "../../../lib/reference.remote";
   import type { User, PaginatedResponse, Role, Department } from "../../../lib/types";
   import Pagination from "../../../components/Pagination.svelte";
   import { simpleConfirm, openCustomModal } from "../../../stores/ui.svelte";
@@ -56,8 +57,8 @@
   onMount(async () => {
     await loadUsers();
     try {
-      const res = await api.get<Department[]>("/reference/departments");
-      if (res) departments = res;
+      await getReferenceData().refresh();
+      departments = (await getReferenceData()).departments;
     } catch { /* non-critical */ }
   });
 

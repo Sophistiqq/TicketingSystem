@@ -1,22 +1,22 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import { onMount } from "svelte";
-  import { api } from "../../../lib/api";
-  import type { AuditLog, PaginatedResponse } from "../../../lib/types";
+  import { getAuthAudit, getTicketAudit } from "../../../lib/audit.remote";
+  import { triggerAlert } from "../../../stores/ui.svelte";
   import Pagination from "../../../components/Pagination.svelte";
   import { Search, ScrollText } from "lucide-svelte";
 
   let activeTab = $state<"ticket" | "auth">("ticket");
 
   // Ticket audit
-  let ticketLogs = $state<AuditLog[]>([]);
+  let ticketLogs = $state<Awaited<ReturnType<typeof getTicketAudit>>['data']>([]);
   let ticketPagination = $state({ page: 1, limit: 30, total: 0, pages: 0 });
   let ticketLoading = $state(true);
   let ticketIdFilter = $state("");
   let actionFilter = $state("");
 
   // Auth audit
-  let authLogs = $state<AuditLog[]>([]);
+  let authLogs = $state<Awaited<ReturnType<typeof getAuthAudit>>['data']>([]);
   let authPagination = $state({ page: 1, limit: 30, total: 0, pages: 0 });
   let authLoading = $state(true);
   let authActionFilter = $state("");
@@ -63,50 +63,33 @@
 
   async function loadTicketAudit(page = 1) {
     ticketLoading = true;
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("limit", "30");
-    if (ticketIdFilter) params.set("ticket_id", ticketIdFilter);
-
-    // Logic: if actionFilter is empty, tell backend to exclude comment_added
-    // If actionFilter is set, use that specific action.
-    if (actionFilter) {
-      params.set("action", actionFilter);
-    } else {
-      params.set("exclude_action", "comment_added");
-    }
-
     try {
-      const res = await api.get<PaginatedResponse<AuditLog>>(
-        `/audit?${params}`,
-      );
+      const result = getTicketAudit({ page, limit: 30, ticket_id: ticketIdFilter ? Number(ticketIdFilter) : undefined,
+        action: actionFilter || undefined, exclude_action: actionFilter ? undefined : 'comment_added' });
+      await result.refresh();
+      const res = await result;
       if (res) {
         ticketLogs = res.data;
         ticketPagination = res.pagination;
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load audit history', 'error');
     }
     ticketLoading = false;
   }
 
   async function loadAuthAudit(page = 1) {
     authLoading = true;
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("limit", "30");
-    if (authActionFilter) params.set("action", authActionFilter);
-
     try {
-      const res = await api.get<PaginatedResponse<AuditLog>>(
-        `/audit/auth?${params}`,
-      );
+      const result = getAuthAudit({ page, limit: 30, action: authActionFilter || undefined });
+      await result.refresh();
+      const res = await result;
       if (res) {
         authLogs = res.data;
         authPagination = res.pagination;
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load authentication history', 'error');
     }
     authLoading = false;
   }

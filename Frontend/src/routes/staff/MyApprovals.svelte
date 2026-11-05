@@ -2,8 +2,9 @@
   import { resolve } from '$app/paths';
   import { onMount } from "svelte";
   import { api } from "../../lib/api";
+  import { getPendingApprovals } from "../../lib/tickets.remote";
   import type { TicketApprover } from "../../lib/types";
-  import { simplePrompt } from "../../stores/ui.svelte";
+  import { simplePrompt, triggerAlert } from "../../stores/ui.svelte";
   import StatusBadge from "../../components/StatusBadge.svelte";
   import {
     CircleCheckBig,
@@ -22,12 +23,11 @@
 
   onMount(async () => {
     try {
-      const res = await api.get<(TicketApprover & { ticket?: any })[]>(
-        "/approvals/my/pending",
-      );
+      await getPendingApprovals().refresh();
+      const res = await getPendingApprovals();
       if (res) approvals = res;
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load approvals', 'error');
     }
     loading = false;
   });

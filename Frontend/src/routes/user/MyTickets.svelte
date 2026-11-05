@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
-  import { api } from "../../lib/api";
+  import { getTickets } from "../../lib/tickets.remote";
+  import { triggerAlert } from "../../stores/ui.svelte";
   import { location } from "../../lib/location.svelte";
-  import type { Ticket, PaginatedResponse } from "../../lib/types";
+  import type { Ticket } from "../../lib/types";
   import TicketTable from "../../components/TicketTable.svelte";
   import Pagination from "../../components/Pagination.svelte";
   import { hasRole } from "../../stores/user.svelte";
@@ -111,15 +112,15 @@
     if (unratedOnly) params.set("unrated", "true");
 
     try {
-      const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/my/requested?${params}`,
-      );
+      const result = getTickets({ ...Object.fromEntries(params), scope: 'requested' });
+      await result.refresh();
+      const res = await result;
       if (res) {
         requestedTickets = res.data;
         requestedPagination = res.pagination;
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load tickets', 'error');
     }
     requestedLoading = false;
   }
@@ -139,15 +140,15 @@
     if (unratedOnly) params.set("unrated", "true");
 
     try {
-      const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/my/assigned?${params}`,
-      );
+      const result = getTickets({ ...Object.fromEntries(params), scope: 'assigned' });
+      await result.refresh();
+      const res = await result;
       if (res) {
         assignedTickets = res.data;
         assignedPagination = res.pagination;
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load tickets', 'error');
     }
     assignedLoading = false;
   }
@@ -167,15 +168,15 @@
     if (unratedOnly) params.set("unrated", "true");
 
     try {
-      const res = await api.get<PaginatedResponse<Ticket>>(
-        `/tickets/?${params}`,
-      );
+      const result = getTickets({ ...Object.fromEntries(params), scope: 'all' });
+      await result.refresh();
+      const res = await result;
       if (res) {
         allTickets = res.data;
         allPagination = res.pagination;
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load tickets', 'error');
     }
     allLoading = false;
   }

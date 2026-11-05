@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy, tick } from "svelte";
   import { api } from "../../lib/api";
-  import type { Message, User } from "../../lib/types";
+  import { getTickets, getTicketPreview as readTicketPreview } from "../../lib/tickets.remote";
+  import { saveProfile, getSession } from "../../lib/auth.remote";
+  import { getUserDirectory, getActiveUsers } from "../../lib/users.remote";
+  import type { UserContact } from "../../lib/server/user-reads";
+  import type { Message } from "../../lib/types";
   import { getCurrentUser, setCurrentUser } from "../../stores/user.svelte";
   import { setHideChrome } from "../../stores/ui.svelte";
   import { fetchMessageUnreadCount } from "../../stores/messages.svelte";
@@ -21,7 +25,7 @@
   import { location } from "../../lib/location.svelte";
   import { triggerAlert } from "../../stores/ui.svelte";
 
-  type Contact = User & {
+  type Contact = UserContact & {
     position?: string | null;
     last_message?: Message | null;
   };
@@ -49,11 +53,12 @@
     const newValue = !messageNotifications;
 
     try {
-      const res = await api.patch<User>("/auth/me", {
+      const res = await saveProfile({
         message_notifications: newValue,
       });
 
       if (res) {
+        await getSession().refresh();
         messageNotifications = res.message_notifications ?? true;
         setCurrentUser(res);
         triggerAlert(
@@ -91,9 +96,9 @@
       clearTimeout(suggestionDebounce);
       suggestionDebounce = setTimeout(async () => {
         if (query.length >= 1) {
-          const res = await api.get<{ data: any[] }>(
-            `/tickets?search=${query}&limit=5`,
-          );
+          const result = getTickets({ search: query, limit: 5 });
+          await result.refresh();
+          const res = await result;
           ticketSuggestions = res?.data || [];
           showTicketSuggestions = ticketSuggestions.length > 0;
         } else {
@@ -264,9 +269,10 @@
   // Data loading
   async function loadAll() {
     try {
+      await getUserDirectory().refresh();
       const [conversations, directory] = await Promise.all([
         api.get<any[]>("/messages/conversations"),
-        api.get<any[]>("/users/directory"),
+        getUserDirectory(),
       ]);
 
       const map = new Map<number, Contact>();
@@ -285,7 +291,8 @@
 
   async function loadActiveUsers() {
     try {
-      const res = await api.get<User[]>("/messages/active");
+      await getActiveUsers().refresh();
+      const res = await getActiveUsers();
       if (res) activeUserIds = new Set(res.map((u: any) => u.id));
     } catch {
       /* ignore */
@@ -366,10 +373,9 @@
   async function getTicketPreview(id: number) {
     if (ticketCache.has(id)) return ticketCache.get(id);
     try {
-      const res = await api.get<{ id: number; title: string }>(
-        `/tickets/${id}/preview`,
-        { suppressAlert: true },
-      );
+      const result = readTicketPreview(id);
+      await result.refresh();
+      const res = await result;
       if (res) {
         ticketCache.set(id, res);
         return res;

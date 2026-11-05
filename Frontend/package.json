@@ -8,12 +8,12 @@
     "bun": ">=1.4.4"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && bun build scripts/migrate.ts --target=bun --outfile build/migrate.js",
+    "dev": "bun --bun vite",
+    "build": "bun --bun vite build && bun build scripts/migrate.ts --target=bun --outfile build/migrate.js",
     "start": "bun build/migrate.js && bun build/index.js",
     "db:migrate": "bun scripts/migrate.ts",
     "db:generate": "drizzle-kit generate",
-    "preview": "vite preview",
+    "preview": "bun --bun vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p src/service-worker/tsconfig.json",
     "test": "bun test",
     "test:server": "bun scripts/check-remotes.ts"

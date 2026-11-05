@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../../lib/api";
+  import { getTicketReport } from "../../../lib/reports.remote";
+  import { getAssignees, getUserDirectory } from "../../../lib/users.remote";
   import { triggerAlert } from "../../../stores/ui.svelte";
   import {
     getDepartments,
@@ -53,24 +54,23 @@
 
   // Reference Data
   let assignees = $state<UserType[]>([]);
-  let requesters = $state<UserType[]>([]);
+  let requesters = $state<Awaited<ReturnType<typeof getUserDirectory>>>([]);
   let departments = $derived(getDepartments());
   let requestTypes = $derived(getRequestTypes());
 
   async function loadReports() {
     loading = true;
     try {
-      const params = new URLSearchParams();
-      if (dateFrom) params.append("date_from", dateFrom);
-      if (dateTo) params.append("date_to", dateTo);
-      if (status) params.append("status", status);
-      if (priority) params.append("priority", priority);
-      if (departmentId) params.append("department_id", departmentId);
-      if (requestTypeId) params.append("request_type_id", requestTypeId);
-      if (assigneeId) params.append("assignee_id", assigneeId);
-      if (requesterId) params.append("requester_id", requesterId);
-
-      const res = await api.get<any>(`/reports/tickets?${params.toString()}`);
+      const result = getTicketReport({
+        date_from: dateFrom || undefined, date_to: dateTo || undefined,
+        status: status || undefined, priority: priority || undefined,
+        department_id: departmentId ? Number(departmentId) : undefined,
+        request_type_id: requestTypeId ? Number(requestTypeId) : undefined,
+        assignee_id: assigneeId ? Number(assigneeId) : undefined,
+        requester_id: requesterId ? Number(requesterId) : undefined,
+      });
+      await result.refresh();
+      const res = await result;
       if (res) {
         tickets = res.tickets;
         summary = res.summary;
@@ -157,14 +157,18 @@
       fetchReferenceData(),
       (async () => {
         try {
-          const res = await api.get<UserType[]>("/users/assignees");
+          const result = getAssignees({});
+          await result.refresh();
+          const res = await result;
           if (res) assignees = res;
         } catch {}
       })(),
       (async () => {
         try {
           // Requesters can be any active user
-          const res = await api.get<UserType[]>("/users");
+          const result = getUserDirectory();
+          await result.refresh();
+          const res = await result;
           if (res) requesters = res;
         } catch {}
       })(),

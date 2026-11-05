@@ -1,7 +1,8 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
+  import { getDashboardSummary } from "../../lib/reports.remote";
+  import { dashboardSortSchema } from "../../lib/validation/reports";
   import type {
     Ticket,
     TicketApprover,
@@ -9,6 +10,7 @@
     DashboardSummary,
   } from "../../lib/types";
   import { getCurrentUser, hasRole } from "../../stores/user.svelte";
+  import { triggerAlert } from "../../stores/ui.svelte";
   import TicketTable from "../../components/TicketTable.svelte";
   import StatsCard from "../../components/StatsCard.svelte";
   import Chart from "../../components/Chart.svelte";
@@ -28,7 +30,7 @@
   let tickets = $state<Ticket[]>([]);
   let pendingApprovals = $state<TicketApprover[]>([]);
   let unratedTickets = $state<Ticket[]>([]);
-  let activeUsers = $state<User[]>([]);
+  let activeUsers = $state<Awaited<ReturnType<typeof getDashboardSummary>>['activeUsers']>([]);
   let analytics = $state<DashboardSummary["analytics"] | null>(null);
   let loading = $state(true);
   let dashboardSort = $state("created_at");
@@ -55,11 +57,9 @@
 
     loading = true;
     try {
-      const deptParam = departmentId ? `&department_id=${departmentId}` : "";
-
-      const res = await api.get<DashboardSummary>(
-        `/dashboard/summary?sort=${dashboardSort}&order=${dashboardOrder}${deptParam}`,
-      );
+      const result = getDashboardSummary({ department_id: departmentId, sort: dashboardSortSchema.parse(dashboardSort), order: dashboardOrder });
+      await result.refresh();
+      const res = await result;
 
       if (res) {
         tickets = res.tickets;
@@ -79,8 +79,8 @@
         totalPendingApprovals = res.stats.totalPendingApprovals;
         analytics = res.analytics;
       }
-    } catch {
-      // handled
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load dashboard', 'error');
     } finally {
       loading = false;
     }

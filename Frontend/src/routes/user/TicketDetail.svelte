@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { getTicket } from "../../lib/tickets.remote";
+  import { getAssignees, getApprovers } from "../../lib/users.remote";
   import { resolve } from '$app/paths';
   import { onMount, onDestroy, tick } from "svelte";
   import { api, API_BASE } from "../../lib/api";
@@ -385,11 +387,11 @@
     if (!ticket || !getCurrentUser()) return;
 
     try {
+      const assigneeQuery = getAssignees({ department_id: ticket.department_id ?? undefined });
+      await Promise.all([assigneeQuery.refresh(), getApprovers().refresh()]);
       const [assigneesRes, approversRes, conversationsRes] = await Promise.all([
-        api.get<User[]>(
-          `/users/assignees${ticket.department_id ? `?department_id=${ticket.department_id}` : ""}`,
-        ),
-        api.get<User[]>("/users/approvers"),
+        assigneeQuery,
+        getApprovers(),
         api.get<any[]>("/messages/conversations"),
       ]);
       if (assigneesRes) assignees = assigneesRes;
@@ -436,14 +438,17 @@
   async function loadTicket() {
     loading = true;
     try {
-      const res = await api.get<Ticket>(`/tickets/${route.params.id}`);
+      const result = getTicket(Number(route.params.id));
+      await result.refresh();
+      const res = await result;
       if (res) {
         ticket = res;
         if (res.csat) csatSubmitted = true;
         scrollToBottom();
       }
-    } catch {
+    } catch (error) {
       ticket = null;
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load ticket', 'error');
     } finally {
       loading = false;
     }
