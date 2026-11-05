@@ -1,22 +1,23 @@
 // ============================================================
 // Auth helpers — login / logout / session check
 // ============================================================
-import { api } from './lib/api';
+import { getSession, login, logout, register } from './lib/auth.remote';
 import { setCurrentUser } from './stores/user.svelte';
 import { startPolling, stopPolling } from './stores/notifications.svelte';
 import { startMessagePolling, stopMessagePolling } from './stores/messages.svelte';
 import { fetchReferenceData } from './stores/reference.svelte';
 import { navigate } from './router.svelte';
 import { ws } from './lib/ws';
-import type { LoginResponse, User } from './lib/types';
+import type { User } from './lib/types';
 import { initPushNotifications } from './lib/pwa';
+import { loginSchema, registerSchema } from './lib/validation/auth';
 
 const auth = {
-  /** Check current session via cookie (GET /auth/me) */
+  /** Restore the session through SvelteKit's server query. */
   check: async (): Promise<User | null> => {
     try {
-      const user = await api.get<User>('/auth/me', { suppressAlert: true });
-      return user;
+      await getSession().refresh();
+      return await getSession();
     } catch {
       return null;
     }
@@ -24,10 +25,13 @@ const auth = {
 
   /** Log in and bootstrap app state */
   login: async (username: string, password: string): Promise<string | void> => {
+    const input = loginSchema.safeParse({ username, password });
+    if (!input.success) return input.error.issues[0].message;
     try {
-      const res = await api.post<LoginResponse>('/auth/login', { username, password });
+      const res = await login(input.data);
       if (res?.user) {
         setCurrentUser(res.user);
+        await getSession().refresh();
         startPolling();
         fetchReferenceData();
         startMessagePolling();
@@ -43,7 +47,8 @@ const auth = {
   /** Log out and clean up */
   logout: async (): Promise<string | void> => {
     try {
-      await api.post('/auth/logout');
+      await logout();
+      await getSession().refresh();
     } catch {
       // even if the request fails, clear local state
     }
@@ -64,8 +69,10 @@ const auth = {
     position?: string;
     department_id?: number;
   }): Promise<string | void> => {
+    const input = registerSchema.safeParse(data);
+    if (!input.success) return input.error.issues[0].message;
     try {
-      await api.post('/auth/register', data);
+      await register(input.data);
       await navigate('/login');
     } catch (e: any) {
       return e?.message ?? 'Registration failed';

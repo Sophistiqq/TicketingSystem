@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../../lib/api";
+  import { createReferenceItem, deleteReferenceItem, getReferenceData, updateReferenceItem } from "../../../lib/reference.remote";
   import { refreshReferenceData } from "../../../stores/reference.svelte";
   import type {
     Department,
@@ -48,30 +48,25 @@
   async function loadAll() {
     loading = true;
     try {
-      const [d, s, r, h] = await Promise.all([
-        api.get<Department[]>("/reference/departments"),
-        api.get<AffectedSystem[]>("/reference/affected-systems"),
-        api.get<RequestType[]>("/reference/request-types"),
-        api.get<HardwareItem[]>("/reference/hardware-items"),
-      ]);
-      departments = d ?? [];
-      systems = s ?? [];
-      requestTypes = r ?? [];
-      hardwareItems = h ?? [];
+      const data = await getReferenceData();
+      departments = (data.departments ?? []);
+      systems = (data.affectedSystems ?? []);
+      requestTypes = (data.requestTypes ?? []);
+      hardwareItems = (data.hardwareItems ?? []);
     } catch {
       /* handled */
     }
     loading = false;
   }
 
-  function getEndpoint(type: string): string {
-    const map: Record<string, string> = {
-      departments: "/reference/departments",
-      systems: "/reference/affected-systems",
-      types: "/reference/request-types",
-      hardware: "/reference/hardware-items",
+  function getKind(type: string): "departments" | "affected-systems" | "request-types" | "hardware-items" {
+    const map: Record<string, "departments" | "affected-systems" | "request-types" | "hardware-items"> = {
+      departments: "departments",
+      systems: "affected-systems",
+      types: "request-types",
+      hardware: "hardware-items",
     };
-    return map[type] ?? "";
+    return map[type] ?? "departments";
   }
 
   function openCreate(type: "departments" | "systems" | "types" | "hardware") {
@@ -101,24 +96,23 @@
     modalLoading = true;
     modalError = "";
     try {
-      const endpoint = getEndpoint(modalType);
-      const body: Record<string, unknown> = {
+      const data = {
         name: formName,
-        description: formDesc || undefined,
+        description: formDesc || null,
         is_active: formActive,
       };
-      if (modalType === "types") {
-        body.requires_approval_by_default = formApproval;
-      }
+      const input = modalType === 'types'
+        ? { kind: 'request-types' as const, data: { ...data, requires_approval_by_default: formApproval } }
+        : { kind: modalType === 'systems' ? 'affected-systems' as const : modalType === 'hardware' ? 'hardware-items' as const : 'departments' as const, data };
 
       if (editingItem) {
-        await api.put(`${endpoint}/${editingItem.id}`, body);
+        await updateReferenceItem({ ...input, id: editingItem.id });
       } else {
-        await api.post(endpoint, body);
+        await createReferenceItem(input);
       }
       showModal = false;
-      await loadAll();
       await refreshReferenceData();
+      await loadAll();
     } catch (e: any) {
       modalError = e?.message ?? "Save failed";
     }
@@ -127,10 +121,9 @@
 
   async function remove(type: "departments" | "systems" | "types" | "hardware", id: number) {
     if (!(await simpleConfirm("Delete this item? (soft delete)", true))) return;
-    const endpoint = getEndpoint(type);
-    await api.delete(`${endpoint}/${id}`);
-    await loadAll();
+    await deleteReferenceItem({ kind: getKind(type), id });
     await refreshReferenceData();
+    await loadAll();
   }
 
   function getTabLabel(type: string): string {

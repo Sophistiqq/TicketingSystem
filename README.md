@@ -1,12 +1,14 @@
 # Ticketing System
 
-A robust, full-stack ticketing and collaboration platform designed for modern enterprises. This project features a high-performance backend powered by Bun and ElysiaJS, and a reactive, mobile-first frontend built with Svelte 5.
+A ticketing and collaboration platform running on Bun with a SvelteKit 3/Svelte 5 interface. The Elysia/Prisma backend is being migrated to SvelteKit server functions with Zod and Drizzle.
+
+Migration progress: [Linear project](https://linear.app/ibs-msap/project/sveltekit-consolidation-3e6a3b910b1f). See [migration notes](docs/sveltekit-migration.md) for the current boundary and deployment changes.
 
 ## 🏗️ Architecture
 
 The project is split into two main components:
 
-- **Frontend**: A Svelte 5 Single Page Application (SPA) with PWA support, optimized for speed and offline capabilities.
+- **Frontend**: SvelteKit file-based routing, client-rendered Svelte 5 pages, a Bun server, and native service-worker support.
 - **Backend**: An ElysiaJS (Bun) API service providing high-performance endpoints, real-time WebSocket communication, and Prisma ORM for database management.
 
 ## Run with Docker Compose
@@ -105,7 +107,7 @@ containers through their network aliases.
        reverse_proxy ticketing-backend:3000
    }
 
-   handle_path /ticketing/* {
+   handle /ticketing/* {
        reverse_proxy ticketing-frontend:80
    }
    ```
@@ -129,14 +131,16 @@ docker compose -f docker-compose.yml -f compose.caddy.yml exec backend bun run d
 
 Use both Compose files for subsequent `up`, `down`, `exec`, and `logs` commands.
 The override sets the browser API path to `/ticketing/api` and builds frontend
-assets and navigation for `/ticketing/`. Caddy strips those prefixes upstream and
-handles WebSocket upgrades automatically. The backend CORS origin is
+assets and navigation for `/ticketing/`. Caddy strips the API prefix but preserves
+the frontend prefix for SvelteKit, and handles WebSocket upgrades automatically.
+If upgrading from the previous SPA, change the frontend handler from `handle_path`
+to `handle` and reload Caddy using the commands above. The backend CORS origin is
 `https://192.168.0.254` (an origin has no path). Trust your Caddy root certificate
 on client devices for HTTPS and browser push to work without certificate errors.
 
 ## 🚀 Deployment Flow (Render)
 
-This repository is optimized for deployment on [Render](https://render.com) using the included `render.yaml` Blueprint specification.
+The `render.yaml` blueprint below is historical. Its static frontend and PostgreSQL configuration do not match the current SvelteKit/SQLite app. Use the Docker Compose/Caddy instructions above during the migration.
 
 ### Deployment Components
 

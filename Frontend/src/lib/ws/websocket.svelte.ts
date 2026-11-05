@@ -1,5 +1,6 @@
 import { treaty } from '@elysiajs/eden';
 import { API_BASE } from '../api';
+import { getWsToken } from '../auth.remote';
 
 type App = any;
 import { pushNotification } from '../../stores/notifications.svelte';
@@ -29,9 +30,7 @@ class TicketingWS {
     this.status = 'connecting';
 
     try {
-      const res = await fetch(`${API_BASE}/auth/ws-token`, { credentials: 'include' });
-      if (!res.ok) throw new Error('Failed to get WS token');
-      const { token } = await res.json();
+      const { token } = await getWsToken();
 
       this.#subscription = (this.#client as any).ws.subscribe({
         query: { token }

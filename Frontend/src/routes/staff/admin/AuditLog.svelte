@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { onMount } from "svelte";
   import { api } from "../../../lib/api";
   import type { AuditLog, PaginatedResponse } from "../../../lib/types";
@@ -221,7 +222,7 @@
                     <td>
                       {#if log.ticket_id}
                         <a
-                          href="{import.meta.env.BASE_URL}tickets/{log.ticket_id}"
+                          href="{resolve('/')}tickets/{log.ticket_id}"
                           class="link link-primary font-mono text-xs"
                           >#{log.ticket_id}</a
                         >

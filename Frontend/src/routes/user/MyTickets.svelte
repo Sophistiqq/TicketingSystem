@@ -9,6 +9,8 @@
   import { Plus, Search, ListTodo } from "lucide-svelte";
   import { getCurrentUser } from "../../stores/user.svelte";
   import { route, navigate } from "../../router.svelte";
+  import { replaceState } from '$app/navigation';
+  import { resolve } from '$app/paths';
 
   const query = $derived(new URLSearchParams(location.search));
 
@@ -74,8 +76,8 @@
     const qs = params.toString();
     const currentQs = window.location.search.replace(/^\?/, "");
     if (qs !== currentQs) {
-      const newPath = qs ? `/my-tickets?${qs}` : "/my-tickets";
-      window.history.replaceState({}, "", newPath);
+      const newPath = resolve('/my-tickets') + (qs ? `?${qs}` : '');
+      replaceState(newPath, {});
     }
   }
 
@@ -234,7 +236,7 @@
       </div>
       <p class="text-xs opacity-60 font-medium">Track and manage your service requests and assigned tasks.</p>
     </div>
-    <a href="{import.meta.env.BASE_URL}tickets/new" class="btn btn-primary gap-2 shadow-none">
+    <a href="{resolve('/')}tickets/new" class="btn btn-primary gap-2 shadow-none">
       <Plus size={18} /> New Ticket
     </a>
   </div>

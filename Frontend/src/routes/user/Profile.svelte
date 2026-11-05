@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api } from "../../lib/api";
+  import { saveProfile, getSession } from "../../lib/auth.remote";
   import {
     getCurrentUser,
     setCurrentUser,
@@ -93,7 +93,8 @@
       };
       if (password) body.password = password;
 
-      const updatedUser = await api.patch<any>("/auth/me", body);
+      const updatedUser = await saveProfile(body);
+      await getSession().refresh();
       if (updatedUser) {
         setCurrentUser(updatedUser);
         success = "Profile updated successfully!";

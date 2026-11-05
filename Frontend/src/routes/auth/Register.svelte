@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import auth from "../../auth.svelte";
-  import { api } from "../../lib/api";
+  import { getReferenceData } from "../../lib/reference.remote";
   import type { Department } from "../../lib/types";
   import { Ticket } from "lucide-svelte";
   import { onMount } from "svelte";
@@ -18,8 +19,8 @@
 
   onMount(async () => {
     try {
-      const res = await api.get<Department[]>("/reference/departments");
-      if (res) departments = res;
+      const data = await getReferenceData();
+      if (data?.departments) departments = data.departments;
     } catch {
       // departments dropdown will be empty
     }
@@ -164,7 +165,7 @@
 
     <p class="text-sm text-center opacity-60">
       Already have an account?
-      <a href="{import.meta.env.BASE_URL}login" class="link link-primary">Sign in</a>
+      <a href="{resolve('/')}login" class="link link-primary">Sign in</a>
     </p>
   </div>
 </div>

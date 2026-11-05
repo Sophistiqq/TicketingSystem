@@ -10,6 +10,13 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.svelte-kit
+build
+/data/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 *.local
 
 # Editor directories and files

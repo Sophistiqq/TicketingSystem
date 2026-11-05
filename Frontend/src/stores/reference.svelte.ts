@@ -2,7 +2,7 @@
 // Reference data store — cached dropdown data
 // Fetched once on app init, used by forms and filters
 // ============================================================
-import { api } from '../lib/api';
+import { getReferenceData } from '../lib/reference.remote';
 import type { Department, AffectedSystem, RequestType, HardwareItem } from '../lib/types';
 
 let departments: Department[] = $state([]);
@@ -20,16 +20,11 @@ export function isLoaded() { return loaded; }
 export async function fetchReferenceData() {
   if (loaded) return;
   try {
-    const [depts, systems, types, hItems] = await Promise.all([
-      api.get<Department[]>('/reference/departments'),
-      api.get<AffectedSystem[]>('/reference/affected-systems'),
-      api.get<RequestType[]>('/reference/request-types'),
-      api.get<HardwareItem[]>('/reference/hardware-items'),
-    ]);
-    departments = depts ?? [];
-    affectedSystems = systems ?? [];
-    requestTypes = types ?? [];
-    hardwareItems = hItems ?? [];
+    const data = await getReferenceData();
+    departments = (data.departments ?? []);
+    affectedSystems = (data.affectedSystems ?? []);
+    requestTypes = (data.requestTypes ?? []);
+    hardwareItems = (data.hardwareItems ?? []);
     loaded = true;
   } catch {
     // fail silently — forms will show empty dropdowns
@@ -39,5 +34,6 @@ export async function fetchReferenceData() {
 /** Force refetch (used after admin edits reference data) */
 export async function refreshReferenceData() {
   loaded = false;
+  await getReferenceData().refresh();
   await fetchReferenceData();
 }

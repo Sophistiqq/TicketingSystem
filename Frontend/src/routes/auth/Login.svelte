@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import auth from "../../auth.svelte";
   import { Ticket } from "lucide-svelte";
 
@@ -77,7 +78,7 @@
 
     <p class="text-sm text-center opacity-60">
       Don't have an account?
-      <a href="{import.meta.env.BASE_URL}register" class="link link-primary">Register</a>
+      <a href="{resolve('/')}register" class="link link-primary">Register</a>
     </p>
   </div>
 </div>

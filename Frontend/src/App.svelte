@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { onMount } from "svelte";
   import { themeChange } from "theme-change";
   import { initPushNotifications } from "./lib/pwa";
-  import { Router } from "sv-router";
-  import "./router.svelte";
+  import type { Snippet } from 'svelte';
+  import { pushState, replaceState } from '$app/navigation';
   import {
     getCurrentUser,
     hasRole,
@@ -45,6 +46,8 @@
     roles?: string[];
     badge?: () => number;
   };
+
+  let { children }: { children: Snippet } = $props();
 
   let user = $derived(getCurrentUser());
   let unread = $derived(getUnreadCount());
@@ -141,7 +144,7 @@
     const checked = (e.target as HTMLInputElement).checked;
     drawerOpen = checked;
     if (checked) {
-      window.history.pushState(null, "", "#drawer");
+      pushState('#drawer', {});
     } else if (!closingFromPopstate && window.location.hash === "#drawer") {
       window.history.back();
     }
@@ -153,7 +156,7 @@
       if (window.location.hash === "#drawer") {
         const url = new URL(window.location.href);
         url.hash = "";
-        window.history.replaceState(null, "", url.toString());
+        replaceState(url, {});
       }
     }
   }
@@ -161,7 +164,7 @@
 
 {#if !user}
   <div class="min-h-screen bg-base-200 flex items-center justify-center p-4 sm:p-8">
-    <Router base={import.meta.env.BASE_URL.slice(0, -1)} />
+    {@render children()}
   </div>
 {:else}
   <div class="drawer lg:drawer-open h-screen overflow-hidden">
@@ -199,7 +202,7 @@
         </button>
 
         <a
-          href="{import.meta.env.BASE_URL}messages"
+          href="{resolve('/')}messages"
           class="btn btn-ghost btn-sm btn-square indicator"
           title="Messages"
         >
@@ -212,7 +215,7 @@
         </a>
 
         <a
-          href="{import.meta.env.BASE_URL}notifications"
+          href="{resolve('/')}notifications"
           class="btn btn-ghost btn-sm btn-square indicator"
           title="Notifications"
         >
@@ -242,7 +245,7 @@
               {user.roles?.map((r) => String(r).toUpperCase()).join(", ") ||
                 "USER"}
             </li>
-            <li><a href="{import.meta.env.BASE_URL}profile"><UserIcon size={16} /> Profile</a></li>
+            <li><a href="{resolve('/')}profile"><UserIcon size={16} /> Profile</a></li>
             <li>
               <button onclick={() => auth.logout()}
                 ><LogOut size={16} /> Logout</button
@@ -261,7 +264,7 @@
             ? 'overflow-hidden'
             : 'overflow-y-auto'}"
         >
-          <Router base={import.meta.env.BASE_URL.slice(0, -1)} />
+          {@render children()}
         </main>
       </div>
     </div>
@@ -284,7 +287,7 @@
             {#if canSee(item)}
               <li>
                 <a
-                  href={import.meta.env.BASE_URL.slice(0, -1) + item.href}
+                  href={resolve('/').slice(0, -1) + item.href}
                   onclick={closeDrawer}
                   aria-current={isActive(item.href as any) ? 'page' : undefined}
                   class="flex items-center justify-between px-3 py-2 rounded-lg"
@@ -314,7 +317,7 @@
               {#if canSee(item)}
                 <li>
                   <a
-                    href={import.meta.env.BASE_URL.slice(0, -1) + item.href}
+                    href={resolve('/').slice(0, -1) + item.href}
                     onclick={closeDrawer}
                     aria-current={isActive(item.href as any) ? 'page' : undefined}
                     class="flex items-center gap-3 px-3 py-2 rounded-lg"

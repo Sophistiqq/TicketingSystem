@@ -4,26 +4,36 @@
   "version": "0.0.0",
   "type": "module",
   "packageManager": "bun@1.4.4",
-  "engines": { "bun": ">=1.4.4" },
+  "engines": {
+    "bun": ">=1.4.4"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && bun build scripts/migrate.ts --target=bun --outfile build/migrate.js",
+    "start": "bun build/migrate.js && bun build/index.js",
+    "db:migrate": "bun scripts/migrate.ts",
+    "db:generate": "drizzle-kit generate",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p src/service-worker/tsconfig.json",
+    "test": "bun test",
+    "test:server": "bun scripts/check-remotes.ts"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@sveltejs/adapter-bun": "1.0.0",
+    "@sveltejs/kit": "3.1.1",
+    "@sveltejs/vite-plugin-svelte": "~7.3.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.0.0",
-    "@tsconfig/svelte": "^5.0.8",
+    "@types/bun": "1.4.4",
     "@types/node": "^24.12.0",
     "daisyui": "^5.0.0",
-    "svelte": "^5.53.12",
+    "devalue": "5.9.4",
+    "drizzle-kit": "0.31.11",
+    "svelte": "~5.57.3",
     "svelte-check": "^4.4.5",
     "tailwindcss": "^4.0.0",
-    "typescript": "~5.9.3",
-    "vite": "^8.0.1",
-    "vite-plugin-pwa": "^1.2.0"
+    "typescript": "~6.0.3",
+    "vite": "~8.3.6"
   },
   "dependencies": {
     "@elysiajs/eden": "^1.4.9",
@@ -43,9 +53,11 @@
     "@tiptap/starter-kit": "^3.22.4",
     "chart.js": "^4.5.1",
     "driver.js": "^1.4.0",
+    "drizzle-orm": "0.45.4",
     "elysia": "^1.4.28",
+    "jose": "6.2.15",
     "lucide-svelte": "^1.0.1",
-    "sv-router": "^0.15.0",
-    "theme-change": "^2.5.0"
+    "theme-change": "^2.5.0",
+    "zod": "4.6.7"
   }
 }

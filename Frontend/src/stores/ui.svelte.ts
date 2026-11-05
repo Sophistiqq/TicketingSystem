@@ -1,6 +1,7 @@
 // ============================================================
 // UI Store — global modals (confirm, prompt, etc.)
 // ============================================================
+import { pushState } from '$app/navigation';
 
 type ConfirmOptions = {
   title?: string;
@@ -49,7 +50,7 @@ export function getModalState() {
 export function openCustomModal(component: any, props: any = {}): Promise<ConfirmResult> {
   // Push state to history for back button support
   if (typeof window !== 'undefined') {
-    window.history.pushState(null, '', '#modal');
+    pushState('#modal', {});
   }
 
   return new Promise((resolve) => {
@@ -112,7 +113,7 @@ export function confirm(options: ConfirmOptions | string): Promise<ConfirmResult
   
   // Push state to history for back button support
   if (typeof window !== 'undefined') {
-    window.history.pushState(null, '', '#modal');
+    pushState('#modal', {});
   }
 
   return new Promise((resolve) => {

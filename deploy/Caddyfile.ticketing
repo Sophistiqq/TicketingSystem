@@ -5,6 +5,6 @@ handle_path /ticketing/api/* {
     reverse_proxy ticketing-backend:3000
 }
 
-handle_path /ticketing/* {
+handle /ticketing/* {
     reverse_proxy ticketing-frontend:80
 }

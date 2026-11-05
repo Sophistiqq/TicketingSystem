@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { navigate } from "../router.svelte";
   import type { Ticket } from "../lib/types";
   import StatusBadge from "./StatusBadge.svelte";
@@ -133,7 +134,7 @@
             </span>
           </td>
           <td>
-            <a href="{import.meta.env.BASE_URL}tickets/{ticket.id}" class="btn btn-ghost btn-xs">View</a>
+            <a href="{resolve('/')}tickets/{ticket.id}" class="btn btn-ghost btn-xs">View</a>
           </td>
         </tr>
       {:else}

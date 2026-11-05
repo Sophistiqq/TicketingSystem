@@ -1,5 +1,12 @@
 node_modules
 dist
+.svelte-kit
+build
+data
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
 dev-dist
 .env
 .env.*

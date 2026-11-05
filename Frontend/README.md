@@ -1,30 +1,32 @@
 # Monolith Frontend
 
-Modern, reactive, and mobile-first ticketing interface built with **Svelte 5** and **Vite**.
+Ticketing interface built with **SvelteKit 3**, **Svelte 5**, and **Bun 1.4.4**. Migration tracking and current boundaries are in [the migration notes](../docs/sveltekit-migration.md).
 
 ## ⚡ Tech Stack
 
-- **Framework**: [Svelte 5](https://svelte.dev) (Runes-based reactivity)
+- **Framework**: [SvelteKit](https://svelte.dev/docs/kit) with Svelte 5 runes and file-based routing
 - **Build Tool**: [Vite](https://vitejs.dev)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com) & [DaisyUI](https://daisyui.com)
 - **Icons**: [Lucide Svelte](https://lucide.dev)
 - **Editor**: [Tiptap](https://tiptap.dev) (Rich Text Editing)
-- **PWA**: `vite-plugin-pwa` for offline support and service workers.
+- **Validation**: Zod schemas for native authentication, profile and reference-data remote functions
+- **Database**: Drizzle over the existing SQLite database; remaining ticket workflows are migrating from Prisma
+- **PWA**: Native SvelteKit service worker for asset caching, push notifications, and update prompts
 
 ## 🚀 Key Features
 
 - **Responsive Dashboards**: Tailored experiences for End Users, Support Staff, and Administrators.
 - **Real-time Notifications**: Instant updates via WebSockets for new messages and ticket changes.
-- **PWA Support**: Installable application with offline capabilities and background sync.
+- **PWA Support**: Installable application with cached assets and push notifications. Ticket operations require a network connection.
 - **Ticket Management**: Intuitive interface for creating, viewing, and managing support tickets.
 - **Rich Interaction**: Interactive maps, charts for CSAT metrics, and real-time messaging.
-- **Custom Routing**: Lean, custom-built routing solution for optimal performance.
+- **Routing**: SvelteKit routes, including parameterized ticket and message pages
 
 ## 🛠️ Getting Started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) or [Node.js](https://nodejs.org) installed.
+- [Bun 1.4.4](https://bun.sh) installed. The production adapter runs on Bun.
 
 ### Installation
 
@@ -40,7 +42,14 @@ Modern, reactive, and mobile-first ticketing interface built with **Svelte 5** a
     Create a `.env` file:
     ```bash
     VITE_API_URL="http://localhost:3000"
+    DATABASE_URL="file:../Backend/database.db"
+    JWT_SECRET="same-secret-as-backend"
+    FRONTEND_URL="http://localhost:5173"
     ```
+
+During the transition, migrate/start the backend first, using the same SQLite file
+and JWT secret. Then run `bun run db:migrate` here to adopt its schema. This verifies
+the schema and records the Drizzle baseline without recreating existing tables.
 
 ### Running the App
 
@@ -56,9 +65,18 @@ The application will be available at `http://localhost:5173`.
 
 ```bash
 bun run build
+bun run start
 ```
 
-The optimized assets will be in the `dist/` directory.
+The Bun server and assets are in `build/`. Use `PORT` to choose the listening port.
+Set `VITE_BASE_PATH=/ticketing/` when building for the Caddy subpath deployment.
+
+Verify with `bun run check` and `bun test`. After building, run `bun run test:server`
+for native remote-function checks. These launch their own Bun server and disposable
+SQLite database; they never connect to an existing server or application data.
+
+`bun run db:generate` generates future Drizzle migrations. Review generated SQL
+before applying it; do not use schema push on existing installations.
 
 ## 📁 Project Structure
 
@@ -66,10 +84,10 @@ The optimized assets will be in the `dist/` directory.
 src/
 ├── components/      # Reusable UI components
 ├── lib/             # API client, WebSocket logic, and utilities
-├── routes/          # Application pages (User, Staff, Admin)
+├── routes/          # SvelteKit routes and existing page components
 ├── stores/          # Svelte 5 state management (using Runes)
 ├── assets/          # Static assets and icons
-└── sw.ts            # Service Worker definition
+└── service-worker/  # Service worker and its separate TypeScript configuration
 ```
 
 ## 📱 Progressive Web App (PWA)

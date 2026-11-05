@@ -1,50 +1,22 @@
 import { defineConfig, loadEnv } from 'vite'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { sveltekit } from '@sveltejs/kit/vite'
+import adapter from '@sveltejs/adapter-bun'
 import tailwindcss from '@tailwindcss/vite'
-import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: loadEnv(mode, process.cwd()).VITE_BASE_PATH || '/',
   plugins: [
     tailwindcss(),
-    svelte(),
-    VitePWA({
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.ts',
-      registerType: 'prompt',
-      injectRegister: 'auto',
-      manifest: {
-        name: 'Ticketing System',
-        short_name: 'Tickets',
-        description: 'Internal Ticketing and Support System',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
-        display: 'standalone',
-        icons: [
-          {
-            src: 'icon.png',
-            sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'icon.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'icon.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
-          }
-        ]
+    sveltekit({
+      adapter: adapter(),
+      paths: {
+        base: (loadEnv(mode, process.cwd()).VITE_BASE_PATH || '/').replace(/\/$/, '') as '' | `/${string}`,
+        origin: loadEnv(mode, process.cwd(), '').FRONTEND_URL || undefined,
       },
-      devOptions: {
-        enabled: true,
-        type: 'module'
-      }
+      files: { assets: 'public', serviceWorker: 'src/service-worker/index.ts' },
+      serviceWorker: { register: false },
+      compilerOptions: { experimental: { async: true } },
+      experimental: { remoteFunctions: true },
     })
   ],
 }))

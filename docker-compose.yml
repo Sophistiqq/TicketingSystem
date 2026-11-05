@@ -29,7 +29,15 @@ services:
       context: ./Frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3002}
+        FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3001}
     restart: unless-stopped
+    environment:
+      DATABASE_URL: file:/app/data/ticketing.db
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in the root .env file}
+      NODE_ENV: production
+      TZ: ${TZ:-Asia/Manila}
+    volumes:
+      - sqlite_data:/app/data
     depends_on:
       backend:
         condition: service_healthy

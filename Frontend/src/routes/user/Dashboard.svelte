@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { resolve } from '$app/paths';
   import { onMount } from "svelte";
   import { api } from "../../lib/api";
   import type {
@@ -122,7 +123,7 @@
     </div>
     <div class="flex gap-2">
       <a
-        href="{import.meta.env.BASE_URL}tickets/new"
+        href="{resolve('/')}tickets/new"
         class="btn btn-primary btn-md shadow-none gap-2"
       >
         <Plus size={20} />
@@ -140,7 +141,7 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {#if totalOverdue > 0}
           <a
-            href="{import.meta.env.BASE_URL}my-tickets?tab={hasRole('admin', 'mis')
+            href="{resolve('/')}my-tickets?tab={hasRole('admin', 'mis')
               ? 'all'
               : 'requested'}&overdue=true"
             class="flex items-center gap-4 p-4 bg-error/10 border border-error/20 rounded-2xl hover:bg-error/15 transition-all group"
@@ -163,7 +164,7 @@
 
         {#if hasRole("approver", "admin") && totalPendingApprovals > 0}
           <a
-            href="{import.meta.env.BASE_URL}approvals"
+            href="{resolve('/')}approvals"
             class="flex items-center gap-4 p-4 bg-primary/10 border border-primary/20 rounded-2xl hover:bg-primary/15 transition-all group"
           >
             <div
@@ -186,7 +187,7 @@
 
         {#if totalUnrated > 0}
           <a
-            href="{import.meta.env.BASE_URL}my-tickets?tab={hasRole('admin', 'mis')
+            href="{resolve('/')}my-tickets?tab={hasRole('admin', 'mis')
               ? 'all'
               : 'requested'}&unrated=true"
             class="flex items-center gap-4 p-4 bg-warning/10 border border-warning/20 rounded-2xl hover:bg-warning/15 transition-all group"
@@ -213,7 +214,7 @@
   <!-- 3. SECONDARY STATS & OPERATIONAL CARDS -->
   <div class="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-4">
     {#if hasRole("admin", "mis")}
-      <a href="{import.meta.env.BASE_URL}my-tickets?tab=assigned&status=in_progress" class="contents">
+      <a href="{resolve('/')}my-tickets?tab=assigned&status=in_progress" class="contents">
         <StatsCard
           icon={UserCheck}
           label="My Workload"
@@ -224,7 +225,7 @@
       </a>
 
       {#if user?.department_id}
-        <a href="{import.meta.env.BASE_URL}my-tickets?tab=all&status=open" class="contents">
+        <a href="{resolve('/')}my-tickets?tab=all&status=open" class="contents">
           <StatsCard
             icon={Briefcase}
             label="Dept Triage"
@@ -237,7 +238,7 @@
     {/if}
 
     <a
-      href="{import.meta.env.BASE_URL}my-tickets?tab={hasRole('admin', 'mis')
+      href="{resolve('/')}my-tickets?tab={hasRole('admin', 'mis')
         ? 'all'
         : 'requested'}&status=open"
       class="contents"
@@ -253,7 +254,7 @@
     </a>
 
     <a
-      href="{import.meta.env.BASE_URL}my-tickets?tab={hasRole('admin', 'mis')
+      href="{resolve('/')}my-tickets?tab={hasRole('admin', 'mis')
         ? 'all'
         : 'requested'}&status=resolved"
       class="contents"
@@ -269,7 +270,7 @@
     </a>
 
     {#if hasRole("admin", "mis")}
-      <a href="{import.meta.env.BASE_URL}my-tickets?tab=all" class="contents">
+      <a href="{resolve('/')}my-tickets?tab=all" class="contents">
         <StatsCard
           icon={LayoutDashboard}
           label="Total Tickets"
@@ -418,7 +419,7 @@
           </h2>
           <div class="flex items-center gap-3 flex-1 justify-end min-w-0">
             <a
-              href="{import.meta.env.BASE_URL}my-tickets?tab={hasRole('admin', 'mis')
+              href="{resolve('/')}my-tickets?tab={hasRole('admin', 'mis')
                 ? 'all'
                 : 'requested'}"
               class="btn btn-ghost btn-sm font-bold text-xs"
@@ -466,7 +467,7 @@
         <div class="card-body p-0 max-h-[400px] overflow-y-auto">
           {#each activeUsers.slice(0, 8) as staff (staff.id)}
             <a
-              href="{import.meta.env.BASE_URL}messages/{staff.id}"
+              href="{resolve('/')}messages/{staff.id}"
               class="w-full px-5 py-4 flex items-center gap-4 hover:bg-base-200 transition-colors border-b border-base-200 last:border-0 group"
             >
               <div class="avatar online">
@@ -496,7 +497,7 @@
         </div>
         <div class="p-4 bg-base-200/30 border-t border-base-200">
           <a
-            href="{import.meta.env.BASE_URL}messages"
+            href="{resolve('/')}messages"
             class="btn btn-ghost btn-xs btn-block gap-2 text-xs font-semibold"
           >
             Open Chat Room

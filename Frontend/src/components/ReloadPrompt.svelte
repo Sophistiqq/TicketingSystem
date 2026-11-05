@@ -1,22 +1,35 @@
 <script lang="ts">
-  import { useRegisterSW } from 'virtual:pwa-register/svelte';
+  import { resolve } from '$app/paths';
+  import { onMount } from 'svelte';
   import { RefreshCw, X } from 'lucide-svelte';
 
-  const { needRefresh, updateServiceWorker } = useRegisterSW({
-    onRegistered(r) {
-      console.log('[PWA] Service Worker registered');
-    },
-    onRegisterError(error) {
-      console.error('[PWA] Service Worker registration error:', error);
-    }
+  let needRefresh = $state(false);
+  let registration: ServiceWorkerRegistration | undefined;
+
+  onMount(() => {
+    if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register(`${resolve('/')}service-worker.js`, { type: 'module' }).then(result => {
+      registration = result;
+      needRefresh = !!result.waiting;
+      result.addEventListener('updatefound', () => {
+        result.installing?.addEventListener('statechange', () => {
+          needRefresh = !!result.waiting && !!navigator.serviceWorker.controller;
+        });
+      });
+    }).catch(error => console.error('[PWA] Registration failed:', error));
   });
 
+  function updateServiceWorker() {
+    navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), { once: true });
+    registration?.waiting?.postMessage({ type: 'SKIP_WAITING' });
+  }
+
   function close() {
-    $needRefresh = false;
+    needRefresh = false;
   }
 </script>
 
-{#if $needRefresh}
+{#if needRefresh}
   <div class="toast toast-bottom toast-center z-[100] w-full max-w-md p-4">
     <div class="alert alert-info shadow-lg flex flex-col sm:flex-row justify-between items-center gap-4">
       <div class="flex items-center gap-3">
@@ -31,7 +44,7 @@
       <div class="flex items-center gap-2 w-full sm:w-auto">
         <button 
           class="btn btn-primary btn-sm flex-1 sm:flex-none" 
-          onclick={() => updateServiceWorker(true)}
+          onclick={updateServiceWorker}
         >
           Update Now
         </button>

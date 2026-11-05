@@ -38,14 +38,14 @@ export type AttachmentType = 'approval_form' | 'screenshot' | 'document' | 'othe
 export type Department = {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   is_active: boolean;
 };
 
 export type AffectedSystem = {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   is_active: boolean;
   department_id?: number | null;
 };
@@ -53,7 +53,7 @@ export type AffectedSystem = {
 export type RequestType = {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   requires_approval_by_default: boolean;
   is_active: boolean;
   department_id?: number | null;
@@ -62,7 +62,7 @@ export type RequestType = {
 export type HardwareItem = {
   id: number;
   name: string;
-  description?: string;
+  description?: string | null;
   is_active: boolean;
 };
 
