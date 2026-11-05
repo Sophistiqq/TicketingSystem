@@ -1613,7 +1613,7 @@
                   </span>
                   {#if ticket && ticket.requester_id !== user?.id}
                       <a
-                      href="/messages/{ticket.requester_id}"
+                      href="{import.meta.env.BASE_URL}messages/{ticket.requester_id}"
                       class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/req:opacity-100 transition-opacity text-primary flex items-center justify-center"
                       title="Chat with Requester"
                     >
@@ -1642,7 +1642,7 @@
                   </span>
                   {#if ticket && ticket.assignee && ticket.assignee_id !== user?.id}
                     <a
-                      href="/messages/{ticket.assignee_id}"
+                      href="{import.meta.env.BASE_URL}messages/{ticket.assignee_id}"
                       class="btn btn-ghost btn-xs h-6 w-6 p-0 opacity-0 group-hover/ass:opacity-100 transition-opacity text-primary flex items-center justify-center"
                       title="Chat with Assignee"
                     >

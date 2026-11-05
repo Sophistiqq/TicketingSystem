@@ -5,10 +5,11 @@ import { setCurrentUser } from '../stores/user.svelte';
 type App = any;
 
 let base = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-if (base && !base.startsWith('http')) base = `https://${base}`;
-export const API_BASE = base;
+if (base.startsWith('/')) base = new URL(base, window.location.origin).href;
+else if (!base.startsWith('http')) base = `https://${base}`;
+export const API_BASE = base.replace(/\/$/, '');
 
-export const client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''), {
+export const client = treaty<App>(API_BASE, {
   fetch: {
     credentials: 'include'
   }

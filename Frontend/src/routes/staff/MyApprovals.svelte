@@ -105,7 +105,7 @@
                   {/if}
                 </div>
                 <a
-                  href="/tickets/{approval.ticket_id}"
+                  href="{import.meta.env.BASE_URL}tickets/{approval.ticket_id}"
                   class="text-xl font-bold hover:text-primary transition-colors block leading-tight"
                 >
                   {approval.ticket?.title ?? `Ticket #${approval.ticket_id}`}
@@ -184,7 +184,7 @@
                   class="mt-4 pt-4 border-t border-base-300 flex justify-end"
                 >
                   <a
-                    href="/tickets/{approval.ticket_id}"
+                    href="{import.meta.env.BASE_URL}tickets/{approval.ticket_id}"
                     class="btn btn-link btn-xs text-primary no-underline"
                     >View Full Ticket History →</a
                   >

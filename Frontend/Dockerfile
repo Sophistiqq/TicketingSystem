@@ -16,6 +16,8 @@ COPY . .
 # VITE_API_URL should be provided as an build-arg or environment variable
 ARG VITE_API_URL
 ENV VITE_API_URL=$VITE_API_URL
+ARG VITE_BASE_PATH=/
+ENV VITE_BASE_PATH=$VITE_BASE_PATH
 
 RUN bun run build
 

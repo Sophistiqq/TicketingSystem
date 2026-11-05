@@ -11,7 +11,7 @@ class TicketingWS {
   status = $state<'connected' | 'disconnected' | 'connecting' | 'error'>('disconnected');
 
   // 🔹 Internal 🔹
-  #client = treaty<App>(API_BASE.replace(/^https?:\/\//, ''));
+  #client = treaty<App>(API_BASE);
   #subscription: any = null;
   #reconnectAttempts = 0;
   #maxReconnectAttempts = 5;

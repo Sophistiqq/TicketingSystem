@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+generated
+server
+server.exe
+uploads
+*.db
+*.db-*
+.git
+.vscode
+.qwen
+*.log

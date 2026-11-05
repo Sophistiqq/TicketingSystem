@@ -77,7 +77,7 @@
 
     <p class="text-sm text-center opacity-60">
       Don't have an account?
-      <a href="/register" class="link link-primary">Register</a>
+      <a href="{import.meta.env.BASE_URL}register" class="link link-primary">Register</a>
     </p>
   </div>
 </div>

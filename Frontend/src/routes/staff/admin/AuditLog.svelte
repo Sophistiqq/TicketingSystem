@@ -221,7 +221,7 @@
                     <td>
                       {#if log.ticket_id}
                         <a
-                          href="/tickets/{log.ticket_id}"
+                          href="{import.meta.env.BASE_URL}tickets/{log.ticket_id}"
                           class="link link-primary font-mono text-xs"
                           >#{log.ticket_id}</a
                         >

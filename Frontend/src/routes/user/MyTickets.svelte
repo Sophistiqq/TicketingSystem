@@ -234,7 +234,7 @@
       </div>
       <p class="text-xs opacity-60 font-medium">Track and manage your service requests and assigned tasks.</p>
     </div>
-    <a href="/tickets/new" class="btn btn-primary gap-2 shadow-lg shadow-primary/20">
+    <a href="{import.meta.env.BASE_URL}tickets/new" class="btn btn-primary gap-2 shadow-lg shadow-primary/20">
       <Plus size={18} /> New Ticket
     </a>
   </div>

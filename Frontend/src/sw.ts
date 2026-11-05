@@ -15,8 +15,8 @@ self.addEventListener('push', (event) => {
     const data = event.data.json()
     const options: any = {
       body: data.body,
-      icon: '/icon.png',
-      badge: '/icon.png',
+      icon: `${import.meta.env.BASE_URL}icon.png`,
+      badge: `${import.meta.env.BASE_URL}icon.png`,
       vibrate: [100, 50, 100],
       tag: data.tag,
       renotify: !!data.tag,
@@ -45,13 +45,13 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   const dataUrl = event.notification.data?.url || '/notifications'
-  const urlToOpen = new URL(dataUrl, self.location.origin).href
+  const urlToOpen = new URL(dataUrl.replace(/^\//, ''), self.registration.scope).href
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       // 1. If we have a window already, try to navigate it and focus
       for (const client of clientList) {
-        if ('focus' in client && 'navigate' in client) {
+        if (client.url.startsWith(self.registration.scope) && 'focus' in client && 'navigate' in client) {
           return (client as WindowClient).navigate(urlToOpen).then(c => c?.focus())
         }
       }

@@ -155,7 +155,7 @@
 
 {#if !user}
   <div class="min-h-screen bg-base-200 flex items-center justify-center">
-    <Router />
+    <Router base={import.meta.env.BASE_URL.slice(0, -1)} />
   </div>
 {:else}
   <div class="drawer lg:drawer-open h-screen overflow-hidden">
@@ -190,7 +190,7 @@
         </button>
 
         <a
-          href="/messages"
+          href="{import.meta.env.BASE_URL}messages"
           class="btn btn-ghost btn-sm btn-square indicator"
           title="Messages"
         >
@@ -203,7 +203,7 @@
         </a>
 
         <a
-          href="/notifications"
+          href="{import.meta.env.BASE_URL}notifications"
           class="btn btn-ghost btn-sm btn-square indicator"
           title="Notifications"
         >
@@ -233,7 +233,7 @@
               {user.roles?.map((r) => String(r).toUpperCase()).join(", ") ||
                 "USER"}
             </li>
-            <li><a href="/profile"><UserIcon size={16} /> Profile</a></li>
+            <li><a href="{import.meta.env.BASE_URL}profile"><UserIcon size={16} /> Profile</a></li>
             <li>
               <button onclick={() => auth.logout()}
                 ><LogOut size={16} /> Logout</button
@@ -252,7 +252,7 @@
             ? 'overflow-hidden'
             : 'overflow-y-auto'}"
         >
-          <Router />
+          <Router base={import.meta.env.BASE_URL.slice(0, -1)} />
         </main>
       </div>
     </div>
@@ -271,7 +271,7 @@
             {#if canSee(item)}
               <li>
                 <a
-                  href={item.href}
+                  href={import.meta.env.BASE_URL.slice(0, -1) + item.href}
                   onclick={closeDrawer}
                   class="flex items-center justify-between px-6 py-4 rounded-none {isActive(
                     item.href as any,
@@ -304,7 +304,7 @@
               {#if canSee(item)}
                 <li>
                   <a
-                    href={item.href}
+                    href={import.meta.env.BASE_URL.slice(0, -1) + item.href}
                     onclick={closeDrawer}
                     class="flex items-center gap-3 px-6 py-4 rounded-none {isActive(
                       item.href as any,

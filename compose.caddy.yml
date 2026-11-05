@@ -1,0 +1,25 @@
+# Use with: docker compose -f docker-compose.yml -f compose.caddy.yml up -d --build
+services:
+  backend:
+    ports: !reset []
+    environment:
+      FRONTEND_URL: https://192.168.0.254
+    networks:
+      proxy:
+        aliases:
+          - ticketing-backend
+
+  frontend:
+    ports: !reset []
+    build:
+      args:
+        VITE_BASE_PATH: /ticketing/
+        VITE_API_URL: /ticketing/api
+    networks:
+      proxy:
+        aliases:
+          - ticketing-frontend
+
+networks:
+  proxy:
+    external: true

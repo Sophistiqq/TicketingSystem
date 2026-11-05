@@ -133,7 +133,7 @@
             </span>
           </td>
           <td>
-            <a href="/tickets/{ticket.id}" class="btn btn-ghost btn-xs">View</a>
+            <a href="{import.meta.env.BASE_URL}tickets/{ticket.id}" class="btn btn-ghost btn-xs">View</a>
           </td>
         </tr>
       {:else}

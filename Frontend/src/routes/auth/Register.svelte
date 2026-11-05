@@ -164,7 +164,7 @@
 
     <p class="text-sm text-center opacity-60">
       Already have an account?
-      <a href="/login" class="link link-primary">Sign in</a>
+      <a href="{import.meta.env.BASE_URL}login" class="link link-primary">Sign in</a>
     </p>
   </div>
 </div>
