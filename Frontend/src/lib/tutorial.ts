@@ -22,7 +22,7 @@ export const createTicketTour = () => {
         element: '[data-tour="ticket-description"]',
         popover: {
           title: "Issue Description",
-          description: "Describe the problem in detail. You can paste images, create tables, or even paste from Excel directly here.",
+          description: "Describe what happened, what you expected, and what you tried. Paste tables from Excel here; pasted screenshots are added as attachments below.",
         },
       },
       {

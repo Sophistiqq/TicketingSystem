@@ -17,6 +17,7 @@
   } = $props();
 
   let searchQuery = $state("");
+  const selectId = $props.id();
   let isOpen = $state(false);
 
   let filteredItems = $derived(
@@ -53,7 +54,7 @@
 
 <div class="form-control w-full relative" data-tour={dataTour}>
   {#if label}
-    <label class="label py-1" for="searchable-select">
+    <label class="label py-1" for={selectId}>
       <span
         class="label-text font-bold text-[10px] uppercase tracking-wider flex items-center gap-2"
       >
@@ -72,7 +73,9 @@
       onkeydown={(e) => e.key === "Enter" && !disabled && (isOpen = !isOpen)}
       role="combobox"
       aria-expanded={isOpen}
-      aria-controls="select-options"
+      aria-controls={`${selectId}-options`}
+      aria-label={label || placeholder}
+      aria-disabled={disabled}
       aria-haspopup="listbox"
       tabindex="0"
     >
@@ -82,7 +85,7 @@
         <span class="flex-1 truncate">{selectedItem.name}</span>
       {:else}
         <input
-          id="searchable-select"
+          id={selectId}
           type="text"
           class="flex-1 bg-transparent border-none outline-none text-sm p-0 h-full"
           {placeholder}
@@ -90,6 +93,7 @@
           onfocus={() => (isOpen = true)}
           oninput={() => (isOpen = true)}
           {disabled}
+          aria-label={label || placeholder}
         />
       {/if}
 
@@ -102,6 +106,7 @@
             clear();
           }}
           {disabled}
+          aria-label={`Clear ${label || 'selection'}`}
         >
           <X size={14} />
         </button>
@@ -119,7 +124,7 @@
       <div class="fixed inset-0 z-10" onclick={() => (isOpen = false)}></div>
 
       <ul
-        id="select-options"
+        id={`${selectId}-options`}
         class="absolute z-20 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-base-100 border border-base-300 rounded-lg shadow-xl p-1 animate-in fade-in slide-in-from-top-2 duration-200"
       >
         {#each filteredItems as item}

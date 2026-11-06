@@ -6,7 +6,7 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { eq } from 'drizzle-orm';
 import { migrateDatabase } from '../src/lib/server/db/migrate';
-import { csat, departments, messages, ticketComments, tickets, userRoles, users } from '../src/lib/server/db/schema';
+import { attachments, csat, departments, messages, requestTypes, ticketComments, tickets, userRoles, users } from '../src/lib/server/db/schema';
 
 // Browser actions must never reach an existing deployment or real application data.
 const handoff = readFileSync('build/adapter-bun.js', 'utf8');
@@ -25,6 +25,7 @@ type View = InstanceType<typeof Bun.WebView>;
 const exceptions: string[] = [], requests: string[] = [];
 const checks: string[] = [];
 const sessionCookies = new Map<View, string>();
+let failNextUpload = false;
 async function wait(view: View, expression: string) {
   for (let attempt = 0; attempt < 150; attempt++) {
     if (await view.evaluate(expression)) return;
@@ -67,6 +68,12 @@ async function login(view: View, username: string) {
   view.addEventListener('Fetch.requestPaused', event => {
     const request = (event as unknown as MessageEvent<{ requestId: string; request: { url: string; headers: Record<string, string> } }>).data;
     continued = continued.then(() => {
+      if (failNextUpload && request.request.url === `${address}${prefix}/api/attachments`) {
+        failNextUpload = false;
+        return view.cdp('Fetch.fulfillRequest', { requestId: request.requestId, responseCode: 503,
+          responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+          body: Buffer.from(JSON.stringify({ message: 'Simulated upload failure' })).toString('base64') });
+      }
       const headers = Object.entries(request.request.headers).filter(([name]) => name.toLowerCase() !== 'cookie').map(([name, value]) => ({ name, value }));
       const cookie = sessionCookies.get(view);
       if (cookie) headers.push({ name: 'Cookie', value: cookie });
@@ -85,6 +92,7 @@ try {
   migrateDatabase(sqlite);
   const db = drizzle(sqlite);
   const department = db.insert(departments).values({ name: 'IT' }).returning().get()!;
+  db.insert(requestTypes).values({ name: 'Hardware Issue' }).run();
   const password = await Bun.password.hash('password123');
   const [admin, user] = db.insert(users).values(['admin', 'user'].map(username => ({ username, first_name: username === 'admin' ? 'Admin' : 'User', last_name: 'Browser', email: `${username}@example.com`, password, department_id: department.id }))).returning().all();
   db.insert(userRoles).values([{ user_id: admin.id, role: 'admin' }, { user_id: admin.id, role: 'mis' }, { user_id: user.id, role: 'user' }]).run();
@@ -101,12 +109,69 @@ try {
   assert.equal(await userView.evaluate(`!!document.querySelector('.app-sidebar a[href="${prefix}/admin/users"]')`), false);
   await userView.evaluate("localStorage.setItem('tour_ticket_create_seen', 'true')");
   await userView.navigate(base + 'tickets/new');
+  await wait(userView, "!!document.querySelector('#title')");
+  await userView.click('form button[type="submit"]');
+  await wait(userView, "document.activeElement?.id === 'title' && !!document.querySelector('#description-error')");
+  assert.equal(db.select().from(tickets).all().length, 0);
+  await input(userView, '#title', 'A draft only for the requester');
+  await userView.click('#requires_approval');
+  await wait(userView, `JSON.parse(localStorage.getItem('ticket_draft:${user.id}') || '{}').requires_approval === true`);
+  await adminView.navigate(base + 'tickets/new');
+  await wait(adminView, "!!document.querySelector('#title')");
+  assert.equal(await adminView.evaluate("document.querySelector('#title').value"), '');
+  await userView.navigate(base + 'tickets/new');
+  await wait(userView, "document.querySelector('#title')?.value === 'A draft only for the requester' && document.querySelector('#requires_approval')?.checked");
+  await clickText(userView, 'Discard draft');
+  await wait(userView, `!document.querySelector('#title').value && !localStorage.getItem('ticket_draft:${user.id}')`);
+  await userView.evaluate("[...document.querySelectorAll('[role=combobox]')].find(el => el.getAttribute('aria-label').startsWith('Request type')).click()");
+  await clickText(userView, 'Hardware Issue');
+  await wait(userView, "!!document.querySelector('[role=combobox][aria-label=\"Hardware item (optional)\"]') && document.querySelector('#description-help')?.innerText.includes('device')");
   await input(userView, '#title', 'Browser workflow ticket');
   await wait(userView, "!!document.querySelector('.tiptap[contenteditable=true]')");
   await userView.click('.tiptap[contenteditable=true]');
   await userView.type('A sufficiently detailed description for the native ticket workflow.');
+  const pasteScreenshot = `(() => {
+    const bytes = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII='), char => char.charCodeAt(0));
+    const transfer = new DataTransfer(); transfer.items.add(new File([bytes], 'screenshot.png', { type: 'image/png' }));
+    document.querySelector('.tiptap').dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
+  })()`;
+  await userView.evaluate(pasteScreenshot);
+  await wait(userView, "!!document.querySelector('img[alt=\"Preview of screenshot.png\"]')");
+  await userView.evaluate("document.querySelector('button[aria-label=\"Remove screenshot.png\"]').scrollIntoView({ block: 'center' })");
+  await userView.click('button[aria-label="Remove screenshot.png"]');
+  await wait(userView, "!document.querySelector('img[alt=\"Preview of screenshot.png\"]')");
+  await userView.evaluate(`(() => {
+    const transfer = new DataTransfer();
+    for (let i = 0; i < 6; i++) transfer.items.add(new File(['log'], 'log-' + i + '.txt', { type: 'text/plain' }));
+    const input = document.querySelector('#ticket-files'); input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true }));
+  })()`);
+  await wait(userView, "document.querySelector('[data-tour=ticket-attachments]')?.innerText.includes('Upload up to 5 files')");
+  await userView.evaluate(`(() => {
+    const transfer = new DataTransfer(); transfer.items.add(new File(['log details'], 'error-log.txt', { type: 'text/plain' }));
+    document.querySelector('[data-tour=ticket-attachments] button').dispatchEvent(new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true }));
+  })()`);
+  await wait(userView, "!!document.querySelector('button[aria-label=\"Remove error-log.txt\"]')");
+  await userView.evaluate(pasteScreenshot);
+  await userView.resize(390, 844);
+  assert.ok(await userView.evaluate('document.documentElement.scrollWidth <= innerWidth + 1'), 'Mobile creation form overflows');
+  await userView.resize(1920, 1080);
+  assert.ok(await userView.evaluate("document.querySelector('.ticket-create').getBoundingClientRect().width > 1500"), 'Creation form should use the full desktop workspace');
+  failNextUpload = true;
   await userView.click('form button[type="submit"]');
+  await wait(userView, "document.querySelector('main')?.innerText.includes('Simulated upload failure') && document.querySelector('main')?.innerText.includes('Retry attachments')");
+  assert.equal(db.select().from(tickets).all().length, 1);
+  assert.equal(db.select().from(attachments).all().length, 0);
+  await userView.navigate(base + 'tickets/new');
+  await wait(userView, "document.querySelector('main')?.innerText.includes('has been created') && !!document.querySelector('.tiptap')");
+  assert.equal(await userView.evaluate("document.querySelector('#title').matches(':disabled')"), true);
+  await userView.evaluate(pasteScreenshot);
+  await clickText(userView, 'Retry attachments');
   await wait(userView, "location.pathname.includes('/tickets/') && !location.pathname.endsWith('/new') && !!document.querySelector('textarea[placeholder=" + JSON.stringify('Reply...') + "]')");
+  assert.equal(db.select().from(tickets).all().length, 1, 'Attachment retry created a duplicate ticket');
+  assert.equal(db.select().from(attachments).all().length, 1);
+  assert.equal(await userView.evaluate(`localStorage.getItem('ticket_draft:${user.id}')`), null);
+  await userView.resize(1440, 1000);
+  checks.push('creation validation, per-user draft restoration/discard, request guidance, pasted screenshots/removal, full-width/mobile layout and upload retry after reload without duplicate tickets');
   const ticket = db.select().from(tickets).get()!;
   assert.equal(ticket.requester_id, user.id);
   checks.push('UI ticket creation and role navigation');

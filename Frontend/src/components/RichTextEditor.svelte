@@ -12,6 +12,10 @@
     disabled = $bindable(false),
     class: className = "min-h-[500px]",
     "data-tour": dataTour = undefined,
+    id = undefined,
+    "aria-label": accessibleLabel = undefined,
+    "aria-describedby": describedBy = undefined,
+    "aria-invalid": invalid = false,
   } = $props();
 
   let element: HTMLDivElement;
@@ -37,6 +41,11 @@
       editorProps: {
         attributes: {
           class: `prose prose-sm max-w-none focus:outline-none p-4 ${className}`,
+          ...(id ? { id } : {}),
+          role: "textbox",
+          "aria-multiline": "true",
+          ...(accessibleLabel ? { "aria-label": accessibleLabel } : {}),
+          ...(describedBy ? { "aria-describedby": describedBy } : {}),
         },
       },
     });
@@ -50,13 +59,14 @@
 
   $effect(() => {
     if (editor && editor.getHTML() !== value) {
-      editor.commands.setContent(value);
+      editor.commands.setContent(value, { emitUpdate: false });
     }
   });
 
   $effect(() => {
     if (editor) {
       editor.setEditable(!disabled);
+      editor.view.dom.setAttribute("aria-invalid", String(invalid));
     }
   });
 </script>
