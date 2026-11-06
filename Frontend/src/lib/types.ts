@@ -218,10 +218,10 @@ export type Message = {
   is_read: boolean;
   sender_id: number;
   receiver_id: number;
-  sender?: User;
-  receiver?: User;
-  ticket_id?: number;
-  ticket?: Partial<Ticket>;
+  sender?: Pick<User, 'id' | 'first_name' | 'last_name' | 'username'>;
+  receiver?: Pick<User, 'id' | 'first_name' | 'last_name' | 'username'>;
+  ticket_id?: number | null;
+  ticket?: Pick<Ticket, 'id' | 'title'> & { status: string } | null;
 };
 
 // ── CSAT ────────────────────────────────────────────────────

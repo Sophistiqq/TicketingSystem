@@ -1,10 +1,10 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../../lib/api";
+  import { getCsatStats, getAgentReport } from "../../../lib/csat.remote";
   import type { CSATStats } from "../../../lib/types";
   import { Star, TrendingUp, Users, ChartColumn, Clock } from "lucide-svelte";
   import StatsCard from "../../../components/StatsCard.svelte";
-  import { openCustomModal } from "../../../stores/ui.svelte";
+  import { openCustomModal, triggerAlert } from "../../../stores/ui.svelte";
   import ReportModal from "../../../components/ReportModal.svelte";
 
   let stats = $state<CSATStats | null>(null);
@@ -15,29 +15,29 @@
 
   async function loadStats() {
     loading = true;
-    const params = new URLSearchParams();
-    if (selectedMonth) params.set("month", selectedMonth);
 
     try {
-      const res = await api.get<CSATStats>(`/csat/stats?${params}`);
+      const result = getCsatStats({ month: selectedMonth || undefined });
+      await result.refresh();
+      const res = await result;
       if (res) stats = res;
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load CSAT', 'error');
     }
     loading = false;
   }
 
   async function showReport(agentId: number) {
     try {
-      const params = new URLSearchParams();
-      if (selectedMonth) params.set("month", selectedMonth);
 
-      const data = await api.get(`/csat/reports/${agentId}?${params}`);
+      const result = getAgentReport({ agent_id: agentId, month: selectedMonth || undefined });
+      await result.refresh();
+      const data = await result;
       if (data) {
         openCustomModal(ReportModal, { data, month: selectedMonth });
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load agent report', 'error');
     }
   }
 

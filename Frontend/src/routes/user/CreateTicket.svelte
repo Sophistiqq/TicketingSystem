@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { createTicket } from "../../lib/ticket-actions.remote";
+  import { createTicketSchema } from "../../lib/validation/ticket-writes";
   import { onMount } from "svelte";
   import { api } from "../../lib/api";
   import {
@@ -139,7 +141,7 @@
       };
       if (due_date) body.due_date = new Date(due_date).toISOString();
 
-      const res = await api.post<{ id: number }>("/tickets/", body);
+      const res = await createTicket(createTicketSchema.parse(body));
       if (res?.id) {
         if (files && files.length > 0) {
           await api.upload(res.id, files);

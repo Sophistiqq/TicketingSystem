@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount, onDestroy, tick } from "svelte";
-  import { api } from "../../lib/api";
+  import { onMount, onDestroy, tick, untrack } from "svelte";
+  import { getConversations, getMessages, markMessagesRead, sendMessage as postMessage } from "../../lib/messages.remote";
   import { getTickets, getTicketPreview as readTicketPreview } from "../../lib/tickets.remote";
   import { saveProfile, getSession } from "../../lib/auth.remote";
   import { getUserDirectory, getActiveUsers } from "../../lib/users.remote";
@@ -190,11 +190,9 @@
   let userId = $derived(route.params?.userId);
 
   $effect(() => {
-    console.log("Router/Params changed: userId =", userId);
-
     if (userId) {
       const contactId = Number(userId);
-      loadMessages(contactId);
+      untrack(() => { void loadMessages(contactId); });
       showChatOnMobile = true;
     } else {
         selectedContactId = null;
@@ -221,7 +219,7 @@
           scrollToBottom();
           if (msg.sender_id) {
             try {
-              await api.get(`/messages/${msg.sender_id}`);
+              await markMessagesRead(msg.sender_id);
               fetchMessageUnreadCount();
             } catch {
               /* ignore */
@@ -240,10 +238,15 @@
       }
       loadAll();
     });
+    const unsubReconnect = ws.onReconnect(() => {
+      void loadAll();
+      if (selectedContactId) void loadMessages(selectedContactId);
+    });
 
     return () => {
       unsubMessage();
       unsubRead();
+      unsubReconnect();
     };
   });
 
@@ -269,10 +272,12 @@
   // Data loading
   async function loadAll() {
     try {
-      await getUserDirectory().refresh();
+      const directoryQuery = getUserDirectory();
+      const conversationsQuery = getConversations();
+      await Promise.all([directoryQuery.refresh(), conversationsQuery.refresh()]);
       const [conversations, directory] = await Promise.all([
-        api.get<any[]>("/messages/conversations"),
-        getUserDirectory(),
+        conversationsQuery,
+        directoryQuery,
       ]);
 
       const map = new Map<number, Contact>();
@@ -283,16 +288,17 @@
       }
 
       contactMap = map;
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load conversations', 'error');
     }
     loadingContacts = false;
   }
 
   async function loadActiveUsers() {
     try {
-      await getActiveUsers().refresh();
-      const res = await getActiveUsers();
+      const result = getActiveUsers();
+      await result.refresh();
+      const res = await result;
       if (res) activeUserIds = new Set(res.map((u: any) => u.id));
     } catch {
       /* ignore */
@@ -306,14 +312,17 @@
     loadingMessages = true;
 
     try {
-      const res = await api.get<Message[]>(`/messages/${contactId}`);
+      const result = getMessages(contactId);
+      await result.refresh();
+      const res = await result;
+      await markMessagesRead(contactId);
       if (res) {
         messages = res;
         scrollToBottom();
         fetchMessageUnreadCount();
       }
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to load messages', 'error');
     }
     loadingMessages = false;
   }
@@ -347,7 +356,7 @@
     scrollToBottom();
 
     try {
-      const res = await api.post<Message>("/messages", {
+      const res = await postMessage({
         content,
         receiver_id: selectedContactId,
         ticket_id: ticketId ?? undefined,

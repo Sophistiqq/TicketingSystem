@@ -3,6 +3,7 @@ dist
 .svelte-kit
 build
 data
+uploads
 *.db
 *.db-shm
 *.db-wal

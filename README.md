@@ -1,187 +1,118 @@
 # Ticketing System
 
-A ticketing and collaboration platform running on Bun with a SvelteKit 3/Svelte 5 interface. The Elysia/Prisma backend is being migrated to SvelteKit server functions with Zod and Drizzle.
+One SvelteKit 3/Svelte 5 application on Bun 1.4.4, with Zod validation and Drizzle/SQLite. Native remote functions handle application workflows; authenticated server endpoints handle files and SSE realtime. Elysia, Eden and Prisma are removed.
 
-Migration progress: [Linear project](https://linear.app/ibs-msap/project/sveltekit-consolidation-3e6a3b910b1f). See [migration notes](docs/sveltekit-migration.md) for the current boundary and deployment changes.
-
-## 🏗️ Architecture
-
-The project is split into two main components:
-
-- **Frontend**: SvelteKit file-based routing, client-rendered Svelte 5 pages, a Bun server, and native service-worker support.
-- **Backend**: An ElysiaJS (Bun) API service providing high-performance endpoints, real-time WebSocket communication, and Prisma ORM for database management.
-
-## Run with Docker Compose
-
-The application uses Bun 1.4.4; both Docker builds pin that version. For local
-development, install Bun 1.4.4 or newer.
-
-Image uploads retain their original bytes and full-resolution downloads.
-JPEG, PNG, and WebP uploads also get a WebP grid preview up to 480×480
-when it is smaller than the original. Previews use Bun's built-in image API with
-a 16-megapixel decode limit. Unsupported, oversized, or invalid images retain
-their originals without a preview. Existing attachments continue to work and use
-their originals; no backfill or database migration is needed. Original uploads
-and previews share the persistent uploads volume and are removed together.
-
-Uploads allow up to 5 files per request, at most 20 MB each. To run upload tests:
+## Run locally
 
 ```sh
-cd Backend
+cd Frontend
+bun install --frozen-lockfile
+cp .env.example .env
+# Set JWT_SECRET, then:
+bun run db:migrate
+bun run db:seed
+bun run dev
+```
+
+Open http://localhost:5173. Reference seeding is idempotent and does not create demo accounts. Create the first administrator using `ADMIN_EMAIL` and `ADMIN_PASSWORD` (at least 12 characters):
+
+```sh
+export ADMIN_EMAIL=admin@example.com
+read -rs -p 'Administrator password: ' ADMIN_PASSWORD; echo
+export ADMIN_PASSWORD
+bun run admin:create
+unset ADMIN_PASSWORD
+```
+
+`ADMIN_USERNAME` defaults to `admin`. Existing usernames/emails are rejected without changing their passwords or roles. Existing installations keep their accounts and JWT secret.
+
+## Docker Compose
+
+From the repository root, copy `.env.example` to `.env` and set `JWT_SECRET` and the browser origin `FRONTEND_URL`. Then:
+
+```sh
+docker compose up -d --build --remove-orphans
+docker compose ps
+docker compose logs -f web
+```
+
+The app listens on http://localhost:3001, bound to loopback. Use Caddy for LAN access. There is one `web` service, with persistent `sqlite_data` and `uploads` volumes. Startup verifies/adopts existing SQLite schemas and applies versioned Drizzle migrations before listening. It does not reset data or run seeds.
+
+For a new installation, run `docker compose exec web bun run db:seed`. To create its first administrator, set/export the variables above on the host and run:
+
+```sh
+docker compose exec -e ADMIN_EMAIL -e ADMIN_PASSWORD web bun run admin:create
+```
+
+For optional web push, retain or generate a VAPID key pair:
+
+```sh
+docker compose exec web bun -e "console.log(require('web-push').generateVAPIDKeys())"
+```
+
+Set `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_CONTACT` in `.env`, then recreate `web`. Push requires HTTPS and browser permission. Supported push providers are FCM, Mozilla, Apple and Windows. Keys and subscription records survive the migration.
+
+## Caddy at /ticketing/
+
+Create the external `proxy` network if it does not already exist. Build/start using both Compose files:
+
+```sh
+docker compose -f docker-compose.yml -f compose.caddy.yml up -d --build --remove-orphans
+```
+
+Replace the previous ticketing handlers with [deploy/Caddyfile.ticketing](deploy/Caddyfile.ticketing), inside the existing `192.168.0.254` site block before the fallback handler:
+
+```caddyfile
+redir /ticketing /ticketing/ 308
+handle /ticketing/* {
+    reverse_proxy ticketing-web:3000
+}
+```
+
+Remove the old `/ticketing/api/*` handler targeting `ticketing-backend`. Preserve the entire prefix with `handle`. The single server owns `/ticketing/_app/remote/*`, `/ticketing/api/*`, files, pages and the service worker. Validate/reload Caddy with your existing Caddy Compose setup.
+
+The override builds with `VITE_BASE_PATH=/ticketing/` and `FRONTEND_URL=https://192.168.0.254`. If the hostname changes, update the override's build origin and Caddy site together. Remote-function CSRF checks require the actual browser origin, without a path. Rebuild after changing the base or origin.
+
+## Upgrade an existing installation
+
+Keep the same Compose project name, working directory and volume names so Compose reuses the existing database and uploads. Keep the existing JWT/VAPID secrets. Back up both volumes before the first single-service start; `down` must never use `-v`.
+
+For the Caddy deployment, from the same repository directory as the previous deployment:
+
+```sh
+docker compose -f docker-compose.yml -f compose.caddy.yml build
+docker compose -f docker-compose.yml -f compose.caddy.yml down --remove-orphans
+mkdir -p backups
+docker compose -f docker-compose.yml -f compose.caddy.yml run --rm --no-deps -v "$PWD/backups:/backup" --entrypoint sh web -c 'tar -czf /backup/sqlite.tar.gz -C /app/data . && tar -czf /backup/uploads.tar.gz -C /app/uploads .'
+docker compose -f docker-compose.yml -f compose.caddy.yml up -d --remove-orphans
+docker compose -f docker-compose.yml -f compose.caddy.yml logs --tail=100 web
+```
+
+Use a new backup directory for each upgrade. Apply the Caddy handler change above, validate/reload Caddy, then check login, a ticket, its original attachment and live messaging. The backup helper overrides startup, so it archives the stopped volumes before migrations run. For a local deployment, omit the second `-f compose.caddy.yml` throughout.
+
+Existing schemas are checked against the baseline before migration history is recorded. Incompatible or partial schemas fail startup without recreating tables. For a rehearsal, restore the backups into separate volumes/project and verify there first. The repository's automated tests use disposable databases, not your production data.
+
+To replace the database manually, stop `web`, back up both volumes, replace `/app/data/ticketing.db` in the SQLite volume and remove stale `ticketing.db-wal`/`ticketing.db-shm` only while all database writers are stopped. Restore the matching uploads too. Startup adopts a compatible old database. Do not use schema push or delete the volume.
+
+## Files, realtime and validation
+
+Uploads preserve original bytes and full-resolution downloads. JPEG/PNG/WebP uploads get a smaller WebP preview up to 480x480 when useful, with a 16-megapixel decode limit. Existing attachments work without a backfill. Uploads allow five files of at most 20 MB each; authenticated downloads enforce ticket access. Active document formats download with `nosniff` rather than execute inline.
+
+Realtime uses authenticated SSE with automatic reconnect, fresh role/access checks and private internal-note channels. This deployment runs one Bun process; scaling to several independent instances requires a shared event broker. Notifications also retain polling recovery. The service worker caches static assets only; app/database operations require connectivity.
+
+```sh
+cd Frontend
+bun run check
 bun test
+bun run build
+bun run test:server
 ```
 
-Install Docker Engine with Compose v2 (or Docker Desktop using Linux containers).
-From the repository root:
-
-1. Copy `.env.example` to `.env` (`Copy-Item .env.example .env` in PowerShell).
-2. Set `JWT_SECRET` in `.env` to a long, random value.
-3. Build and start:
-
-   ```sh
-   docker compose up -d --build
-   docker compose ps
-   docker compose logs -f backend
-   ```
-
-Open http://localhost:3001. The API is at http://localhost:3002 and its
-documentation at http://localhost:3002/swagger.
-
-Compose runs the existing SQLite database inside the backend container; no separate
-database server is needed. Migrations run before the API starts. The frontend waits
-for the API health check. Named volumes preserve SQLite data and uploaded files
-across container rebuilds and `docker compose down`.
-
-For a new local/demo installation, populate reference data and demo accounts once:
+The integration check launches its own Bun server, database and upload directory. For browser checks, Chrome must be installed; build with a local origin first:
 
 ```sh
-docker compose exec backend bun run db:seed
+FRONTEND_URL=http://127.0.0.1:33001 VITE_BASE_PATH=/ticketing/ bun run build
+bun run test:browser
 ```
 
-The existing seed creates `admin`, `mis`, `approver`, and `user`, all with password
-`password123`. Change these passwords before making the app accessible to others.
-Seeding is explicit so normal restarts do not create demo accounts.
-
-For optional browser push notifications, generate your own VAPID keys:
-
-```sh
-docker compose exec backend bun -e "console.log(require('web-push').generateVAPIDKeys())"
-```
-
-Put the keys and a `mailto:` contact in `.env`, then run `docker compose up -d`.
-Browser push requires HTTPS except on localhost.
-
-For access from another computer, set `FRONTEND_URL` and `VITE_API_URL` to URLs
-reachable by that computer and run `docker compose up -d --build` again. The API URL
-is embedded in the frontend at build time; a Compose service name such as `backend`
-is not a browser-accessible hostname. Configure HTTPS before public deployment.
-
-Stop with `docker compose down`. **`docker compose down -v` deletes the database
-and uploads.** This setup starts a fresh SQLite database; it does not import an
-existing local/Turso database or migrate old PostgreSQL data. Any volume from the
-previous PostgreSQL Compose setup is left untouched.
-
-### Existing Caddy server at 192.168.0.254
-
-Use the shared external `proxy` network to serve the app at
-`https://192.168.0.254/ticketing/`. Caddy's container must already belong to that
-network. This override removes both published host ports; Caddy reaches the
-containers through their network aliases.
-
-1. Copy `.env.example` to `.env` and set `JWT_SECRET` as above.
-2. Start from this repository's directory (Compose v2.24.4 or newer):
-
-   ```sh
-   docker compose -f docker-compose.yml -f compose.caddy.yml config
-   docker compose -f docker-compose.yml -f compose.caddy.yml up -d --build
-   ```
-
-3. Inside the existing `192.168.0.254 { ... }` Caddy site block, add the contents
-   of [deploy/Caddyfile.ticketing](deploy/Caddyfile.ticketing) before the fallback
-   `handle` that proxies Homarr:
-
-   ```caddyfile
-   redir /ticketing /ticketing/ 308
-
-   handle_path /ticketing/api/* {
-       reverse_proxy ticketing-backend:3000
-   }
-
-   handle /ticketing/* {
-       reverse_proxy ticketing-frontend:80
-   }
-   ```
-
-4. From `~/Services/caddy`, validate and reload (replace `caddy` if your Compose
-   service has a different name):
-
-   ```sh
-   docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile
-   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
-   ```
-
-5. Open `https://192.168.0.254/ticketing/`. Check the API at
-   `https://192.168.0.254/ticketing/api/health`.
-
-For initial demo data:
-
-```sh
-docker compose -f docker-compose.yml -f compose.caddy.yml exec backend bun run db:seed
-```
-
-Use both Compose files for subsequent `up`, `down`, `exec`, and `logs` commands.
-The override sets the browser API path to `/ticketing/api` and builds frontend
-assets and navigation for `/ticketing/`. Caddy strips the API prefix but preserves
-the frontend prefix for SvelteKit, and handles WebSocket upgrades automatically.
-If upgrading from the previous SPA, change the frontend handler from `handle_path`
-to `handle` and reload Caddy using the commands above. The backend CORS origin is
-`https://192.168.0.254` (an origin has no path). Trust your Caddy root certificate
-on client devices for HTTPS and browser push to work without certificate errors.
-
-## 🚀 Deployment Flow (Render)
-
-The `render.yaml` blueprint below is historical. Its static frontend and PostgreSQL configuration do not match the current SvelteKit/SQLite app. Use the Docker Compose/Caddy instructions above during the migration.
-
-### Deployment Components
-
-1.  **Frontend (Static Site)**:
-    - Automatically builds using `bun run build`.
-    - Serves the `dist` directory.
-    - Configured with SPA rewrite rules (`/*` -> `/index.html`).
-2.  **Backend (Web Service)**:
-    - Runs on Bun.
-    - Handles database migrations and seeding automatically on start.
-    - Exposes a high-performance API.
-3.  **PostgreSQL Database**:
-    - Managed instance provisioned automatically via the Blueprint.
-
-### One-Click Deployment Steps
-
-1.  Fork this repository to your GitHub account.
-2.  Log in to your Render dashboard.
-3.  Click **New +** and select **Blueprint**.
-4.  Connect your forked repository.
-5.  Render will parse the `render.yaml` and prompt you to confirm the creation of the services.
-6.  **Configuration**:
-    - The `render.yaml` handles most environment variables.
-    - You may need to update `VITE_API_URL` in the Frontend service settings if your Backend URL differs from the default in the YAML.
-
-## 🛠️ Project Structure
-
-```text
-.
-├── Backend/          # ElysiaJS API & Database (Bun)
-├── Frontend/         # Svelte 5 Application (Vite)
-├── plans/            # Documentation & Improvement plans
-├── render.yaml       # Render Blueprint configuration
-├── api.yaml          # OpenAPI/Swagger Specification
-└── run_all_tests.sh  # E2E Test Suite runner
-```
-
-## 🧪 Local Development
-
-To run the entire system locally, refer to the individual READMEs in the `Backend/` and `Frontend/` directories.
-
-- [Backend Documentation](./Backend/README.md)
-- [Frontend Documentation](./Frontend/README.md)
-
+See [migration notes](docs/sveltekit-migration.md) and [Linear tracking](https://linear.app/ibs-msap/project/sveltekit-consolidation-3e6a3b910b1f). Docker/live Caddy and real-provider web push must be verified on the deployment host.

@@ -5,13 +5,15 @@ import type { AuthContext } from './auth';
 import type { getDb } from './db';
 import * as s from './db/schema';
 import { sqliteDateMillis } from './db/date';
+import { redactCommentAudit } from './audit-privacy';
+import { sanitizeRichText } from './rich-text';
 import type { ApprovalStatus, AttachmentType, Ticket, TicketPriority, TicketStatus, User } from '../types';
 import type { TicketListInput } from '../validation/tickets';
 
 type Db = ReturnType<typeof getDb>;
 type TicketRow = typeof s.tickets.$inferSelect;
 
-export function loadUser(db: Db, id: number | null): User | undefined {
+export function loadUser(db: Pick<Db, 'select'>, id: number | null): User | undefined {
   if (id === null) return undefined;
   const { password: _, ...columns } = getTableColumns(s.users);
   const row = db.select(columns).from(s.users).where(eq(s.users.id, id)).get();
@@ -31,6 +33,7 @@ function childCount(db: Db, table: typeof s.attachments | typeof s.resolutionAtt
 export function ticketDto(db: Db, row: TicketRow): Ticket & { _count: { attachments: number; resolution_attempts: number } } {
   return {
     ...row,
+    description: sanitizeRichText(row.description),
     status: row.status as TicketStatus, priority: row.priority as TicketPriority,
     created_at: row.created_at.toISOString(), updated_at: row.updated_at.toISOString(),
     escalated_at: row.escalated_at?.toISOString(), started_at: row.started_at?.toISOString(),
@@ -121,14 +124,14 @@ export function readTicket(db: Db, auth: AuthContext, id: number): Ticket {
       ...a, notes: a.notes ?? undefined, reopen_reason: a.reopen_reason ?? undefined, handled_by_id: a.handled_by_id ?? undefined,
       created_at: a.created_at.toISOString(), resolved_at: a.resolved_at?.toISOString(), reopened_at: a.reopened_at?.toISOString(), handled_by: loadUser(db, a.handled_by_id),
     })),
-    audit_logs: db.select().from(s.auditLogs).where(eq(s.auditLogs.ticket_id, id)).orderBy(desc(sqliteDateMillis(s.auditLogs.created_at)), desc(s.auditLogs.id)).all().map(a => ({
+    audit_logs: db.select().from(s.auditLogs).where(eq(s.auditLogs.ticket_id, id)).orderBy(desc(sqliteDateMillis(s.auditLogs.created_at)), desc(s.auditLogs.id)).all().map(a => redactCommentAudit(a, isStaff(auth))).map(a => ({
       ...a, ticket_id: a.ticket_id ?? undefined, performed_by_id: a.performed_by_id ?? undefined,
       old_value: a.old_value ?? undefined, new_value: a.new_value ?? undefined, notes: a.notes ?? undefined,
       created_at: a.created_at.toISOString(), performed_by: loadUser(db, a.performed_by_id),
     })),
     comments: db.select().from(s.ticketComments).where(and(eq(s.ticketComments.ticket_id, id), isStaff(auth) ? undefined : eq(s.ticketComments.is_internal, false)))
       .orderBy(asc(sqliteDateMillis(s.ticketComments.created_at)), asc(s.ticketComments.id)).all().map(a => ({
-        ...a, created_at: a.created_at.toISOString(), updated_at: a.updated_at.toISOString(),
+        ...a, content: sanitizeRichText(a.content), created_at: a.created_at.toISOString(), updated_at: a.updated_at.toISOString(),
         user: db.select({ id: s.users.id, first_name: s.users.first_name, last_name: s.users.last_name, username: s.users.username })
           .from(s.users).where(eq(s.users.id, a.user_id)).get(),
       })),

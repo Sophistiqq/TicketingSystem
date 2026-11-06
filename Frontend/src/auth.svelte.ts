@@ -9,7 +9,7 @@ import { fetchReferenceData } from './stores/reference.svelte';
 import { navigate } from './router.svelte';
 import { ws } from './lib/ws';
 import type { User } from './lib/types';
-import { initPushNotifications } from './lib/pwa';
+import { initPushNotifications, stopPushNotifications } from './lib/pwa';
 import { loginSchema, registerSchema } from './lib/validation/auth';
 
 const auth = {
@@ -47,6 +47,7 @@ const auth = {
   /** Log out and clean up */
   logout: async (): Promise<string | void> => {
     try {
+      await stopPushNotifications().catch(() => {});
       await logout();
       await getSession().refresh();
     } catch {

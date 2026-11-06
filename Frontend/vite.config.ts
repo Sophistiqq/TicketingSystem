@@ -8,10 +8,10 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     tailwindcss(),
     sveltekit({
-      adapter: adapter(),
+      adapter: adapter({ serverOptions: { maxRequestBodySize: 105 * 1024 * 1024, idleTimeout: 60 } }),
       paths: {
         base: (loadEnv(mode, process.cwd()).VITE_BASE_PATH || '/').replace(/\/$/, '') as '' | `/${string}`,
-        origin: loadEnv(mode, process.cwd(), '').FRONTEND_URL || undefined,
+        origin: loadEnv(mode, process.cwd(), '').FRONTEND_URL?.replace(/\/$/, '') || undefined,
       },
       files: { assets: 'public', serviceWorker: 'src/service-worker/index.ts' },
       serviceWorker: { register: false },

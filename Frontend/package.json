@@ -13,10 +13,13 @@
     "start": "bun build/migrate.js && bun build/index.js",
     "db:migrate": "bun scripts/migrate.ts",
     "db:generate": "drizzle-kit generate",
+    "db:seed": "bun scripts/seed.ts",
+    "admin:create": "bun scripts/create-admin.ts",
     "preview": "bun --bun vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p src/service-worker/tsconfig.json",
     "test": "bun test",
-    "test:server": "bun scripts/check-remotes.ts"
+    "test:server": "bun scripts/check-remotes.ts",
+    "test:browser": "bun scripts/check-browser.ts"
   },
   "devDependencies": {
     "@sveltejs/adapter-bun": "1.0.0",
@@ -26,6 +29,8 @@
     "@tailwindcss/vite": "^4.0.0",
     "@types/bun": "1.4.4",
     "@types/node": "^24.12.0",
+    "@types/sanitize-html": "^2.16.2",
+    "@types/web-push": "3.6.4",
     "daisyui": "^5.0.0",
     "devalue": "5.9.4",
     "drizzle-kit": "0.31.11",
@@ -36,7 +41,6 @@
     "vite": "~8.3.6"
   },
   "dependencies": {
-    "@elysiajs/eden": "^1.4.9",
     "@fontsource-variable/dm-sans": "^5.2.8",
     "@fontsource-variable/inter": "^5.2.8",
     "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
@@ -54,10 +58,11 @@
     "chart.js": "^4.5.1",
     "driver.js": "^1.4.0",
     "drizzle-orm": "0.45.4",
-    "elysia": "^1.4.28",
     "jose": "6.2.15",
     "lucide-svelte": "^1.0.1",
+    "sanitize-html": "2.18.1",
     "theme-change": "^2.5.0",
+    "web-push": "3.6.7",
     "zod": "4.6.7"
   }
 }

@@ -1,25 +1,17 @@
-# Use with: docker compose -f docker-compose.yml -f compose.caddy.yml up -d --build
+# docker compose -f docker-compose.yml -f compose.caddy.yml up -d --build --remove-orphans
 services:
-  backend:
-    ports: !reset []
-    environment:
-      FRONTEND_URL: https://192.168.0.254
-    networks:
-      proxy:
-        aliases:
-          - ticketing-backend
-
-  frontend:
+  web:
     ports: !reset []
     build:
       args:
         VITE_BASE_PATH: /ticketing/
-        VITE_API_URL: /ticketing/api
         FRONTEND_URL: https://192.168.0.254
+    environment:
+      APP_BASE_PATH: /ticketing/
     networks:
       proxy:
         aliases:
-          - ticketing-frontend
+          - ticketing-web
 
 networks:
   proxy:

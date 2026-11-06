@@ -11,7 +11,7 @@ beforeEach(() => {
   sqlite = new Database(':memory:');
   sqlite.exec('PRAGMA foreign_keys = ON');
   for (const name of ['20260529061222_init', '20260529081903_init']) {
-    sqlite.exec(readFileSync(new URL(`../../../../../Backend/prisma/migrations/${name}/migration.sql`, import.meta.url), 'utf8'));
+    sqlite.exec(readFileSync(new URL(`../../../../test/fixtures/legacy/${name}.sql`, import.meta.url), 'utf8'));
   }
 });
 afterEach(() => sqlite.close());

@@ -1,4 +1,4 @@
-import { client } from "./api";
+import { getVapidPublicKey, subscribePush, unsubscribePush } from './notifications.remote';
 
 // ============================================================
 // PWA & Notification Helpers
@@ -50,35 +50,32 @@ export async function subscribeToPush(publicVapidKey: string) {
   try {
     const registration = await navigator.serviceWorker.ready;
     
-    // Check if we're already subscribed
     let subscription = await registration.pushManager.getSubscription();
-    
     const convertedKey = urlBase64ToUint8Array(publicVapidKey);
-
-    if (subscription) {
-      // Verify if it's using the same key, if not, resubscribe
-      // This is a bit complex, so we'll just resubscribe for safety if we're not getting notifications
+    const currentKey = subscription?.options.applicationServerKey;
+    if (subscription && currentKey && !new Uint8Array(currentKey).every((value, index) => value === convertedKey[index])) {
+      await subscription.unsubscribe();
+      subscription = null;
     }
-
-    subscription = await registration.pushManager.subscribe({
+    subscription ??= await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: convertedKey
     });
 
 
-    // Send subscription to backend
-    const subJson = subscription.toJSON();
-    if (subJson.endpoint && subJson.keys?.p256dh && subJson.keys?.auth) {
-      await (client as any).notifications['push-subscribe'].post({
-        endpoint: subJson.endpoint,
-        keys: {
-          p256dh: subJson.keys.p256dh,
-          auth: subJson.keys.auth
-        }
-      });
+    // Re-register existing subscriptions; rotate instead of taking another account's endpoint.
+    for (let attempt = 0; ; attempt++) {
+      const subJson = subscription.toJSON();
+      if (!subJson.endpoint || !subJson.keys?.p256dh || !subJson.keys?.auth) throw new Error('Invalid browser push subscription');
+      try {
+        await subscribePush({ endpoint: subJson.endpoint, keys: { p256dh: subJson.keys.p256dh, auth: subJson.keys.auth } });
+        return subscription;
+      } catch (error) {
+        if (attempt || (error as { status?: number }).status !== 409) throw error;
+        await subscription.unsubscribe();
+        subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: convertedKey });
+      }
     }
-
-    return subscription;
   } catch (error) {
     console.error('Failed to subscribe to push notifications:', error);
     return null;
@@ -100,14 +97,7 @@ export async function initPushNotifications(user: any) {
   }
 
   try {
-    const res = await (client as any).notifications['vapid-public-key'].get();
-    
-    if (res.error) {
-      console.error('[PWA] Failed to get VAPID key:', res.error);
-      return;
-    }
-
-    const publicKey = res.data.publicKey;
+    const { publicKey } = await getVapidPublicKey();
     if (!publicKey) {
       console.warn('[PWA] Backend returned empty VAPID key - check backend environment variables');
       return;
@@ -122,4 +112,13 @@ export async function initPushNotifications(user: any) {
   } catch (error) {
     console.error('[PWA] Error initializing push:', error);
   }
+}
+
+export async function stopPushNotifications() {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  const registration = await navigator.serviceWorker.getRegistration();
+  const subscription = await registration?.pushManager.getSubscription();
+  if (!subscription) return;
+  try { await unsubscribePush(subscription.endpoint); }
+  finally { await subscription.unsubscribe(); }
 }

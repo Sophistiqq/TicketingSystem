@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
+  import { deleteNotification } from "../../lib/notifications.remote";
   import { navigate } from "../../router.svelte";
   import {
     getNotifications,
@@ -56,7 +56,7 @@
   }
 
   async function handleDelete(id: number) {
-    await api.delete(`/notifications/${id}`);
+    await deleteNotification(id);
     await loadPage(pagination.page);
   }
 

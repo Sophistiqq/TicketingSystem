@@ -1,11 +1,11 @@
 // ============================================================
 // Notification store — polls unread count for the bell badge
 // ============================================================
-import { api } from '../lib/api';
-import type { Notification, PaginatedResponse } from '../lib/types';
+import { getNotifications as readNotifications, getNotificationUnreadCount, markNotificationRead, markAllNotificationsRead } from '../lib/notifications.remote';
+import { getCurrentUser } from './user.svelte';
 
 let unreadCount: number = $state(0);
-let notifications: Notification[] = $state([]);
+let notifications = $state<Awaited<ReturnType<typeof readNotifications>>['data']>([]);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 export function getUnreadCount() {
@@ -17,20 +17,25 @@ export function getNotifications() {
 }
 
 export async function fetchUnreadCount() {
+  const user = getCurrentUser()?.id;
+  if (!user) return;
   try {
-    const res = await api.get<{ count: number }>('/notifications/unread-count');
-    if (res) unreadCount = res.count;
+    await getNotificationUnreadCount().refresh();
+    const res = await getNotificationUnreadCount();
+    if (res && getCurrentUser()?.id === user) unreadCount = res.count;
   } catch {
     // silently fail — non-critical
   }
 }
 
 export async function fetchNotifications(page = 1, limit = 20) {
+  const user = getCurrentUser()?.id;
+  if (!user) return null;
   try {
-    const res = await api.get<PaginatedResponse<Notification>>(
-      `/notifications/?page=${page}&limit=${limit}`
-    );
-    if (res) {
+    const result = readNotifications({page, limit});
+    await result.refresh();
+    const res = await result;
+    if (res && getCurrentUser()?.id === user) {
       notifications = res.data;
       return res;
     }
@@ -41,20 +46,23 @@ export async function fetchNotifications(page = 1, limit = 20) {
 }
 
 export async function markAsRead(id: number) {
-  await api.put(`/notifications/${id}/read`);
+  await markNotificationRead(id);
+  const wasUnread = notifications.some(notification => notification.id === id && !notification.is_read);
   notifications = notifications.map((n) =>
     n.id === id ? { ...n, is_read: true } : n
   );
-  unreadCount = Math.max(0, unreadCount - 1);
+  if (wasUnread) unreadCount = Math.max(0, unreadCount - 1);
 }
 
 export async function markAllAsRead() {
-  await api.put('/notifications/read-all');
+  await markAllNotificationsRead();
   notifications = notifications.map((n) => ({ ...n, is_read: true }));
   unreadCount = 0;
 }
 
 export function pushNotification(notification: any) {
+  if (notification.type === 'message_received' || (notification.type === 'comment_added' && getCurrentUser()?.roles.includes('approver'))) return;
+  if (notifications.some(existing => existing.id === notification.id)) return;
   notifications = [notification, ...notifications];
   unreadCount++;
 }
@@ -66,6 +74,8 @@ export function startPolling(intervalMs = 30_000) {
 }
 
 export function stopPolling() {
+  unreadCount = 0;
+  notifications = [];
   if (pollTimer) {
     clearInterval(pollTimer);
     pollTimer = null;

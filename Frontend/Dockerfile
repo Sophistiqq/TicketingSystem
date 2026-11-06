@@ -13,9 +13,6 @@ RUN bun install --frozen-lockfile
 COPY . .
 
 # Build the application
-# VITE_API_URL should be provided as an build-arg or environment variable
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
 ARG VITE_BASE_PATH=/
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
 ARG FRONTEND_URL
@@ -32,10 +29,11 @@ COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/drizzle ./drizzle
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/src/lib/server/db ./src/lib/server/db
 
-ENV PORT=80
+ENV PORT=3000
 
-# Expose port 80
-EXPOSE 80
+EXPOSE 3000
 
 CMD ["sh", "-c", "bun build/migrate.js && exec bun build/index.js"]

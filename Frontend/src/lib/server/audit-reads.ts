@@ -6,6 +6,7 @@ import type { AuthContext } from './auth';
 import type { getDb } from './db';
 import { auditLogs, ticketApprovers, tickets, users } from './db/schema';
 import { sqliteDateMillis } from './db/date';
+import { redactCommentAudit } from './audit-privacy';
 
 type Db = ReturnType<typeof getDb>;
 type Filters = z.infer<typeof auditFilterSchema>;
@@ -41,5 +42,6 @@ export function readTicketAuditTrail(db: Db, auth: AuthContext, ticketId: number
   if (!auth.roles.some(role => ['admin', 'mis', 'approver'].includes(role)) && ticket.requester_id !== auth.user && ticket.assignee_id !== auth.user && !assignedApprover) error(403, 'Access denied');
   return db.select(columns).from(auditLogs).leftJoin(users, eq(users.id, auditLogs.performed_by_id))
     .where(eq(auditLogs.ticket_id, ticketId)).orderBy(desc(sqliteDateMillis(auditLogs.created_at)), desc(auditLogs.id)).all()
+    .map(row => redactCommentAudit(row, auth.roles.some(role => ['admin', 'mis', 'approver'].includes(role))))
     .map(row => ({ ...row, created_at: row.created_at.toISOString() }));
 }

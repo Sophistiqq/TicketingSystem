@@ -6,6 +6,7 @@ import type { getDb } from './db';
 import { affectedSystems, csat, departments, requestTypes, ticketApprovers, tickets, users } from './db/schema';
 import type { DashboardQuery, TicketReportQuery } from '../validation/reports';
 import { ticketDto } from './ticket-reads';
+import { sanitizeRichText } from './rich-text';
 import { sqliteDateMillis as dateNumber } from './db/date';
 
 type Db = ReturnType<typeof getDb>;
@@ -112,7 +113,7 @@ export function readTicketReport(db: Db, auth: AuthContext, input: TicketReportQ
   const rated = rows.filter(row => row.csat != null);
   return {
     tickets: rows.map(({ requesterDepartment, ...row }) => ({
-      ...row, requester: { ...row.requester, department: requesterDepartment },
+      ...row, description: sanitizeRichText(row.description), requester: { ...row.requester, department: requesterDepartment },
       created_at: row.created_at.toISOString(), updated_at: row.updated_at.toISOString(),
       escalated_at: row.escalated_at?.toISOString() ?? null, started_at: row.started_at?.toISOString() ?? null,
       completed_at: row.completed_at?.toISOString() ?? null, due_date: row.due_date?.toISOString() ?? null,

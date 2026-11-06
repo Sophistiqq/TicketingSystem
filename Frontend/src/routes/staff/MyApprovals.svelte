@@ -1,7 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
   import { onMount } from "svelte";
-  import { api } from "../../lib/api";
+  import { decideApproval } from "../../lib/ticket-actions.remote";
   import { getPendingApprovals } from "../../lib/tickets.remote";
   import type { TicketApprover } from "../../lib/types";
   import { simplePrompt, triggerAlert } from "../../stores/ui.svelte";
@@ -44,15 +44,15 @@
     if (remarks === null) return;
 
     try {
-      await api.post(`/approvals/${approval.id}/decide`, {
+      await decideApproval({ id: approval.id,
         ticket_id: approval.ticket_id,
         decision,
         remarks: remarks || undefined,
       });
       // Remove from list
       approvals = approvals.filter((a) => a.id !== approval.id);
-    } catch {
-      /* handled */
+    } catch (error) {
+      triggerAlert(error instanceof Error ? error.message : 'Failed to record approval', 'error');
     }
   }
 

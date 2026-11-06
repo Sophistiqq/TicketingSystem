@@ -1,6 +1,10 @@
 <script lang="ts">
   import { getTicket } from "../../lib/tickets.remote";
   import { getAssignees, getApprovers } from "../../lib/users.remote";
+  import { updateTicket, toggleTicketApprover, escalateTicket as requestEscalation, createComment, updateComment, decideApproval } from "../../lib/ticket-actions.remote";
+  import { ticketStatusSchema, ticketPrioritySchema } from "../../lib/validation/ticket-writes";
+  import { submitCsat as saveCsat } from "../../lib/csat.remote";
+  import { getConversations, sendMessage } from "../../lib/messages.remote";
   import { resolve } from '$app/paths';
   import { onMount, onDestroy, tick } from "svelte";
   import { api, API_BASE } from "../../lib/api";
@@ -219,7 +223,7 @@
         body.other_department = editOtherDepartment || null;
       }
 
-      await api.put(`/tickets/${ticket.id}`, body);
+      await updateTicket({ id: ticket.id, data: body });
       triggerAlert("Ticket updated successfully.", "success");
       isEditingContent = false;
       await loadTicket();
@@ -233,9 +237,9 @@
     if (!ticket) return;
     statusLoading = true;
     try {
-      await api.put(`/tickets/${ticket.id}`, {
+      await updateTicket({ id: ticket.id, data: {
         due_date: val ? new Date(val).toISOString() : null,
-      });
+      } });
       await loadTicket();
       triggerAlert("Due date updated.", "info");
     } catch (e: any) {
@@ -248,9 +252,7 @@
     if (!ticket) return;
     statusLoading = true;
     try {
-      await api.put(`/tickets/${ticket.id}`, {
-        priority: val,
-      });
+      await updateTicket({ id: ticket.id, data: { priority: ticketPrioritySchema.parse(val) } });
       await loadTicket();
       triggerAlert("Priority updated.", "info");
     } catch (e: any) {
@@ -264,15 +266,15 @@
     statusLoading = true;
     statusError = "";
     try {
-      await api.put(`/tickets/${ticket.id}`, {
-        status,
+      await updateTicket({ id: ticket.id, data: {
+        status: ticketStatusSchema.parse(status),
         resolution_notes: status === "resolved" ? notes : undefined,
         reopen_reason:
           status === "open" &&
           (ticket.status === "closed" || ticket.status === "resolved")
             ? notes
             : undefined,
-      });
+      } });
       await loadTicket();
     } catch (e: any) {
       statusError = e?.message ?? "Update failed";
@@ -323,7 +325,7 @@
     statusLoading = true;
     statusError = "";
     try {
-      await api.post(`/tickets/${ticket.id}/approver/toggle`, {
+      await toggleTicketApprover({ id: ticket.id,
         approver_id: approverId,
       });
       await loadTicket();
@@ -338,7 +340,7 @@
     statusLoading = true;
     statusError = "";
     try {
-      await api.put(`/tickets/${ticket.id}`, { assignee_id: id });
+      await updateTicket({ id: ticket.id, data: { assignee_id: id } });
       await loadTicket();
     } catch (e: any) {
       statusError = e.message;
@@ -365,7 +367,7 @@
       return;
     statusLoading = true;
     try {
-      await api.post(`/tickets/${ticket.id}/escalate`, {});
+      await requestEscalation(ticket.id);
       await loadTicket();
       triggerAlert("Ticket successfully escalated to approval.", "success");
     } catch (e: any) {
@@ -388,11 +390,11 @@
 
     try {
       const assigneeQuery = getAssignees({ department_id: ticket.department_id ?? undefined });
-      await Promise.all([assigneeQuery.refresh(), getApprovers().refresh()]);
+      await Promise.all([assigneeQuery.refresh(), getApprovers().refresh(), getConversations().refresh()]);
       const [assigneesRes, approversRes, conversationsRes] = await Promise.all([
         assigneeQuery,
         getApprovers(),
-        api.get<any[]>("/messages/conversations"),
+        getConversations(),
       ]);
       if (assigneesRes) assignees = assigneesRes;
       if (approversRes) allApprovers = approversRes;
@@ -461,12 +463,12 @@
     commentLoading = true;
     try {
       if (editingCommentId) {
-        await api.put(`/comments/${editingCommentId}`, {
+        await updateComment({ id: editingCommentId, data: {
           content: commentText,
           is_internal: isInternal,
-        });
+        } });
       } else {
-        await api.post("/comments/", {
+        await createComment({
           ticket_id: ticket.id,
           content: commentText,
           is_internal: isInternal,
@@ -504,7 +506,7 @@
 
   async function deleteAttachment(id: number) {
     if (!(await simpleConfirm("Delete this attachment?", true))) return;
-    await api.delete(`/attachments/${id}`);
+    await api.deleteAttachment(id);
     await loadTicket();
   }
 
@@ -512,7 +514,7 @@
     if (!ticket || csatRatingSpeed < 1 || csatRatingAttitude < 1 || csatRatingImpact < 1) return;
     csatLoading = true;
     try {
-      await api.post("/csat/", {
+      await saveCsat({
         ticket_id: ticket.id,
         rating_speed: csatRatingSpeed,
         rating_attitude: csatRatingAttitude,
@@ -536,7 +538,7 @@
       "Add any internal remarks...",
     );
     if (remarks === null) return;
-    await api.post(`/approvals/${approvalId}/decide`, {
+    await decideApproval({ id: approvalId,
       ticket_id: ticket!.id,
       decision,
       remarks: remarks ?? undefined,
@@ -626,7 +628,7 @@
     if (!ticket || !sharingToId) return;
     shareLoading = true;
     try {
-      await api.post("/messages", {
+      await sendMessage({
         content: `Hi, referencing Ticket #${ticket.id}: "${ticket.title}"`,
         receiver_id: Number(sharingToId),
         ticket_id: ticket.id,

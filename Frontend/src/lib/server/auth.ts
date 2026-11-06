@@ -355,9 +355,3 @@ export async function updateProfile(input: UpdateProfileInput): Promise<User> {
   const departmentRow = loadDepartment(db, updatedUser.department_id);
   return toDto(updatedUser, roles, departmentRow);
 }
-
-export async function issueWsToken(): Promise<{ token: string }> {
-  const { user, roles } = await requireAuth();
-  const token = await signToken(user.toString(), roles, 60);
-  return { token };
-}

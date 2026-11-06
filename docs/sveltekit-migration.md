@@ -1,100 +1,34 @@
 # SvelteKit consolidation
 
-[Linear project and milestones](https://linear.app/ibs-msap/project/sveltekit-consolidation-3e6a3b910b1f)
+[Linear project](https://linear.app/ibs-msap/project/sveltekit-consolidation-3e6a3b910b1f)
 
-Target: one SvelteKit 3/Svelte 5 application on Bun, Zod input validation, and
-Drizzle over the existing SQLite database. App-owned reads and mutations move to
-remote functions; uploads, downloads and integration boundaries use server endpoints.
+The implementation now runs as one SvelteKit 3/Svelte 5 application on Bun 1.4.4 with Zod and Drizzle. Elysia, Eden, Prisma, the old REST tests and the historical Render/PostgreSQL blueprint are removed. Old SQLite SQL migrations survive as test fixtures only.
 
-## Current boundary
+## Completed implementation
 
-- T-1: the UI uses SvelteKit page routes and the official Bun adapter. Existing
-  browser-only editors/stores remain client-rendered (`ssr = false`). The small
-  router module delegates navigation to SvelteKit while existing callers migrate.
-- T-2: all 16 tables are mapped in `Frontend/src/lib/server/db/schema.ts`.
-  Compatibility tests compare columns/defaults, indexes and foreign-key actions
-  against the existing migrations and exercise dates, booleans, update timestamps,
-  uniqueness, delete behavior and transaction rollback. Startup records a guarded
-  Drizzle baseline for compatible existing databases; it rejects partial/mismatched
-  schemas before writing history. Fresh installations use the versioned baseline SQL.
-- T-3: authentication, registration, session checks, profile changes, short-lived
-  legacy WebSocket tokens and reference management use Zod-validated native remote
-  functions backed by Drizzle. Authorization reloads active status and roles from
-  SQLite. Registration and profile audit writes are transactional. Client caches
-  refresh after mutations and session changes.
-- T-3 reads: ticket lists/details/previews, approval lists, dashboards, ticket
-  reports, contact directories, assignee/approver lookups and audit history now use
-  native remote queries. Filtering cannot override a requester's ticket scope;
-  previews check ticket access, internal notes stay staff-only, and contact/comment
-  projections exclude private fields. Historic UTC/ISO/epoch dates compare
-  chronologically. Reads refresh after legacy writes rather than reuse stale caches.
-- Elysia/Prisma still serve ticket/approval/comment mutations, uploads,
-  user administration, CSAT, messaging, notifications and realtime transport. Their
-  remaining migration/removal is tracked by T-3, T-4 and T-5.
+- Native page routing, Bun adapter, PWA worker/update prompt, root and subpath support.
+- All 16 existing SQLite tables, compatible UTC/ISO/epoch dates, guarded baseline adoption and versioned migrations.
+- Native auth, registration, profile, reference management, ticket reads/mutations, assignments, SLA, escalation, approvals, comments and audit history.
+- Admin user/role management, last-active-admin protection, CSAT submissions, analytics and reports.
+- Multipart attachments with originals/previews, authenticated downloads, bounds/path checks and rollback cleanup.
+- Native messages, conversations, read receipts, notifications and web-push subscriptions/delivery.
+- Authenticated SSE with reconnect, ticket/user/role channels, private notes and fresh access/expiry checks.
+- One Compose service with the same SQLite/uploads volume keys and JWT/VAPID settings; documented Caddy/backup/upgrade procedure.
 
-## Database compatibility
+Writes keep audit/state/notification records transactional; realtime and web push occur after commit. Rejected tickets with existing approvers require fresh decisions after reopening. Completed-ticket reopening retains prior authorization, clears assignment/completion and resets CSAT. Input validation rejects arbitrary decisions/statuses and privilege fields. Rich-text descriptions/comments are sanitized on writes and historic reads. Historical internal-comment audit text is redacted for requesters.
 
-Keep SQL table/column names and existing records. Preserve the SQLite/uploads
-volume names at cutover. Do not reset the database, run Drizzle schema push, or
-apply an initial create-table migration over an existing installation.
+## Data and deployment boundary
 
-Prisma/libsql writes ISO dates with a `+00:00` offset. SQLite defaults can produce
-UTC text, and older clients can store epoch milliseconds. The Drizzle date column
-handles these encodings, preserves the current write format, and rejects invalid
-dates. `User`, `Ticket`, and `TicketComment` need application-maintained
-`updated_at` values; the schema provides insert/update hooks. Baseline the migration
-history and verify a backup of deployed data before production cutover. Drizzle
-inserts use an ISO UTC SQL expression for default timestamps, preserving ordering
-and millisecond precision alongside Prisma/libsql dates. Legacy SQL defaults stay
-untouched when an existing database is adopted.
+No real database was read, changed or deployed during this work. The retired local Backend directory may still contain ignored user data; it is not part of the application or Docker build. Keep deployed volume/project names and existing secrets, and rehearse using a restored backup before production cutover.
 
-## Deployment during the transition
+Drizzle compares all model columns/defaults, indexes and foreign keys before recording a baseline. It leaves compatible existing rows and `_prisma_migrations` intact. Never reset the database, apply initial create-table SQL over existing tables or use schema push. New inserts use ISO UTC defaults and runtime update timestamps; reads compare historic date encodings chronologically.
 
-Keep both Compose services while the backend migration is in progress. The
-frontend now runs a Bun server on port 80 instead of nginx and shares the SQLite
-volume and JWT secret with the backend. Backend migrations run first; frontend
-startup then verifies/adopts the baseline. Build with `VITE_API_URL`,
-`VITE_BASE_PATH` and `FRONTEND_URL` (the browser origin used for CSRF/cookie handling).
-Compose supplies these values. Local development must also use the same database
-and JWT secret in both services; see `Frontend/.env.example`.
+Caddy now forwards the entire `/ticketing/*` prefix to `ticketing-web:3000`. Remove the old separate API handler. Build with the actual browser origin for remote-function CSRF checks. Run one Bun instance; multiple instances need a shared realtime broker.
 
-The Caddy frontend handler must preserve the subpath:
+## Validation
 
-```caddyfile
-handle /ticketing/* {
-    reverse_proxy ticketing-frontend:80
-}
-```
+Run `bun run check`, `bun test`, `bun run build`, `bun run test:server` in Frontend. Compiled integration checks cover auth, ticket lifecycle, approvals, comments/SSE privacy, CSAT, admin, messaging, notifications and file originals/previews with disposable fixtures. Browser checks use `bun run test:browser` after a build with local HTTP origin and require Chrome.
 
-Keep the preceding `handle_path /ticketing/api/*` handler for the existing API.
-Apply `deploy/Caddyfile.ticketing` to the server's Caddyfile and validate/reload
-Caddy when deploying this milestone. The repository does not edit the live server.
+Verified: 65 tests/901 assertions; zero type-check errors/warnings; root and `/ticketing/` builds; compiled-server integration and browser workflows in both configurations. Browser checks include repeated conversation deep links, a real disposable-server restart with missed-message recovery, live receipts, admin edits, mobile layout and logout. The browser harness isolates fixture cookies per tab and bypasses the shared service worker during session interception. Local and Caddy Compose models validate with one service and unchanged volume keys.
 
-Service-worker registration remains scoped to the app. The native worker caches
-build/static assets, never API responses, and preserves push/click behavior and
-the update prompt. Database operations require connectivity.
-
-The older Render/PostgreSQL blueprint is not the supported deployment target for
-this migration; the tested configuration is SQLite with Docker Compose/Caddy.
-
-## Verification
-
-```sh
-cd Frontend
-bun install --frozen-lockfile
-bun run check
-bun test
-bun run build
-bun run test:server
-```
-
-The Vite scripts explicitly run under Bun because server modules use `bun:sqlite`.
-The compiled-server integration check exercises auth, reference mutations and the
-new read queries against disposable SQLite data, including access denials, private
-notes, forged role claims and invalid inputs. Browser checks cover subpath login,
-dashboard, ticket lists/details, reports/audit and refresh after a legacy write.
-
-Before T-5, verify all role-specific ticket/approval transitions, internal-note
-and message privacy, attachment originals/previews/deletion, web push and realtime
-reconnections. Retire Elysia, Eden, Prisma and legacy deployment configuration only
-after those checks pass. No production cutover has been performed.
+Docker execution, live Caddy and actual provider push delivery are deployment-host checks. Production cutover remains operational work; implementation completion does not imply it has been deployed.

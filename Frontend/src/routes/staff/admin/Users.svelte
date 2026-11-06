@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { api } from "../../../lib/api";
+  import { getAdminUsers, createUser, updateUser, deactivateUser, assignRole, removeRole as revokeRole } from "../../../lib/admin.remote";
+  import { getAgentReport } from "../../../lib/csat.remote";
+  import { adminUserListSchema, createUserSchema, updateUserDataSchema, roleSchema } from "../../../lib/validation/admin";
   import { getReferenceData } from "../../../lib/reference.remote";
-  import type { User, PaginatedResponse, Role, Department } from "../../../lib/types";
+  import type { User, Role, Department } from "../../../lib/types";
   import Pagination from "../../../components/Pagination.svelte";
-  import { simpleConfirm, openCustomModal } from "../../../stores/ui.svelte";
+  import { simpleConfirm, openCustomModal, triggerAlert } from "../../../stores/ui.svelte";
   import ReportModal from "../../../components/ReportModal.svelte";
   import {
     Search,
@@ -75,7 +77,9 @@
     if (activeFilter) params.set("is_active", activeFilter);
 
     try {
-      const res = await api.get<PaginatedResponse<User>>(`/users/?${params}`);
+      const result = getAdminUsers(adminUserListSchema.parse(Object.fromEntries(params)));
+      await result.refresh();
+      const res = await result;
       if (res) {
         // Flatten roles if they are objects
         users = res.data.map((u: any) => ({
@@ -84,7 +88,7 @@
         }));
         pagination = res.pagination;
       }
-    } catch { /* handled */ }
+    } catch (error) { triggerAlert(error instanceof Error ? error.message : 'Failed to load users', 'error'); }
     loading = false;
   }
 
@@ -141,9 +145,9 @@
       body.department_id = formData.department_id ?? null;
 
       if (editingUser) {
-        await api.put(`/users/${editingUser.id}`, body);
+        await updateUser({ id: editingUser.id, data: updateUserDataSchema.parse(body) });
       } else {
-        await api.post("/users/", body);
+        await createUser(createUserSchema.parse(body));
       }
       showModal = false;
       await loadUsers(pagination.page);
@@ -162,8 +166,10 @@
 
   async function deleteUser(user: User) {
     if (!(await simpleConfirm(`Deactivate ${user.first_name} ${user.last_name}?`, true))) return;
-    await api.delete(`/users/${user.id}`);
-    await loadUsers(pagination.page);
+    try {
+      await deactivateUser(user.id);
+      await loadUsers(pagination.page);
+    } catch (error) { triggerAlert(error instanceof Error ? error.message : 'Failed to deactivate user', 'error'); }
   }
 
   function openRoles(user: User) {
@@ -175,25 +181,29 @@
   async function addRole() {
     if (!roleTarget) return;
     try {
-      await api.post(`/users/${roleTarget.id}/roles`, { role: newRole });
+      await assignRole({ id: roleTarget.id, role: newRole });
       showRoleModal = false;
       await loadUsers(pagination.page);
-    } catch { /* handled */ }
+    } catch (error) { triggerAlert(error instanceof Error ? error.message : 'Failed to assign role', 'error'); }
   }
 
   async function removeRole(userId: number, role: string) {
     if (!(await simpleConfirm(`Remove role "${role}"?`, true))) return;
-    await api.delete(`/users/${userId}/roles/${role}`);
-    await loadUsers(pagination.page);
+    try {
+      await revokeRole({ id: userId, role: roleSchema.parse(role) });
+      await loadUsers(pagination.page);
+    } catch (error) { triggerAlert(error instanceof Error ? error.message : 'Failed to remove role', 'error'); }
   }
 
   async function showReport(agentId: number) {
     try {
-      const data = await api.get(`/csat/reports/${agentId}`);
+      const result = getAgentReport({ agent_id: agentId });
+      await result.refresh();
+      const data = await result;
       if (data) {
         openCustomModal(ReportModal, { data });
       }
-    } catch { /* handled */ }
+    } catch (error) { triggerAlert(error instanceof Error ? error.message : 'Failed to load agent report', 'error'); }
   }
 </script>
 

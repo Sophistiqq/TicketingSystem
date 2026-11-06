@@ -1,7 +1,8 @@
 // ============================================================
 // Messaging store — unread count polling
 // ============================================================
-import { api } from '../lib/api';
+import { getMessageUnreadCount as readUnreadCount } from '../lib/messages.remote';
+import { getCurrentUser } from './user.svelte';
 
 let unreadCount: number = $state(0);
 let pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -11,9 +12,12 @@ export function getMessageUnreadCount() {
 }
 
 export async function fetchMessageUnreadCount() {
+  const user = getCurrentUser()?.id;
+  if (!user) return;
   try {
-    const res = await api.get<{ count: number }>('/messages/unread-count');
-    if (res) unreadCount = res.count;
+    await readUnreadCount().refresh();
+    const res = await readUnreadCount();
+    if (res && getCurrentUser()?.id === user) unreadCount = res.count;
   } catch {
     // silently fail
   }
@@ -30,6 +34,7 @@ export function startMessagePolling(intervalMs = 30_000) {
 }
 
 export function stopMessagePolling() {
+  unreadCount = 0;
   if (pollTimer) {
     clearInterval(pollTimer);
     pollTimer = null;
